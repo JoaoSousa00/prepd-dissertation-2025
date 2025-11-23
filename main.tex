@@ -28,8 +28,8 @@
 11pt, % The default document font size, options: 10pt, 11pt, 12pt
 %oneside, % Two side (alternating margins) for binding by default, uncomment to switch to one side (for drafting/reading purposes)
 %openany, % Starts the chapter on the next page, even or odd (not recommended)
-english, % english for English;
-%portuguese,% for Portuguese; delete temporary files if you change language (e.g. 'make clean; make')
+%english, % english for English;
+portuguese,% for Portuguese; delete temporary files if you change language (e.g. 'make clean; make')
 singlespacing, % Single line spacing, alternatives: onehalfspacing or doublespacing (for drafting/reading purposes)
 %draft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
 %nolistspacing, % If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
@@ -62,6 +62,9 @@ headsepline, % Uncomment to get a line under the header
 
 % alphabetic citation style (e.g. [Buendía10], [Buendía10, Arcadio40])
 %\usepackage[style=alphabetic,sorting=none,backend=biber]{biblatex} % Bibtex backend with the alphabetic citation style (alphabetic citations, bibliography ordered by appearance)
+
+\usepackage{soulutf8} %To markup text use \hl
+\sethlcolor{yellow}
 
 
 \addbibresource{mainbibliography.bib} % The filename of the bibliography
@@ -120,8 +123,8 @@ headsepline, % Uncomment to get a line under the header
 \input{ch1/chapter1}
 \input{ch2/chapter2}
 \input{ch3/chapter3}
-%\input{ch4/chapter4}
-%\input{ch5/chapter5}
+\input{ch4/chapter4}
+\input{ch5/chapter5}
 
 
 %----------------------------------------------------------------------------------------
