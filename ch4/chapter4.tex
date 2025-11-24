@@ -12,11 +12,13 @@ A organização estrutura-se em equipas ágeis multidisciplinares, agrupadas em 
 O presente relatório foi desenvolvido no âmbito da unidade curricular de Preparação para Dissertação (PREPD) do Instituto Superior de Engenharia do Porto (ISEP), com o intuito de demonstrar o estudo de viabilidade de uma solução para o problema em causa.
 
 \section{Problema}
- A análise e resolução de incidentes está no dia a dia das equipas que lidam com projetos potencialmente críticos. Um incidente pode ter por origem duas principais fontes: automático, através de métricas definidas pelas equipas; e manuais, criados por clientes das aplicações desenvolvidas. Um registo de incidente (ticket) é um documento, normalmente gerido por um sistema externo (como \textit{ServiceNow} ou \textit{Jira Service Management}), onde é possível visualizar detalhes do incidente, tais como a sua descrição e prioridade, e onde um elemento da equipa pode descrever os passos de resolução efetuados.
- 
- Equipas destes sistemas criticos lidam com muitos incidentes diariamente e muitas vezes fora de horários.
- - Quantidade de tickets pode ser demasiada
- - Analise pode ser descuidada, principalmente para o caso de acontecer de madrugada
+ A análise e resolução de incidentes está no dia a dia das equipas que lidam com projetos potencialmente críticos. Um incidente é um evento que provoca interrupção ou degradação num qualquer serviço, e podem comprometer significativamente a disponibilidade das aplicações e resultar em perdas financeiras substanciais. [How to Mitigate the Incident? An Effective Troubleshooting Guide Recommendation Technique for Online Service Systems] Estes incidentes podes ter por origem duas principais fontes: automático, através de métricas definidas pelas equipas; e manuais, criados por clientes das aplicações desenvolvidas. Um registo de incidente (ticket) é um documento, normalmente gerido por um sistema externo (como \textit{ServiceNow} ou \textit{Jira Service Management}), onde é possível visualizar detalhes do incidente, tais como a sua descrição e prioridade, e onde um elemento da equipa pode descrever os passos de resolução efetuados.
+
+ Na área IT(…), as equipas podem manter vários serviços em simultâneo e por essa razão os engenheiros de plantão (membros das equipas responsáveis por manter os serviços estáveis 24x7) podem ficar sobrecarregados de incidentes, fazendo com que tenham que lidar com eventos provenientes de vários serviços paralelamente. Numa situação como esta, os engenheiros podem ter um sentimento de confusão, misturando temas e errando nas suas análises, o que pode causar piores resoluções de incidentes e o aumento do seu tempo de mitigação (TTM). Outro cenário frequente para os OCEs (On-Call Engineers) envolve incidentes que ocorrem fora do horário de expediente, especialmente durante a madrugada, quando o engenheiro de prevenção pode não estar na sua plena capacidade de raciocínio e operacional.
+
+?? Acrescentar o caso de tickets manuais??
+
+ Uma interpretação ou resolução inadequada das ocorrências pode reduzir a disponibilidade dos serviços, o que, por sua vez, pode gerar prejuízos significativos para a organização, seja pela perda de receitas, seja pelo impacto negativo na experiência do utilizador final.
 
 \section{Objetivos}
 
