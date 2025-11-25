@@ -1,35 +1,30 @@
-% Chapter 1
-% 
-\chapter{Thesis Structure} % Main chapter title
-\label{chap:Chapter1} % For referencing the chapter elsewhere, use Chapter~\ref{Chapter1}
+% Chapter 4
 
+\chapter{Introdução} % Main chapter title
+\label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
+Este capítulo apresenta a organização responsável pela ideia do tema a ser desenvolvido, o contexto do seu surgimento e os problemas que a originaram. São abordados os objetivos, o planeamento e as considerações éticas tidas em conta para executar a proposta. Por último é descrita a estrutura deste documento de forma a facilitar a leitura do mesmo.
+%----------------------------------------------------------------------------------------
+\section{Organização e Contexto}
+A Critical Techworks (CTW) nasceu de um empreendimento conjunto entre a Critical Software e o grupo BMW (Bayerische Motoren Werke). Estabelecida em 2018 esta empresa desenvolve software exclusivamente para os produtos da BMW. A sua missão é a de "transformar a forma como o mundo se move" focando-se para isso na transformação digital com as melhores práticas do mercado.
 
-%-------------------------------------------------------------------------------
-%---------
-%
-\section{Introduction} 
-\label{sec:chap1_introduction} %For referencing this section elsewhere, use Section~\ref{sec:chap1_introduction}
+A organização estrutura-se em equipas ágeis multidisciplinares, agrupadas em unidades e domínios tecnológicos, o que promove autonomia, ciclos de desenvolvimento rápidos e colaboração contínua. Esta abordagem permite alinhar o desenvolvimento de software com necessidades reais dos veículos e serviços digitais da BMW.
 
-The goal of a Master dissertation is to document the work developed and highlight its importance. Firstly, the author should aim to follow the best practices in terms of writing style and organise the contents such that the message is clear. The language style used should be clear, and avoid colloquial expressions.
+O presente relatório foi desenvolvido no âmbito da unidade curricular de Preparação para Dissertação (PREPD) do Instituto Superior de Engenharia do Porto (ISEP), com o intuito de demonstrar o estudo de viabilidade de uma solução para o problema em causa.
 
-Please use an automated spell checker during the writing of your work.
+\section{Problema}
+A análise e resolução de incidentes está no dia a dia das equipas que lidam com projetos potencialmente \textbf{críticos}. Um incidente é um \textbf{evento} que provoca \textbf{interrupção} ou \textbf{degradação} num qualquer serviço, e podem \textbf{comprometer} significativamente a disponibilidade dos serviços e resultar em perdas financeiras substanciais. [How to Mitigate the Incident? An Effective Troubleshooting Guide Recommendation Technique for Online Service Systems] Estes incidentes podem ter por origem duas principais fontes: \textbf{automático}, através de métricas definidas pelas equipas; e \textbf{manuais}, criados por clientes das aplicações desenvolvidas. Um \textbf{registo de incidente} (\textit{ticket}) é um documento, normalmente gerido por um sistema externo (como \textit{ServiceNow} ou \textit{Jira Service Management}), onde é possível visualizar detalhes do incidente, tais como a sua descrição e prioridade, e onde um elemento da equipa pode descrever os passos de resolução efetuados.
 
-This chapter provides some brief recommendations for the writing of your dissertation. 
+Na área de TI (Tecnologias de Informação), as equipas podem manter vários serviços em simultâneo e por essa razão os engenheiros de plantão (membros das equipas responsáveis por manter os serviços estáveis \textbf{24x7}) podem ficar \textbf{sobrecarregados} de incidentes, fazendo com que tenham que lidar com eventos provenientes de vários serviços paralelamente. Numa situação como esta, os engenheiros podem ter um sentimento de \textbf{confusão}, misturando temas e errando nas suas análises, o que pode causar piores resoluções de incidentes e o aumento do seu tempo de mitigação (\textit{\textbf{TTM}}). Outro cenário frequente para os \textit{\textbf{OCEs}} (\textit{On-Call Engineers}) envolve incidentes que ocorrem fora do horário de expediente, especialmente durante a madrugada, quando o engenheiro de prevenção pode não estar na sua plena capacidade de raciocínio e operacional.
 
-\section{Structure}
+Foi também referido anteriormente os incidente com origem manual. Estes, são criados por clientes finais e/ou equipas de testes e podem conter mais ou menos informação. Muitas vezes, os \textit{OCEs} são \textbf{obrigados} a fazer uma \textbf{extensa análise} para compreender o conteúdo do incidente e a resolução mais adaptada a aplicar.
 
-The structure of the document can be divided in three major parts: Introduction, Body and Conclusions.
+Uma interpretação ou resolução inadequada das ocorrências pode \textbf{reduzir a disponibilidade} dos serviços, o que, por sua vez, pode gerar \textbf{prejuízos significativos} para a organização, seja pela perda de receitas, seja pelo impacto negativo na experiência do utilizador final.
 
-The introduction includes, at least, a statement of what was the work developed; a brief, focused, state of the art; an explanation of how the work fits into the current state of the art, and how it contributes to it; a description of the structure of the document.
+\section{Objetivos}
 
-The Body of the dissertation should include a literature review (in one or more chapters) and one or more chapters that describe the work developed and the results, justifying them adequately.
+\section{Planeamento}
+Gant chart...
 
-The conclusions make a final balance of the work, highlighting the main aspects of the work and making critical judgments about what was accomplished, and providing suggestions for future work, if appropriate. 
+\section{Considerações Éticas}
 
-\section{Formatting}
-
-The document can be written in Portuguese or English. The minimum number of pages is 60 and the maximum is 120 (not counting the Annexes). Small deviations are allowed. Please follow the margins and fonts  defined in this template. The font size should be 11pt. The document should be printed double sided.
-
-Note that the graphical aspect of the thesis is important, but does not replace a well-written and well-organised presentation of ideas.
-
-Please refer to Chapter~\ref{chap:Chapter2} and Chapter~\ref{chap:Chapter3} for details about this template, how to format the document and insert citations, figures, tables, equations and other elements.
+\section{Estrutura do Documento}
