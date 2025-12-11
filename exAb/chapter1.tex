@@ -1,0 +1,97 @@
+% Extended Abstract
+
+\chapter{Extended Abstract} % Main chapter title
+
+%----------------------------------------------------------------------------------------
+\section{Titulo Provisório}
+	Sugestões de resolução de incidentes através do uso de LLM’s
+
+\section{Introdução e Enquadramento do Problema}
+	A Critical Techworks (CTW) é uma empresa criada através de uma parceria entre a Critical Software e o grupo BMW. Desde 2018 que se dedica ao **desenvolvimento de software** para os vários produtos e serviços digitais da BMW. Tendo em conta a quantidade de sistemas ativos e a sua importância, a forma como os incidentes são geridos torna-se um tema essencial para garantir a estabilidade dos serviços.
+	
+	Um incidente é, na prática, qualquer evento que cause uma interrupção ou uma degradação no funcionamento de um serviço. Quando isso acontece, é criado um *ticket* com a descrição do problema, a prioridade e outra informação útil para a equipa responsável. Estes incidentes podem resultar de alertas automáticos, baseados em métricas configuradas pelas próprias equipas, ou ser reportados manualmente por utilizadores ou equipas de testes. Em períodos de grande volume de trabalho, ou quando o engenheiro está de prevenção durante a madrugada, é comum surgirem dificuldades na interpretação correta do problema, o que pode levar a erros e aumentar o tempo necessário para encontrar a solução.
+	
+	O principal desafio identificado é precisamente esta dificuldade em compreender rapidamente o que está a acontecer, sobretudo quando o *ticket* tem pouca informação, é pouco claro ou chega num momento menos favorável. Isto afeta a eficiência das equipas, aumenta o tempo médio de mitigação e pode ter impactos relevantes, tanto a nível financeiro como na experiência de quem utiliza os serviços. Os principais envolvidos neste processo são as equipas de desenvolvimento e operação, os engenheiros de prevenção, os utilizadores internos e externos e a própria organização, que depende da fiabilidade dos seus serviços. O objetivo deste estudo passa por encontrar formas de melhorar a análise dos incidentes e acelerar a sua resolução, reduzindo o impacto que estes problemas podem ter no dia-a-dia da empresa.
+
+\section{Pergunta(s) de Investigação e Objetivos}
+	Com base nas dificuldades identificadas pelas equipas DevOps e CorpOps na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de Inteligência Artificial, como técnicas de Processamento de Linguagem Natural (PLN), para apoiar a compreensão e tratamento destes registos. Desta forma, foi formulada a seguinte questão: “Quão eficazes são os Large Language Models na melhoria da interpretação e análise de registos de incidentes de TI?”.
+	
+	O objetivo passa por perceber que soluções existem atualmente, de que forma têm sido aplicadas e se há evidências da sua eficácia. Podendo, assim, perceber se existe viabilidade para o desenvolvimento de uma solução que apoie as equipas durante as operações dos seus serviços. Com isso, as equipas poderão conseguir reduzir o Tempo Médio de Resposta (TMR) aos incidentes, reduzindo o tempo de indisponibilidade das aplicações, e podendo concentrar maior tempo para o desenvolvimento de outras funcionalidades.
+
+\section{Estado da Arte}
+	Optou-se por utilizar um método de pesquisa com base num estudo sistemático de mapeamento (Systematic Mapping Study ou SMS), a fim de, realizar a revisão de literatura. Primeiramente, foi definida uma pergunta de investigação (apresentada anteriormente), para estudar soluções já existentes no mercado, e, de seguida, com base na RQ (Research Question) definida e com o suporte da metodologia PICOCS, foram identificados os elementos necessários para estruturar a pesquisa. Com a questão já enquadrada, prosseguiu-se para definição das palavras chave e dos limites de inclusão e exclusão. Por fim, para obter os artigos, foram utilizadas bases de dados de artigos científicos reconhecidas, tais como, a ACM Digital Library e a IEEE Xplore.
+
+	\subsection{Questão}
+		Quão eficazes são os Large Language Models na melhoria da interpretação e análise de registos de incidentes de TI?
+	
+	\subsection{Metodologia PICOC(S)}
+		\begin{table}[htbp]
+			\centering
+			\begin{tabular}{|l|p{4cm}|p{4cm}|p{5cm}|}
+				\hline
+				\textbf{PICOC} & \textbf{RQ part} & \textbf{I/E} & \textbf{Sub String} \\
+				\hline
+				\textbf{P – Population} & Registos de incidentes & I — Ferramenta ServiceNow
+				
+				E — Estudos sobre gestão de alarmes & "incident management"; "incident analysis"; "incident resolution"; "incident interpretation"; "ticket analysis"; "ticket interpretation"; "ServiceNow" \\
+				\hline
+				\textbf{I – Intervention} & Uso de LLMs para análise de incidentes & I — Técnicas conhecidas de LLMs
+				
+				E — - - - & "Large Language Model"; "LLM"; "Natural Language Processing"; "NLP"; "RAG"; "fine-tuning" \\
+				\hline
+				\textbf{C – Comparison} & ——— & ——— & ——— \\
+				\hline
+				\textbf{O – Outcome} & Redução do MTTR, melhoria na priorização e diminuição de erros de analise & I —
+				
+				E — Estudos não relacionados com incidentes & "incident"; "ticket" \\
+				\hline
+				\textbf{C – Context} & Ambientes DevOps/CorpOps & I — Estudos na área
+				
+				E — Estudos fora da área & "DevOps"; "CorpOps"; "IT"; "team" \\
+				\hline
+				\textbf{S — Study Type} & Pesquisa empirica ou com base em estudos & I — Estudos de caso, provas de conceito
+				
+				E — Trabalho teórico ou especulativo & "empirical study"; "case study"; "survey" \\
+				\hline
+			\end{tabular}
+			\caption{PICOCS Methodology Table}
+			\label{tab:picocs}
+		\end{table}
+
+
+	\subsection{Palavras Chave Utilizadas}
+		\lstset{language=Java}
+		\begin{lstlisting}
+			("incident management" OR "incident analysis" OR "incident resolution" OR "incident interpretation" OR "ticket analysis" OR "ticket interpretation" OR "ServiceNow")
+			AND
+			("Large Language Model" OR "LLM" OR "Natural Language Processing" OR "NLP" OR "RAG" OR "fine-tuning")
+			AND
+			("incident" OR "ticket")
+			AND
+			("DevOps" OR "CorpOps" OR "IT" OR "team")
+			AND
+			("empirical study" OR "case study" OR "survey")
+			NOT
+			("theoretical" OR "speculative")
+		\end{lstlisting}
+	
+	\subsection{Critérios de Inclusão e Exclusão}
+		Para reduzir o “ruído” resultante das bases de dados e melhorar a eficácia da revisão de literatura, foi decidido excluir artigos com mais de 5 anos e incluir apenas artigos provenientes de conferências renomeadas, como a International Conference on Software Engineering (ICSE) e a ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering (ESEC/FSE). 
+		
+	\subsection{PRISMA}
+		blablabla
+		
+	\subsection{Principais trabalhos revistos}
+		Algum texto
+		
+		\subsubsection{Artigo 1 - xxx}
+			Esta investigação destaca um problema comum vivido pelos OCE's aquando de um incidente. As pessoas em operações têm de determinar a causa do incidente para o poder resolver da forma mais eficaz, a este processo chama-se Root Cause Analysis (RCA). Desta forma, o estudo em questão apura soluções, com o uso de LLM's, para automatizar este processo de análise gerando sugestões aos engenheiros que permitam uma mitigação dos incidentes mais eficiente. Este estudo apoia-se não só no histórico de instruções como também em ferramentas complementares de registos de logs. No final do ensaio, o autor afirma que os comentários deixados nos incidentes não têm grande impacto na performance dos agentes de LLM, porém o estudo baseou-se apenas em datasets estáticos o que pode enviesar esta análise.
+	
+		\subsubsection{Artigo 2 - xxx}
+		
+	\subsection{title}
+
+\section{xxxxxx}
+
+
+\section{xxxxxx}
