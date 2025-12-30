@@ -1,0 +1,80 @@
+\documentclass[
+11pt, % The default document font size, options: 10pt, 11pt, 12pt
+portuguese,% for Portuguese; delete temporary files if you change language (e.g. 'make clean; make')
+singlespacing, % Single line spacing, alternatives: onehalfspacing or doublespacing (for drafting/reading purposes)
+liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents (recommended)
+parskip, % Add space between paragraphs (recommended)
+nohyperreflinkcolor, % hyperref links are not colored (comment to color links, for example to produce an electronic-only version)
+headsepline, % Uncomment to get a line under the header
+]{tmdei-style} % The class file specifying the document structure
+
+\usepackage{tikz} % Required for creating graphics programmatically (can be removed if not used)
+
+\usepackage{pgfplots} % Required for drawing high--quality function plots (can be removed if not used)
+\pgfplotsset{compat=newest}
+
+\usepackage[hidelinks]{hyperref} % no borders on links
+
+%
+% Next you have examples of admissable citation styles; we recomend using the authoryear-comp citation style (which resembles Harvard); don't forget to only uncomment one
+%
+
+% authoryear-comp: recommended citation style (e.g. (Buendía, 1860), (Buendía 1910, Arcadio 1940))
+\usepackage[style=authoryear-comp,backend=biber]{biblatex} % Bibtex backend with the authoryear-comp citation style (authoryear citations, bibliography ordered alphabetically)
+
+\usepackage{listings} % To make code blocks
+
+\usepackage{float} % So that figures, etc.. dont be floating
+
+\addbibresource{mainbibliography.bib} % The filename of the bibliography
+
+%----------------------------------------------------------------------------------------
+%	THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\thesistitle{{[}Sugestões de resolução de incidentes através do uso de LLM’s{]}} % Your thesis title, this is used in the title, print it elsewhere with \ttitle
+
+\thesissubtitle{{[}Extended Abstract{]}} % Your thesis title, this is used in the title, print it elsewhere with \tsubtitle
+
+\author{João \textsc{Sousa}} % Your name, this is used in the title page, print it elsewhere with \authorname \supname
+
+\keywords{Incident Management, Large Language Models, Incidente History Analysis} % Please define up to 6 keywords that better describe your work, print it elsewhere with \keywordnames
+
+\university{\href{https://www.isep.ipp.pt/}{Instituto Superior de Engenharia do Porto}} % Your university's name and URL, this is used in the title page and abstract, print it elsewhere with \univname
+
+\department{\href{https://www.dei.isep.ipp.pt/}{Departamento de Engenharia Informática}} % Your department's name and URL, this is used in the title page and abstract, print it elsewhere with \deptname
+
+\thesisdate{Porto, \today} % thesis date,  print it elsewhere with \tdate
+
+\hypersetup{pdftitle=\ttitle} % Set the PDF's title to your title
+\hypersetup{pdfauthor=\authorname} % Set the PDF's author to your name
+\hypersetup{pdfkeywords=\keywordnames} % Set the PDF's keywords to your keywords
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	FRONT MATTER
+%----------------------------------------------------------------------------------------
+
+% Include the frontmatter of your thesis here
+\input{frontmatter/frontmatter}
+
+%----------------------------------------------------------------------------------------
+%	MAIN BODY
+%----------------------------------------------------------------------------------------
+
+% Include the chapters of the thesis as separate folder for each chapter
+% Uncomment the lines as you write the chapters
+
+\input{exAb/chapter1}
+
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\printbibliography[heading=bibintoc]
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
