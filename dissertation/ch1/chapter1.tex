@@ -2,12 +2,12 @@
 
 \chapter{Introdução} % Main chapter title
 \label{chap:Chapter1} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
-	Este capítulo apresenta a organização responsável pela ideia do tema a ser desenvolvido, o contexto do seu surgimento e os problemas que a originaram. São abordados os objetivos, o planeamento e as considerações éticas tidas em conta para executar a proposta. Por último é descrita a estrutura deste documento de forma a facilitar a leitura do mesmo.
+	Este capítulo apresenta a organização responsável pela ideia do tema a ser desenvolvido, o contexto do seu surgimento e os problemas que a originaram. São abordados os objetivos, o planeamento e as considerações éticas tidas em conta para executar a proposta. Por último, é descrita a estrutura deste documento de forma a facilitar a leitura do mesmo.
 %----------------------------------------------------------------------------------------
 \section{Organização e Contexto}
-	A \gls{CTW} nasceu de um empreendimento conjunto entre a Critical Software e o grupo \gls{BMW}. Estabelecida em 2018 esta empresa desenvolve software exclusivamente para os produtos da BMW. A sua missão é a de "transformar a forma como o mundo se move" focando-se para isso na transformação digital com as melhores práticas do mercado.
+	A \textit{\gls{CTW}} nasceu de um empreendimento conjunto entre a \textit{Critical Software} e o grupo \textit{\gls{BMW}}. Estabelecida em 2018, esta empresa desenvolve \textit{software} exclusivamente para os produtos da \textit{\gls{BMW}}. A sua missão é "transformar a forma como o mundo se move" focando-se para isso na transformação digital com as melhores práticas do mercado.
 	
-	A organização estrutura-se em equipas ágeis multidisciplinares, agrupadas em unidades e domínios tecnológicos, o que promove autonomia, ciclos de desenvolvimento rápidos e colaboração contínua. Esta abordagem permite alinhar o desenvolvimento de software com necessidades reais dos veículos e serviços digitais da \gls{BMW}.
+	A organização estrutura-se em equipas ágeis multidisciplinares, agrupadas em unidades e domínios tecnológicos, o que promove autonomia, ciclos de desenvolvimento rápidos e colaboração contínua. Esta abordagem permite alinhar o desenvolvimento de \textit{software} com necessidades reais dos veículos e serviços digitais da \textit{\gls{BMW}}.
 	
 	O presente relatório foi desenvolvido no âmbito da unidade curricular de \gls{PREPD} do \gls{ISEP}, com o intuito de demonstrar o estudo de viabilidade de uma solução para o problema em causa.
 
@@ -25,24 +25,24 @@
 	
 	Pretende-se, através do estudo de artigos científicos, investigar se uma solução já existente no mercado é capaz de resolver o problema identificado anteriormente ou se será necessário o desenvolvimento de uma nova ferramenta para o devido efeito.
 	
-	O propósito principal, é no final, perceber se existe viabilidade para a adoção ou desenvolvimento de uma solução capaz de:
+	No final, o propósito principal consiste em perceber se existe viabilidade para a adoção ou desenvolvimento de uma solução capaz de:
 	\begin{itemize}
 		\item Gerar resumos de um incidente especifico, com base na sua descrição e no histórico de incidentes semelhantes.
 		\item Gerar sugestões de mitigação com base no histórico de incidentes semelhantes.
 		\item Analisar registos das aplicações para melhorar resumos e sugestões. \hl{(Como dizer que é opcional)}
 	\end{itemize}
 	
-	Espera-se que, com a geração de textos em linguagem natural, se consiga uma resposta mais rápida e consistente o que se reflete numa redução do \gls{TMR} aos incidentes. Isso, fará assim, diminuir a carga de trabalho associada a operações por parte dos engenheiros envolvidos e libertando-os para o desenvolvimento de novas funcionalidades. De igual forma, é esperado que a diminuição do \gls{TMR} possa aumentar a disponibilidade das aplicações, o que traz um impacto direto ao cliente final.
+	Espera-se que, com a geração de textos em linguagem natural, se consiga uma resposta mais rápida e consistente, o que se reflete numa redução do \gls{TMR} aos incidentes. Assim, a carga de trabalho associada a operações por parte dos engenheiros envolvidos diminui, libertando-os para o desenvolvimento de novas funcionalidades. De igual forma, é esperado que a diminuição do \gls{TMR} possa aumentar a disponibilidade das aplicações, o que traz um impacto direto ao cliente final.
 	Adicionalmente, a utilização de informação histórica e, de forma opcional, de registos das aplicações, procura ir ao encontro dos requisitos das diferentes partes interessadas, apoiando a tomada de decisão e permitindo que as equipas dediquem mais tempo a outras atividades de valor.
 		
 
 \section{Planeamento}
-	O planeamento do trabalho foi definido com base numa \textit{\gls{WBS}}, que serviu de base à construção do diagrama de Gantt (Figura \ref{fig:gantChart}). A \gls{WBS} permite estruturar o projeto em três fases distintas, cada uma com as respetivas tarefas e entregáveis. Por sua vez, o diagrama de Gantt é utilizado para calendarizar as atividades, identificar dependências entre tarefas e definir marcos de controlo.
+	O planeamento do trabalho foi definido com base numa \textit{\gls{WBS}}, que serviu de base à construção do diagrama de \textit{Gantt} (Figura \ref{fig:gantChart}). A \textit{\gls{WBS}} permite estruturar o projeto em três fases distintas, cada uma com as respetivas tarefas e entregáveis. Por sua vez, o diagrama de \textit{Gantt} é utilizado para calendarizar as atividades, identificar dependências entre tarefas e definir marcos de controlo.
 	
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=\textwidth,keepaspectratio]{img/GantChart}
-		\caption[WBS e Gantt]{WBS e diagrama de Gantt}
+		\caption[WBS e Gantt]{WBS e diagrama de \textit{Gantt}}
 		\label{fig:gantChart}
 	\end{figure}
 	
@@ -51,7 +51,7 @@
 \section{Considerações Éticas}
 	Neste projeto, foram seguidos os princípios do Código de Ética e Conduta Profissional da \textit{\gls{ACM}}, do Código de Ética para Engenheiros da \textit{\gls{NSPE}} e do Código de Engenharia de Software da \textit{ACM/IEEE-CS}, de forma a orientar o estudo e a atuar com responsabilidade, tanto em relação aos dados como às pessoas afetadas pela solução.
 
-	Tendo em conta os dados a serem utilizados poderem \textbf{incluir informações confidenciais}, foi avaliada cuidadosamente a possibilidade de anonimizar os dados e, caso não seja satisfatório para as partes interessadas, será garantido que apenas os resultados agregados sejam apresentados, \textbf{evitando quaisquer riscos de exposição de dados confidenciais}. Não identificámos outros riscos éticos relevantes no projeto.
+	Tendo em conta que os dados a serem utilizados podem \textbf{conter informações confidenciais}, foi avaliada a possibilidade de os anonimizar e, caso não seja satisfatório para as partes interessadas, será garantido que apenas os resultados agregados sejam apresentados, \textbf{evitando quaisquer riscos de exposição de dados confidenciais}. Não foram identificados outros riscos éticos relevantes no projeto.
 	
 	Para além dos códigos acima mencionados, foi também seguido o Código de Boas Práticas e de Conduta do \gls{IPP}.
 	
