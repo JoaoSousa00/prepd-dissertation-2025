@@ -72,17 +72,15 @@ The optional Acknowledgment goes here\ldots Below is an example of a humorous ac
 
 \listoftables % Prints the list of tables
 
-\iflanguage{portuguese}{
-\renewcommand{\listalgorithmname}{Lista de Algor\'itmos}
-}
-\listofalgorithms % Prints the list of algorithms
-\addchaptertocentry{\listalgorithmname}
-
-
 \renewcommand{\lstlistlistingname}{List of Source Code}
 \iflanguage{portuguese}{
 \renewcommand{\lstlistlistingname}{Lista de C\'odigo}
 }
+
+\iflanguage{portuguese}{
+	\renewcommand{\lstlistingname}{Código}
+}
+
 \lstlistoflistings % Prints the list of listings (programming language source code)
 \addchaptertocentry{\lstlistlistingname}
 

@@ -1,26 +1,140 @@
 % Chapter 2
 
 \chapter{Estado da Arte} % Main chapter title
-\label{chap:Chapter2} % For referencing the chapter elsewhere, use \ref{chap:Chapter5} 
+\label{chap:Chapter2} % For referencing the chapter elsewhere, use \ref{chap:Chapter2} 
+	Este capítulo apresenta o estado da arte sobre o tema em estudo. Para esse efeito, é descrita a metodologia de investigação adotada para analisar a utilização de modelos de linguagem de grande dimensão no apoio à análise e resolução de incidentes em contextos de operações de \gls{TI}. De seguida, são apresentados os principais artigos obtidos a partir da revisão da literatura, bem como uma discussão dos aspetos comuns e divergentes identificados nesses estudos. Esta análise permite consolidar uma base de conhecimento que serve de suporte à avaliação da viabilidade e à eventual adoção ou desenvolvimento de uma solução para o problema identificado.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia de Investigação}
 
-\subsection{Pergunta(s) de Investigação}
+	Optou-se por utilizar um método de pesquisa com base num estudo sistemático de mapeamento ou \textit{\gls{SMS}}, a fim de, realizar a revisão de literatura. Primeiramente, foi definida uma pergunta de investigação, para estudar soluções já existentes no mercado, e, de seguida, com base na \textit{\gls{RQ}} definida e com o suporte da metodologia \gls{PICOCT}, foram identificados os elementos necessários para estruturar a pesquisa. Com a questão já enquadrada, prosseguiu-se para definição das palavras chave e dos limites de inclusão e exclusão. Por fim, para obter os artigos, foram utilizadas bases de dados de artigos científicos reconhecidas, tais como, a \textit{ACM Digital Library} e a \textit{IEEE Xplore}.
 
-\subsection{Metodologia PICOC(T)}
 
-	- Explicar PICOCT
-	- Mostrar PICOCT
-	- Mostrar Palacvras chave obtidas
-
-\subsection{Critérios de Inclusão e Exclusão}
-
-\subsection{PRISMA}
+	\subsection{Pergunta(s) de Investigação}
+		Com base nas dificuldades identificadas pelas equipas \textit{DevOps} e \textit{CorpOps} na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de \gls{IA}, como técnicas de \gls{PLN}, para apoiar a compreensão e o tratamento destes registos. Desta forma, foi formulada a questão: “\textbf{Como é que as ferramentas de Large Language Models podem melhorar a interpretação e análise de registos de incidentes de TI?}”.
+		
+	
+	\subsection{Metodologia PICOC(T)}
+	
+		A metodologia \gls{PICOCT} é, geralmente, usada como guia para organizar e a clarificar perguntas de investigação, ajudando a estruturar o problema de forma clara. Através desta abordagem, a pergunta é dividida em componentes simples, como a população em estudo, a solução analisada, os resultados esperados e o contexto, tornando mais fácil de perceber o foco da investigação.
+		
+		Existem várias variantes desta metodologia, como PICO, PCC ou POT, sendo a escolha da variante dependente do tipo de estudo e da área científica. Neste trabalho, a metodologia \gls{PICOCT} foi utilizada para apoiar a formulação da pergunta de investigação e para identificar as palavras-chave usadas na pesquisa bibliográfica.
+	
+		Com base na pergunta de investigação descrita anteriormente, foi possível realizar a decomposição pelos componentes da metodologia e a obtenção de palavras chave para cada um desses componentes (Tabela \ref{tab:picoct}).
+	
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{|l|p{3cm}|p{3cm}|p{4cm}|}
+				\hline
+				\textbf{Componente} & \textbf{Descrição} & \textbf{Inclusão/Exclusão} & \textbf{Palavras Chave} \\
+				\hline
+				\textbf{P – População} & Registos de incidentes & I — Ferramenta ServiceNow\newline 
+				
+				E — Estudos sobre gestão de alarmes & "incident management"; "incident analysis"; "incident resolution"; "incident interpretation"; "ticket analysis"; "ticket interpretation"; "ServiceNow" \\
+				\hline
+				\textbf{I – Intervenção} & Uso de LLMs para análise de incidentes & I — Técnicas conhecidas de LLMs\newline
+				
+				E — - - - & "Large Language Model"; "LLM"; "Natural Language Processing"; "NLP"; "RAG"; "fine-tuning" \\
+				\hline
+				\textbf{C – Comparação} & ——— & ——— & ——— \\
+				\hline
+				\textbf{O – Outcome} & Redução do MTTR, melhoria na priorização e diminuição de erros de analise & I — - - -\newline
+				
+				E — Estudos não relacionados com incidentes & "incident"; "ticket" \\
+				\hline
+				\textbf{C – Contexto} & Ambientes DevOps/CorpOps & I — Estudos na área\newline
+				
+				E — Estudos fora da área & "DevOps"; "CorpOps"; "IT"\\
+				\hline
+				\textbf{T – Tipo de estudo} & Pesquisa empírica ou com base em estudos & I — - - -\newline
+				
+				E — Trabalho teórico ou especulativo & Exclude —> "theoretical"; "speculative" \\
+				\hline
+			\end{tabular}
+			\caption[Metodologia PICOCT]{Metodologia PICOCT}
+			\label{tab:picoct}
+		\end{table}
+		
+		
+	\subsection{Palavras Chave}
+	
+		Foi definida uma string de pesquisa (Código \ref{cod:palavrasChave}) com o intuito de orientar a revisão bibliográfica. As palavras-chave utilizadas resultaram da aplicação da metodologia \gls{PICOCT}, garantindo o alinhamento entre a pergunta de investigação e a pesquisa efetuada. Ao longo do processo, a pesquisa assumiu também um caráter exploratório e iterativo, permitindo o ajuste dos termos sempre que necessário, de acordo com os resultados obtidos e com o foco do trabalho. A string foi formulada em inglês de modo a ampliar o número e a relevância dos estudos encontrados.
+	
+		\begin{lstlisting}[caption={Termos de pesquisa},label={cod:palavrasChave}]
+			("incident management" OR "incident analysis" OR "incident resolution" OR "incident interpretation" OR "ticket analysis" OR "ticket interpretation" OR "ServiceNow")
+			AND
+			("Large Language Model" OR "LLM" OR "Natural Language Processing" OR "NLP" OR "RAG" OR "fine-tuning")
+			AND
+			("incident" OR "ticket")
+			AND
+			("DevOps" OR "CorpOps" OR "IT")
+			NOT
+			("theoretical" OR "speculative")
+		\end{lstlisting}
+		
+		Os termos finais foram posteriormente aplicados com a finalidade de obter os artigos científicos utilizados na investigação.
+		
+		Os repositórios de pesquisa selecionados são os mencionados na Tabela \ref{tab:repositorios} e possibilitaram a consulta de artigos e procedimentos mais fiáveis, relacionados com a área de estudo.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{l l}
+				\hline
+				\textbf{Repositório} & \textbf{Acesso à plataforma (\textit{URL})} \\
+				\hline
+				\textit{ACM Digital Library} & https://dl.acm.org/ \\
+				\textit{IEEE Xplore} & https://ieeexplore.ieee.org/ \\
+				\hline
+			\end{tabular}
+			\caption[Repositórios de pesquisa]{Repositórios de pesquisa}
+			\label{tab:repositorios}
+		\end{table}
+	
+	
+	\subsection{Critérios de Inclusão e Exclusão}
+		Os critérios de inclusão e exclusão adotados neste trabalho e definidos nas Tabelas \ref{tab:criteriosI} e \ref{tab:criteriosE} são adicionais ao já estipulados na metodologia \gls{PICOCT} e tiveram como principal objetivo delimitar o âmbito da revisão da literatura e garantir a sua relevância para a questão de investigação. São filtros adicionais que não podem fazer parte dos termos de pesquisa mas podem, normalmente, ser configurados nas próprias configurações dos repositórios de pesquisa.
+		
+		Devido ao elevado número de artigos foi definido no critério \textit{CI1} que, dos procedimentos originários de conferências, apenas seriam considerados trabalhos resultantes da \textit{\gls{ICSE}}, da \textit{\gls{FSE}} e a \textit{\gls{ASE}}.
+		
+		A \textit{\gls{ICSE}} é uma das principais conferências internacionais, focando-se em inovações e tendências da área. Já a \textit{\gls{FSE}}, também conhecida como \textit{ESEC/FSE}, destaca-se pelo foco em métodos, ferramentas e técnicas para o desenvolvimento e manutenção de \textit{software}. Por sua vez, a \textit{\gls{ASE}} centra-se na automação de processos de engenharia de \textit{software}, e em particular nos estudos que envolvem o uso de técnicas de \gls{IA} no apoio a atividades operacionais, como é o caso deste estudo.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{l p{11cm}}
+				\hline
+				\textbf{Identificador} & \textbf{Critério de Inclusão} \\
+				\hline
+				\textit{CI1} & Artigos provenientes de conferências reconhecidas e relacionadas com o tema \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Inclusão]{Critérios de Inclusão}
+			\label{tab:criteriosI}
+		\end{table}
+		
+		Com o critério \textit{CE1} procurou-se dar prioridade a trabalhos mais recentes, reduzindo a probabilidade de incluir tecnologias que já não são relevantes.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{l p{11cm}}
+				\hline
+				\textbf{Identificador} & \textbf{Critério de Exclusão} \\
+				\hline
+				\textit{CE1} & Publicado antes de janeiro de 2020 \\
+				\textit{CE2} & Artigos que não contenham resumo ou \textit{abstract} \\
+				\textit{CE3} & Artigos duplicados ou com conteúdos redundantes \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Exclusão]{Critérios de Exclusão}
+			\label{tab:criteriosE}
+		\end{table}
+		
+	
+	\subsection{PRISMA}
+	
 
 \section{Revisão de Literatura}
 
-\subsection{Principais trabalhos revistos}
-
-\subsection{Conclusão}
+	\subsection{Principais trabalhos revistos}
+	
+	\subsection{Conclusão}
 
