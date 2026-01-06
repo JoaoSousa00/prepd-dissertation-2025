@@ -8,11 +8,33 @@
 
 \section{Metodologia Proposta}
 
-	- Apresentar diagrama com solução proposta e falar um pouco sobre isso
-	- ...
+	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
+	
+	Assim, pretendemos conceber uma solução que, através de \gls{LLM}\textit{s}, seja capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Em seguida, com a correlação de incidentes funcional, pretendemos gerar para o utilizador sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
+	
+	Por fim, com uma ferramenta sólida para ajudar os \gls{OCEs} na interpretação e mitigação de incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos sistemas, ferramentas essas já usadas usualmente na análise manual dos membros das equipas de suporte. Dessa forma, pretendemos, reduzir o tempo gasto a analisar o incidente, diminuindo, uma vez mais, o tempo médio de resposta. \hl{(Dizer que é opcional/se houver tempo?)}
+
+%	- Relembrar brevemente o problema identificado na revisão de literatura	
+% 	- Explicar a abordagem geral (ex.: uso de LLMs + histórico de incidentes)
+%	- Clarificar o propósito da metodologia (apoiar interpretação, análise e mitigação)
+%	- Indicar que se trata de uma proposta conceptual, a validar numa fase futura
+
+	
+\section{Desenho da Solução}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/diagrama_componentes}
+		\caption[Diagrama da Solução Proposta]{Diagrama da Solução Proposta}
+		\label{fig:compDiagram}
+	\end{figure}
+
+\section{Fluxo de Funcionamento}
 
 \section{Pressupostos e Riscos}
 
-	- Ver project charter
-	
-\section{Mais??}
+	\hl{texto a dizer o que isto acarreta no projeto}
+		
+	\subsection{Pressupostos}
+
+	\subsection{Riscos}
