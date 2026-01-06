@@ -12,7 +12,7 @@
 	
 	Assim, pretendemos conceber uma solução que, através de \gls{LLM}\textit{s}, seja capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Em seguida, com a correlação de incidentes funcional, pretendemos gerar para o utilizador sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
 	
-	Por fim, com uma ferramenta sólida para ajudar os \gls{OCEs} na interpretação e mitigação de incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos sistemas, ferramentas essas já usadas usualmente na análise manual dos membros das equipas de suporte. Dessa forma, pretendemos, reduzir o tempo gasto a analisar o incidente, diminuindo, uma vez mais, o tempo médio de resposta. \hl{(Dizer que é opcional/se houver tempo?)}
+	Por fim, com uma ferramenta sólida para ajudar os \gls{OCEs} na interpretação e mitigação de incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos sistemas, ferramentas essas já usadas usualmente na análise manual dos membros das equipas de suporte. Dessa forma, pretendemos, reduzir o tempo gasto a analisar o incidente, diminuindo, uma vez mais, o tempo médio de resposta.
 
 %	- Relembrar brevemente o problema identificado na revisão de literatura	
 % 	- Explicar a abordagem geral (ex.: uso de LLMs + histórico de incidentes)
@@ -22,14 +22,53 @@
 	
 \section{Desenho da Solução}
 	
+	Como referido anteriormente, o objetivo da solução passa desenvolver um serviço capaz de integrar com diversos serviços externos como:
+	
+	\begin{itemize}
+		\item \textbf{Serviço de incidentes}: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes para realizar a correlação;
+		\item \textbf{Motor \gls{LLM}}: outro elemento que devemos considerar como base da solução visto que, será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar;
+		\item \textbf{Serviço de \textit{logs}}: como observado na revisão de literatura, informação adicional como registos de eventos dos serviços pode alavancar a performance do motor \gls{LLM}, não sendo uma componente obrigatória mas tornando-se numa ajuda para a análise dos \gls{OCEs}. 
+	\end{itemize}
+	
+	Para além dos serviços funcionais descritos, a solução proposta deve ainda ser exposta através de uma interface de acesso controlada e escalável. Desta forma, propomos a utilização de um \textit{API Gateway} (Gateway de API) para agir como uma porta de entrada do serviço, controlando autorizações e acessos, e gerir o tráfego de pedidos feitos à \gls{API}. Em paralelo, apresentamos a necessidade de um \textit{Load Balancer} (balanceador de carga) que ajuda a distribuir tráfego entre múltiplas instâncias do serviço, assegurando maior disponibilidade e tolerância a falhas.
+	
+	Adicionalmente, é sugerido o desenvolvimento de uma aplicação \textit{Web} que permita a visualização da informação gerada por parte dos \gls{OCEs}, onde estes poderão consultar o resumo do incidente pretendido, \textit{tickets} relacionados e sugestões de mitigação.
+	
 	\begin{figure}[H]
 		\centering
-		\includegraphics[width=\textwidth,keepaspectratio]{img/diagrama_componentes}
-		\caption[Diagrama da Solução Proposta]{Diagrama da Solução Proposta}
-		\label{fig:compDiagram}
+		\includegraphics[width=\textwidth,keepaspectratio]{img/diagramaDeployment}
+		\caption[Diagrama de Implantação]{Diagrama de Implantação}
+		\label{fig:deployDiagram}
 	\end{figure}
+	
+	Atendendo ao facto desta investigação se focar na análise de viabilidade de uma solução, optou-se por apresentar apenas o diagrama de implantação, que permite evidenciar as integrações principais, deixando o detalhe da arquitetura interna para uma fase mais avançada da investigação.
+	
+%	- Principais blocos da solução (ex.: ingestão de dados, processamento, geração de respostas)
+%	- Papel dos LLMs dentro da solução
+%	- Fontes de informação consideradas:
+%		- tickets
+%		- histórico de incidentes
+%		- métricas e logs (se aplicável)
+%	- Separação entre:
+%		- dados de entrada
+%		- processamento
+%		- saídas esperadas
+
+\hl{Devo já indicar ferramentas como AWS, ServiceNow, Kibana...???}
 
 \section{Fluxo de Funcionamento}
+
+
+%	- Explicar o que acontece passo a passo, desde a criação de um incidente até ao apoio ao OCE.
+%	- Sequência lógica do processo:
+%		- Receção do incidente
+%		- Análise inicial da descrição
+%		- Consulta de incidentes semelhantes
+%		- Consolidação de contexto
+%		- Geração de apoio (resumo, sugestões, etc.)
+%	- Onde entra o histórico
+%	- Onde entram fontes adicionais
+%	- Como o OCE interage com o sistema
 
 \section{Pressupostos e Riscos}
 
