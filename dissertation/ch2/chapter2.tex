@@ -11,7 +11,7 @@
 
 
 	\subsection{Pergunta(s) de Investigação}
-		Com base nas dificuldades identificadas pelas equipas \textit{DevOps} e \textit{CorpOps} na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de \gls{IA}, como técnicas de \gls{PLN}, para apoiar a compreensão e o tratamento destes registos. Desta forma, foi formulada a questão: “\textbf{Como é que as ferramentas de Large Language Models podem melhorar a interpretação e análise de registos de incidentes de TI?}”.
+		Com base nas dificuldades identificadas pelas equipas \textit{DevOps} e \textit{CorpOps} na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de \gls{IA}, como técnicas de \gls{PLN}, para apoiar a compreensão e o tratamento destes registos. Desta forma, foi formulada a questão: “\textbf{Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?}”.
 		
 	
 	\subsection{Metodologia PICOC(T)}
@@ -181,16 +181,30 @@
 			
 	
 \section{Conclusão}
+
+	Com este capítulo, foi possível verificar, com base nos trabalhados analisados, que a gestão de incidentes em sistemas de grande escala é ainda muito afetada pela fragmentação da informação relacionada com as falhas que causam os incidentes, pela recorrência e duplicação de \textit{tickets} em curtos intervalos de tempo e pela dependência da experiência dos \gls{OCEs}. Assim, a literatura, mostrou que o uso de \gls{IA}, como \gls{LLM}\textit{s} ou \gls{GNNs}, é benéfico no sentido em que facilita a contextualização inicial dos incidentes aos membros da equipa de suporte, e ajuda na mitigação das falhas ao fornecer detalhes e sugestões de resolução com base em registos de incidentes anteriores.
 	
-	- Responder à RQ, com base nos resultados
-	- Indicar se vamos então pegar numa solução ou desenvolver uma nova
-		Pegar numa até porque todos as soluções utilizaram datasets estáticos
+	Em síntese, e respondendo à pergunta inicial "Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?", é possível afirmar que estes Modelos de Linguagem de Grande Escala têm um papel importante no apoio da compreensão inicial, na análise e na procura de formas de mitigar os incidentes. São, assim, um apoio ao desenrolar do trabalho dos membros das equipas de prevenção.
+	
+	No entanto, a análise critica da literatura, mostrou que os estudos efetuados foram realizados com conjuntos de dados (\textit{datasets}) estáticos e abordam apenas fases especificas do ciclo de vida de um incidente. Assim, o desenvolvimento de uma nova solução, que agrega várias fases deste ciclo e use um conjunto de dados dinâmicos, pode acarretar riscos ainda não identificados por estudos já realizados.
+	
+	No capitulo \ref{chap:Chapter3} será discutido o futuro desta investigação, apresentando uma proposta de implementação capaz de alcançar os objetivos propostos no capitulo \ref{chap:Chapter1}.
 		
-	- Apresentação dos resultados
-	- Demonstração da relação entre resultados e pergunta de investigação
-	- Análise crítica dos  resultados
-	- Síntese das principais ilações
-	- Identificar as descobertas
-	- Registo do que ficou por desenvolver
-	- Recomendação de caminhos para futuras investigações
-	- Ligar a introdução (objetivos) à conclusão (resultados obtidos)
+%	- Apresentação dos resultados
+%		- afetado por:
+%			- Fragmentação da informação
+%			- recorrência de falhas
+%			- dependencia da experiência do OCE
+%		- é benéfico:
+%			- Contextualização numa fase inicial
+%			- Reaproveitamento dos histórico
+%			- Sugestão de mitigação
+%		- conclusão
+%	- Demonstração da relação entre resultados e pergunta de investigação
+%	- Análise crítica dos  resultados
+%	- Síntese das principais ilações
+%	- Identificar as descobertas
+%	- Registo do que ficou por desenvolver
+%	
+%	- Recomendação de caminhos para futuras investigações (mencionar proximo capitulor)
+%	- Ligar a introdução (objetivos) à conclusão (resultados obtidos)
