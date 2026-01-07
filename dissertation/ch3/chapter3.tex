@@ -84,10 +84,36 @@
 %	- Onde entram fontes adicionais
 %	- Como o OCE interage com o sistema
 
-\section{Pressupostos e Riscos}
+\section{Pressupostos e Restrições}
 
-	\hl{texto a dizer o que isto acarreta no projeto}
+	Projetos de soluções na área de \gls{TI}, apresentam sempre riscos suscetíveis de acontecer durante a sua implementação ou até características que restringem o desenvolvimento da proposta. Por esse motivo, torna-se importante definir, logo de inicio, informações que possa limitar o progresso do projeto e criar planos alternativos que nos permitam, de forma mais controlada, lidar ou contornar estes problemas.
 		
 	\subsection{Pressupostos}
+	
+		Durante o planeamento do projeto, nem todas as informações podem ser assumidas como certas, sendo que muitos dos fatores não são controlados pelos membros das equipas de desenvolvimento. Os pressupostos são um conjunto de suposições que se assume que se vão realizar mas, que têm algum risco associado. Por norma, quando estas hipóteses são confirmadas, tornam-se restrições do projeto, porém, quando não é possível confirmar a sua premissa, acabam por se tornar em riscos do projeto. Dessa forma, devem ser criados planos alternativos para evitar que os riscos possam se tornar em barreiras ao desenvolvimento da solução. Os pressupostos e os planos de contingências foram identificados na Tabela \ref{tab:pressupostos}.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{m{70mm} m{70mm}}
+				\hline
+				\textbf{Pressuposto} & \textbf{Plano Alternativo(s)} \\
+				\hline
+				O conjunto de dados será entregue por uma das equipas da \gls{CTW} num formato passível de utilização &  Plano B - Obter um conjunto de dados sobre incidentes online de plataformas reconhecidas, como \textit{Microsoft} \\
+				\hline
+				O motor \gls{LLM} a utilizar será disponibilizado pela \gls{CTW} de forma a não comprometer dados & Plano B - Desenvolver um \gls{SLM} de raiz \newline \newline
+				Plano C - Utilizar um \gls{LLM} disponível com um \textit{dataset} sem informação confidencial \\
+				\hline
+			\end{tabular}
+			\caption[Pressupostos do Projeto]{Pressupostos do Projeto}
+			\label{tab:pressupostos}
+		\end{table}
+		
 
-	\subsection{Riscos}
+	\subsection{Restrições}
+	
+		As restrições do projeto são fatores que limitam as opções a tomar durante o desenvolvimento da solução. Estes fatores não são negociáveis e por isso a sua identificação precoce, é essencial para avaliar o futuro e a qualidade que proposta pode ter.
+		
+		As restrições identificadas são:
+		\begin{enumerate}
+			\item Os dados presentes no \textit{dataset} fornecido pela empresa terão de ser parcialmente/totalmente anonimizados.
+		\end{enumerate}
