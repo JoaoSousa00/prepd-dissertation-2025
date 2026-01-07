@@ -41,7 +41,7 @@
 		\label{fig:deployDiagram}
 	\end{figure}
 	
-	Atendendo ao facto desta investigação se focar na análise de viabilidade de uma solução, optou-se por apresentar apenas o diagrama de implantação, que permite evidenciar as integrações principais, deixando o detalhe da arquitetura interna para uma fase mais avançada da investigação.
+	Atendendo ao facto desta investigação se focar na análise de viabilidade de uma solução, optou-se por apresentar apenas o diagrama de implantação (Figura \ref{fig:deployDiagram}), que permite evidenciar as integrações principais, deixando o detalhe da arquitetura interna para uma fase mais avançada da investigação.
 	
 %	- Principais blocos da solução (ex.: ingestão de dados, processamento, geração de respostas)
 %	- Papel dos LLMs dentro da solução
@@ -54,10 +54,24 @@
 %		- processamento
 %		- saídas esperadas
 
-\hl{Devo já indicar ferramentas como AWS, ServiceNow, Kibana...???}
+\hl{Na Figura, devo já indicar ferramentas como AWS, ServiceNow, Kibana ou é melhor ser genérico???}
 
 \section{Fluxo de Funcionamento}
 
+	Um processo de consulta de incidentes (Figura \ref{fig:activityDiagram}) tem inicio no serviço a ser desenvolvido, após a receção de um pedido de pesquisa de um incidente, é realizada a consulta do incidente na plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
+	
+	De seguida, o serviço prepara a informação, combinando os dados do incidente atual com o histórico de incidentes anteriores, de forma a enriquecer o contexto disponível para análise e permitindo uma visão mais abrangente do problema. Já com os dados do incidente, é feita uma recolha dos eventos das aplicações num período próximo ao da falha e esses dados são adicionados à informação pré-processada do incidente.
+	
+	Após esta etapa de enriquecimento e agregação de dados, o fluxo é direcionado para o motor de modelos de linguagem de grande escala, responsável por duas tarefas principais. De forma paralela, o \gls{LLM} gera uma descrição do incidente em linguagem natural, tornando a informação técnica mais clara e acessível aos membros da equipa de suporte, e gera sugestões de mitigação priorizadas, com base no contexto do incidente, no histórico e nos eventos recolhidos, de forma a apoiar a tomada de decisão.
+	
+	Por fim, os resultados produzidos pelo motor de \gls{LLM} são novamente integrados no serviço central, que retorna ao utilizador a informação detalhada e contextualizada do incidente, incluindo a sumarização e as sugestões de mitigação.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/diagramaAtividade}
+		\caption[Diagrama de Atividade]{Diagrama de Atividade}
+		\label{fig:activityDiagram}
+	\end{figure}
 
 %	- Explicar o que acontece passo a passo, desde a criação de um incidente até ao apoio ao OCE.
 %	- Sequência lógica do processo:
