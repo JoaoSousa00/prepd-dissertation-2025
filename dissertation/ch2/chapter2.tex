@@ -214,25 +214,45 @@
 	A Inteligência Artificial é um tema em alta em todos os mercados e áreas, sendo esta uma área que não escapa à automatização de processos. Dessa forma, o mercado já apresenta algumas soluções para o correlacionamento de incidentes, para o resumo dos mesmo, para sugestões de mitigação e para análise de informação adicional (eventos das aplicações). Nesta secção abordamos quatros das principais ferramentas existentes, abordando as suas funcionalidades fundamentais.
 	
 	\subsection{\textit{AWS AIOps}}
-	
-		A \textit{AWS} recorreu a técnicas de \gls{IA} e \gls{ML}, de forma a "ajudar a aprimorar, acelerar e automatizar os processos de operações em nuvem" \autocite{WebAWS}. O \textit{AWS AIOps}, permite que os \gls{OCEs} observem facilmente a sua carga de trabalho, acelerando a solução de problemas operacionais e a toma de medidas para resolver e remediar problemas, melhorando o \gls{TTM}.
+		A \textit{AWS} recorreu a técnicas de \gls{IA} e \gls{ML}, de forma a "ajudar a aprimorar, acelerar e automatizar os processos de operações em nuvem" \autocite{WebAWS}. O \textit{AWS AIOps}, permite que os \gls{OCEs} observem facilmente a sua carga de trabalho, acelerando a solução de problemas operacionais e a toma de medidas para resolver e mitigar problemas, melhorando o \gls{TTM}.
 		
 		As principais funcionalidades da sua ferramenta, são:
 		\begin{itemize}
 			\item \textbf{Encontrar a causa raiz de um problema}: É possível configurar o ambiente para iniciar uma investigação mal um alarme seja disparado;
 			\item \textbf{Sugestões de correção}: A \textit{AWS} fornece guias do seu próprio ambiente para a resolução de problemas relacionados com ferramentas \textit{AWS};
-			\item \textbf{Capacitar operadores sem experiência}: A ferramenta analisa pontos de dados para descobrir relações entre serviços e desenvolver uma compreensão de como eles funcionam juntos.
+			\item \textbf{Capacitar operadores sem experiência}: A ferramenta analisa pontos de dados para descobrir relações entre serviços e desenvolver uma compreensão de como eles funcionam juntos;
 			\item \textbf{Consulta de dados de telemetria usando linguagem natural}: A \textit{AWS} permite escrever perguntas em linguagem natural sem precisar de aprender linguagens de consulta complexas. 
 		\end{itemize}
 		
 	
 	\subsection{\textit{New Relic AIOps}}
-	
+		A plataforma de \textit{AIOps} da \textit{New Relic} oferece funcionalidades orientadas por \gls{IA} e \gls{ML}, utilizando técnicas como \gls{RAG}, para gerar interfaces que ajudam as equipas a resolver incidentes com mais rapidez \autocite{WebNewRelic}.
 		
+		As funcionalidade relevantes da plataforma, são:
+		\begin{itemize}
+			\item \textbf{Deteção de anomalias instantânea}: Identifica problemas emergentes ou desvios do sistema usando modelos adaptativos para conectar sintomas a todos os níveis da arquitetura;
+			\item \textbf{Correlação de alertas}: Identifica eventos de alerta semelhantes numa única questão para facilitar a resolução de problemas;
+			\item \textbf{Priorização e conexão com outros serviços}: Oferece a possibilidade de configurar alarmes como mais prioritários e integrar sistemas de notificação, como SMS ou \textit{Microsoft Teams}.
+		\end{itemize}
 	
 	\subsection{\textit{Atlassian Ops Guide Agent}}
-	
+		O agente criado pela \textit{Atlassian} (\textit{Ops Guide}), é um agente projetado para ajudar na gestão de alertas e incidentes com mais eficiência, fornecendo contexto histórico e recomendando ações, simplificando assim as tarefas das equipas de suporte 	\autocite{WebAtlassian}. 
+		
+		Este agente fornece a possibilidade de:
+		\begin{itemize}
+			\item \textbf{Pesquisa em Linguagem Natural}: Permite pesquisar por alertas e incidentes em linguagem natural, convertendo de forma automática em sintaxe de pesquisa da ferramenta;
+			\item \textbf{Correlação de incidentes}: O agente, analisa o histórico de incidentes anteriores para contextualizar com informação adicional os \textit{tickets};
+			\item \textbf{Criação de Post-Mortems}: Através da sua ferramenta \textit{Confluence}, o agente concede a opção de criar revisões pós incidentes baseado nos detalhes de um \textit{ticket}.
+		\end{itemize}
 		
 	
 	\subsection{\textit{Elastic AI Assistant}}
+		O assistente de Inteligência Artificial fornecido pela \textit{Elastic}, foge um pouco ao âmbito das ferramentas apresentadas anteriormente, uma vez que este serviço não gere incidentes mas é sim uma ferramenta de observabilidade, onde é possível visualizar o registo dos eventos de serviços. Assim, este assistente é uma integração com \gls{LLM}\textit{s} que ajuda a perceber, analisar e interagir com os dados armazenados \autocite{WebElastic}.
+	
+		Esta plataforma, ajuda a:
+		\begin{itemize}
+			\item \textbf{Descodificar mensagens de erro}: Interpreta rastros dos serviços e registos de erros para identificar as causas principais de falhas;
+			\item \textbf{Identificar estrangulamentos de desempenho}: Encontra operações que consomem muitos recursos e consultas lentas na ferramenta;
+			\item \textbf{Criar consultas em Linguagem Natural}: A partir de linguagem natural, converte sintaxe \gls{DSL} da consulta para linguagem de consultas do \textit{ElasticSearch} e executa-as diretamente a partir da interface de conversa.
+		\end{itemize}
 		
