@@ -2,7 +2,7 @@
 
 \chapter{Estado da Arte} % Main chapter title
 \label{chap:Chapter2} % For referencing the chapter elsewhere, use \ref{chap:Chapter2} 
-	Este capítulo apresenta o estado da arte sobre o tema em estudo. Para esse efeito, é descrita a metodologia de investigação adotada para analisar a utilização de modelos de linguagem de grande dimensão, que apoia a análise e resolução de incidentes em contextos de operações de \gls{TI}. De seguida, são apresentados os principais artigos obtidos a partir da revisão da literatura, bem como uma discussão dos aspetos comuns e divergentes identificados nesses estudos. Esta análise permite consolidar uma base de conhecimento que serve de suporte à avaliação da viabilidade do desenvolvimento de uma solução para o problema identificado. \hl{Por fim, soluções existentes}
+	Este capítulo apresenta o estado da arte sobre o tema em estudo. Para esse efeito, é descrita a metodologia de investigação adotada para analisar a utilização de modelos de linguagem de grande dimensão, que apoia a análise e resolução de incidentes em contextos de operações de \gls{TI}. De seguida, são apresentados os principais artigos obtidos a partir da revisão da literatura, bem como uma discussão dos aspetos comuns e divergentes identificados nesses estudos. Esta análise permite consolidar uma base de conhecimento que serve de suporte à avaliação da viabilidade do desenvolvimento de uma solução para o problema identificado. Por fim, avaliamos quais são as ferramentas que estão disponíveis no mercado, concluindo quais as funcionalidades que o mercado já cobre.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia de Investigação}
@@ -180,15 +180,15 @@
 		Em suma, a consolidação de informação histórica e contextual dos incidentes, apoiada por modelos de linguagem de grande escala e fontes de informação adicionais, desempenha um papel fundamental na redução da incerteza associada à investigação inicial de incidentes.
 			
 	
-\section{Conclusão}
-
-	Com este capítulo, foi possível verificar, com base nos trabalhos analisados, que a gestão de incidentes em sistemas de grande escala é, ainda, muito afetada pela fragmentação da informação relacionada com as falhas que causam os incidentes, pela recorrência e duplicação de \textit{tickets} em curtos intervalos de tempo e pela dependência da experiência dos \gls{OCEs}. Assim, a literatura, mostrou que o uso de \gls{IA}, como \gls{LLM}\textit{s} ou \gls{GNNs}, facilita a contextualização inicial dos incidentes aos membros da equipa de suporte e ajuda na mitigação das falhas ao fornecer detalhes e sugestões de resolução com base em registos de incidentes anteriores.
+	\subsection{Conclusão}
 	
-	Em síntese, e respondendo à pergunta inicial "Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?", é possível afirmar que estes Modelos de Linguagem de Grande Escala têm um papel importante no apoio da compreensão inicial, na análise e na procura de formas de mitigar os incidentes. São, assim, um apoio no desempenho por parte do trabalho dos membros das equipas de prevenção.
-	
-	No entanto, a análise critica da literatura, mostrou que os estudos efetuados foram realizados com conjuntos de dados (\textit{datasets}) estáticos e abordam apenas fases especificas do ciclo de vida de um incidente. Assim, o desenvolvimento de uma nova solução, que agrega várias fases deste ciclo e use um conjunto de dados dinâmicos, pode acarretar riscos ainda não identificados por estudos já realizados.
-	
-	No capitulo \ref{chap:Chapter3}, será discutido o futuro desta investigação, apresentando uma proposta de implementação capaz de alcançar os objetivos propostos no capitulo \ref{chap:Chapter1}.
+		Com este capítulo, foi possível verificar, com base nos trabalhos analisados, que a gestão de incidentes em sistemas de grande escala é, ainda, muito afetada pela fragmentação da informação relacionada com as falhas que causam os incidentes, pela recorrência e duplicação de \textit{tickets} em curtos intervalos de tempo e pela dependência da experiência dos \gls{OCEs}. Assim, a literatura, mostrou que o uso de \gls{IA}, como \gls{LLM}\textit{s} ou \gls{GNNs}, facilita a contextualização inicial dos incidentes aos membros da equipa de suporte e ajuda na mitigação das falhas ao fornecer detalhes e sugestões de resolução com base em registos de incidentes anteriores.
+		
+		Em síntese, e respondendo à pergunta inicial "Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?", é possível afirmar que estes Modelos de Linguagem de Grande Escala têm um papel importante no apoio da compreensão inicial, na análise e na procura de formas de mitigar os incidentes. São, assim, um apoio no desempenho por parte do trabalho dos membros das equipas de prevenção.
+		
+		No entanto, a análise critica da literatura, mostrou que os estudos efetuados foram realizados com conjuntos de dados (\textit{datasets}) estáticos e abordam apenas fases especificas do ciclo de vida de um incidente. Assim, o desenvolvimento de uma nova solução, que agrega várias fases deste ciclo e use um conjunto de dados dinâmicos, pode acarretar riscos ainda não identificados por estudos já realizados.
+		
+		No capitulo \ref{chap:Chapter3}, será discutido o futuro desta investigação, apresentando uma proposta de implementação capaz de alcançar os objetivos propostos no capitulo \ref{chap:Chapter1}.
 		
 %	- Apresentação dos resultados
 %		- afetado por:
@@ -208,3 +208,31 @@
 %	
 %	- Recomendação de caminhos para futuras investigações (mencionar proximo capitulor)
 %	- Ligar a introdução (objetivos) à conclusão (resultados obtidos)
+
+\section{Soluções no Mercado}
+
+	A Inteligência Artificial é um tema em alta em todos os mercados e áreas, sendo esta uma área que não escapa à automatização de processos. Dessa forma, o mercado já apresenta algumas soluções para o correlacionamento de incidentes, para o resumo dos mesmo, para sugestões de mitigação e para análise de informação adicional (eventos das aplicações). Nesta secção abordamos quatros das principais ferramentas existentes, abordando as suas funcionalidades fundamentais.
+	
+	\subsection{\textit{AWS AIOps}}
+	
+		A \textit{AWS} recorreu a técnicas de \gls{IA} e \gls{ML}, de forma a "ajudar a aprimorar, acelerar e automatizar os processos de operações em nuvem" \autocite{WebAWS}. O \textit{AWS AIOps}, permite que os \gls{OCEs} observem facilmente a sua carga de trabalho, acelerando a solução de problemas operacionais e a toma de medidas para resolver e remediar problemas, melhorando o \gls{TTM}.
+		
+		As principais funcionalidades da sua ferramenta, são:
+		\begin{itemize}
+			\item \textbf{Encontrar a causa raiz de um problema}: É possível configurar o ambiente para iniciar uma investigação mal um alarme seja disparado;
+			\item \textbf{Sugestões de correção}: A \textit{AWS} fornece guias do seu próprio ambiente para a resolução de problemas relacionados com ferramentas \textit{AWS};
+			\item \textbf{Capacitar operadores sem experiência}: A ferramenta analisa pontos de dados para descobrir relações entre serviços e desenvolver uma compreensão de como eles funcionam juntos.
+			\item \textbf{Consulta de dados de telemetria usando linguagem natural}: A \textit{AWS} permite escrever perguntas em linguagem natural sem precisar de aprender linguagens de consulta complexas. 
+		\end{itemize}
+		
+	
+	\subsection{\textit{New Relic AIOps}}
+	
+		
+	
+	\subsection{\textit{Atlassian Ops Guide Agent}}
+	
+		
+	
+	\subsection{\textit{Elastic AI Assistant}}
+		
