@@ -4,7 +4,7 @@
 \label{chap:Chapter3} % For referencing the chapter elsewhere, use \ref{chap:Chapter3} 
 
 %----------------------------------------------------------------------------------------
-\hl{Texto introdução}
+Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados e é retratado um dos fluxos principais da solução onde é possível verificar a interação entre os diversos sistemas. Por fim, são identificados os pressupostos e restrições inerentes à solução proposta neste documento.
 
 \section{Metodologia Proposta}
 
@@ -54,13 +54,11 @@
 %		- processamento
 %		- saídas esperadas
 
-\hl{Na Figura, devo já indicar ferramentas como AWS, ServiceNow, Kibana ou é melhor ser genérico???}
-
 \section{Fluxo de Funcionamento}
 
-	Um processo de consulta de incidentes (Figura \ref{fig:activityDiagram}) tem inicio no serviço a ser desenvolvido, após a receção de um pedido de pesquisa, é realizada a consulta do incidente na plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
+	Um processo de consulta de incidentes (Figura \ref{fig:activityDiagram}), tem inicio no serviço a ser desenvolvido, onde, após a receção de um pedido de pesquisa, é realizada a consulta do incidente na plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
 	
-	De seguida, o serviço prepara a informação, combinando os dados do incidente atual com o histórico de incidentes anteriores, de forma a enriquecer o contexto disponível para análise e permitindo uma visão mais abrangente do problema. Já com os dados do incidente, é feita uma recolha dos eventos das aplicações num período próximo ao da falha e esses dados são adicionados à informação pré-processada do incidente.
+	De seguida, o serviço prepara a informação, combinando os dados do incidente atual com o histórico de incidentes anteriores, de forma a enriquecer o contexto disponível para análise e permitindo uma visão mais abrangente do problema. Já com os dados do incidente, é feita uma recolha dos eventos das aplicações, num período próximo ao da falha, e esses dados são adicionados à informação pré-processada do incidente.
 	
 	Após esta etapa de enriquecimento e agregação de dados, o fluxo é direcionado para o motor de modelos de linguagem de grande escala, responsável por duas tarefas principais. De forma paralela, o \gls{LLM} gera uma descrição do incidente em linguagem natural, tornando a informação técnica mais clara e acessível aos membros da equipa de suporte, e gera sugestões de mitigação priorizadas, com base no contexto do incidente, no histórico e nos eventos recolhidos, de forma a apoiar a tomada de decisão.
 	
