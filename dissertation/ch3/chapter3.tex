@@ -12,7 +12,7 @@
 	
 	Assim, pretendemos conceber uma solução que, através de \gls{LLM}\textit{s}, seja capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Em seguida, com a correlação de incidentes funcional, pretendemos gerar para o utilizador sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
 	
-	Por fim, com uma ferramenta sólida para ajudar os \gls{OCEs} na interpretação e mitigação de incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos sistemas, ferramentas essas já usadas usualmente na análise manual dos membros das equipas de suporte. Dessa forma, pretendemos, reduzir o tempo gasto a analisar o incidente, diminuindo, uma vez mais, o tempo médio de resposta.
+	Por fim, com uma ferramenta sólida para ajudar os \gls{OCEs} na interpretação e mitigação de incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos sistemas, ferramentas essas já utilizadas frequentemente na análise manual dos membros das equipas de suporte. Dessa forma, pretendemos, reduzir o tempo gasto a analisar o incidente, diminuindo, uma vez mais, o tempo médio de resposta.
 
 %	- Relembrar brevemente o problema identificado na revisão de literatura	
 % 	- Explicar a abordagem geral (ex.: uso de LLMs + histórico de incidentes)
@@ -22,11 +22,11 @@
 	
 \section{Desenho da Solução}
 	
-	Como referido anteriormente, o objetivo da solução passa desenvolver um serviço capaz de integrar com diversos serviços externos como:
+	Como referido anteriormente, o objetivo da solução passa por desenvolver um serviço capaz de integrar com diversos serviços externos, tais como:
 	
 	\begin{itemize}
-		\item \textbf{Serviço de incidentes}: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes para realizar a correlação;
-		\item \textbf{Motor \gls{LLM}}: outro elemento que devemos considerar como base da solução visto que, será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar;
+		\item \textbf{Serviço de incidentes}: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
+		\item \textbf{Motor \gls{LLM}}: outro elemento que devemos considerar como base da solução, visto que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar;
 		\item \textbf{Serviço de \textit{logs}}: como observado na revisão de literatura, informação adicional como registos de eventos dos serviços pode alavancar a performance do motor \gls{LLM}, não sendo uma componente obrigatória mas tornando-se numa ajuda para a análise dos \gls{OCEs}. 
 	\end{itemize}
 	
@@ -58,7 +58,7 @@
 
 \section{Fluxo de Funcionamento}
 
-	Um processo de consulta de incidentes (Figura \ref{fig:activityDiagram}) tem inicio no serviço a ser desenvolvido, após a receção de um pedido de pesquisa de um incidente, é realizada a consulta do incidente na plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
+	Um processo de consulta de incidentes (Figura \ref{fig:activityDiagram}) tem inicio no serviço a ser desenvolvido, após a receção de um pedido de pesquisa, é realizada a consulta do incidente na plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
 	
 	De seguida, o serviço prepara a informação, combinando os dados do incidente atual com o histórico de incidentes anteriores, de forma a enriquecer o contexto disponível para análise e permitindo uma visão mais abrangente do problema. Já com os dados do incidente, é feita uma recolha dos eventos das aplicações num período próximo ao da falha e esses dados são adicionados à informação pré-processada do incidente.
 	
@@ -107,7 +107,6 @@
 			\caption[Pressupostos do Projeto]{Pressupostos do Projeto}
 			\label{tab:pressupostos}
 		\end{table}
-		
 
 	\subsection{Restrições}
 	
