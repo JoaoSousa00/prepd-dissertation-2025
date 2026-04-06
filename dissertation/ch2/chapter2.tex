@@ -11,7 +11,7 @@
 
 
 	\subsection{Pergunta(s) de Investigação}
-		Com base nas dificuldades identificadas pelas equipas \textit{DevOps} e \textit{CorpOps} na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de \gls{IA}, como técnicas de \gls{PLN}, para apoiar a compreensão e o tratamento destes registos. Desta forma, foi formulada a questão: “\textbf{Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?}”.
+		Com base nas dificuldades identificadas pelas equipas \textit{DevOps} e \textit{CorpOps} na análise e resolução de incidentes, surgiu a hipótese de recorrer a ferramentas de \gls{IA}, como técnicas de \gls{PLN}, para apoiar a compreensão e o tratamento destes registos. Desta forma, foi formulada a questão: “Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?”.
 		
 	
 	\subsection{Metodologia PICOC(T)}
@@ -149,7 +149,7 @@
 	\subsection{Análise de Causa Raiz e Correlação de Incidentes}
 		As abordagens atuais para identificar as causas dos incidentes são, ainda, muito reativas e manuais, sendo que toda a investigação da origem do problema depende, quase exclusivamente, da experiência dos \gls{OCEs} e da consulta da documentação técnica e registos das aplicações. Enquanto funcional, para ambientes controlados, estas abordagens tendem a apresentar limitações quando aplicadas a sistemas de grande escala.
 		
-		Em paralelo, nos ambientes de grande escala, um único problema pode propagar-se por vários serviços e originar múltiplas ocorrências aparentemente independentes, fenómeno já identificado em sistemas reais de gestão de incidentes \autocite{Reference3}. Também afirmado por \textcite{Reference6}, em sistemas de grande escala, uma única falha pode acionar vários alertas, uma vez que os serviços são altamente interligados e dependem uns dos outros. Consequentemente, é gerado um grande volume de alertas e incidentes em pouco tempo, o que dificulta a identificação dos alertas pertencentes à mesma falha para análise da causa raiz. Esta recorrência e repetição de incidentes está, assim, ligada ao aumento o tempo despendido na procura da causa e do melhor processo de mitigação e conduz, frequentemente, a diagnósticos redundantes ou demorados.
+		Em paralelo, nos ambientes de grande escala, um único problema pode propagar-se por vários serviços e originar múltiplas ocorrências aparentemente independentes, fenómeno já identificado em sistemas reais de gestão de incidentes \autocite{Reference3}. Também afirmado por \textcite{Reference6}, em sistemas de grande escala, uma única falha pode acionar vários alertas, uma vez que os serviços são altamente interligados e dependem uns dos outros. Consequentemente, é gerado um grande volume de alertas e incidentes em pouco tempo, o que dificulta a identificação dos alertas pertencentes à mesma falha para análise da causa raiz. Esta recorrência e repetição de incidentes está, assim, ligada ao aumento do tempo despendido na procura da causa e do melhor processo de mitigação e conduz, frequentemente, a diagnósticos redundantes ou demorados.
 		
 		Torna-se importante identificar correlações entre incidentes que, à primeira vista, pareçam diferentes. Esta ligação entre ocorrências pode ter a mesma origem, os mesmos sintomas ou até descrições semelhantes. Trabalhos mais recentes mostram que a identificação de relações entre incidentes ou alertas relacionados é fundamental para apoiar atividades como a análise de causa raiz e a mitigação eficiente \autocite{Reference2,Reference1}.
 		
@@ -178,6 +178,42 @@
 		\textcite{Reference4} mostra ainda que, incluir contexto adicional proveniente de diferentes fases do ciclo de vida do software, pode melhorar a capacidade dos \gls{LLM}\textit{s} em apoiar tarefas de análise e investigação. Este enriquecimento contextual, contribui para reduzir a incerteza inicial associada aos incidentes e orientar os \gls{OCEs} de forma mais eficaz no primeiro contacto com os \textit{tickets}. Adicionalmente, \textcite{Reference5} também apontam que os \gls{LLM}\textit{s} podem facilitar o acesso à informação operacional relevante, tornando tarefas que exigiam conhecimento específico sobre ferramentas e linguagens internas em tarefas automatizadas.
 		
 		Em suma, a consolidação de informação histórica e contextual dos incidentes, apoiada por modelos de linguagem de grande escala e fontes de informação adicionais, desempenha um papel fundamental na redução da incerteza associada à investigação inicial de incidentes.
+		
+
+	\subsection{Técnicas e Modelos para Análise de Incidentes}
+	\todo[inline]{O estudo do estado da arte apresentado devia apresentar algumas técnicas e métodos que podem, eventualmente, ser utilizadas.}
+	As principais técnicas identificadas na literatura são apresentadas de seguida:
+	
+	\begin{itemize}
+		\item \textbf{\gls{RAG}}: 
+		Combinação de mecanismos de recuperação de informação com modelos de linguagem para gerar respostas com mais contexto. 
+		Foi utilizado na geração de \textit{queries} e apoio à análise de incidentes, apresentando melhorias na qualidade das respostas quando comparado com \gls{LLM}s sem mecanismos de \textit{retrieval}. 
+		Como limitação, depende fortemente da qualidade dos dados recuperados. \autocite{Reference4, Reference5}
+		
+		\item \textbf{Agentes de \gls{LLM}}: 
+		Agentes baseados em modelos de linguagem capazes de executar raciocínio com várias etapas e interagir com ferramentas externas. 
+		São particularmente eficazes na análise de causa raiz e apresentam maior precisão do que abordagens baseadas em \gls{LLM} simples. No entanto, implicam maior custo computacional e tempo de resposta. \autocite{Reference1}
+		
+		\item \textbf{\gls{CoT}}: 
+		Técnica de instruções que incentiva o modelo a gerar raciocínio passo-a-passo. 
+		Melhora a interpretabilidade e a qualidade das respostas em tarefas de \textit{debugging} e análise de incidentes, embora aumente o tempo de análise. \autocite{Reference1, Reference5}
+		
+		\item \textbf{Clustering}: 
+		Permite agrupar incidentes com base na sua similaridade, sendo útil na correlação de incidentes e apresentando uma maior robustez do que heurísticas simples, mas sendo sensível à escolha de parâmetros. Um exemplo de um algoritmo referido na revisão de literatura, foi o \gls{DBSCAN}. \autocite{Reference3}
+		
+		\item \textbf{\gls{GNNs}}: 
+		Modelos que representam sistemas como grafos, capturando, assim, relações entre componentes. 
+		Estes modelos, têm sido propostas para prever relações entre alertas, sendo avaliadas através de métricas como \gls{AUC} e F1-Score, demonstrando desempenho superior face a métodos tradicionais.
+		Contudo, possuem elevada complexidade computacional. \autocite{Reference6}
+		
+		\item \textbf{Modelos de Grafos Temporais}: 
+		Extensões de \gls{GNNs} que incorporam informação temporal, e que permitem modelar a evolução de incidentes ao longo do tempo. 
+		Oferecem melhor desempenho do que grafos estáticos, no entanto, são mais complexos de implementar. \autocite{Reference6}
+		
+		\item \textbf{Learning-to-Rank}: 
+		Abordagem que permite ordenar resultados com base na sua relevância. 
+		É utilizada na recomendação de ações de mitigação, superando métodos heurísticos, embora necessite de dados anotados para treino. \autocite{Reference2}
+	\end{itemize}
 			
 	
 	\subsection{Conclusão}
