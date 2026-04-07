@@ -291,4 +291,99 @@
 			\item \textbf{Identificar estrangulamentos de desempenho}: Encontra operações que consomem muitos recursos e consultas lentas na ferramenta;
 			\item \textbf{Criar consultas em Linguagem Natural}: A partir de linguagem natural, converte sintaxe \gls{DSL} da consulta para linguagem de consultas do \textit{ElasticSearch} e executa-as diretamente a partir da interface de conversa.
 		\end{itemize}
+	
+	\subsection{Conclusão}
+		Através das tabelas \ref{tab:aiops_capabilities} e \ref{tab:aiops_techniques} conseguimos distinguir as capacidades oferecidas pelas soluções no mercado e as técnicas utilizadas para as implementar. 
+		
+		É possível que soluções mais tradicionais, como \textit{AWS AIOps} e \textit{New Relic}, têm maior foco em capacidades de correlação e análise de causa raiz suportadas por técnicas de \textit{machine learning} e análise de dados, apresentando um suporte limitado para contextualização baseada em modelos de linguagem e focando-se apenas no seu ambiente de ferramentas.
+		
+		Por outro lado, soluções mais recentes, como o \textit{Atlassian Ops Guide Agent} e o \textit{Elastic AI Assistant}, recorrem a modelos de linguagem, agentes e técnicas de \gls{RAG}, permitindo melhorar significativamente a contextualização e o suporte à decisão.
+		
+		Esta distinção evidencia uma evolução das abordagens, passando de sistemas centrados na análise de dados para sistemas orientados à interpretação, contextualização e assistência inteligente onde se torna evidente o uso mais frequente de agentes \gls{LLM} e sistemas baseados em \gls{RAG}.
+	
+		\begin{table}[h]
+			\centering
+			\begin{tabular}{|p{4cm}|c|c|c|c|}
+				\hline
+				\textbf{Solução} 
+				& \textbf{Correlação} 
+				& \textbf{Causa Raiz} 
+				& \textbf{Mitigação} 
+				& \textbf{Contextualização} \\
+				\hline
+				
+				AWS AIOps 
+				& Sim 
+				& Sim 
+				& Sim 
+				& Parcial \\
+				\hline
+				
+				New Relic AIOps 
+				& Sim 
+				& Sim 
+				& Não 
+				& Não \\
+				\hline
+				
+				Atlassian Ops Guide Agent 
+				& Sim 
+				& Sim 
+				& Não 
+				& Sim \\
+				\hline
+				
+				Elastic AI Assistant 
+				& Não 
+				& Sim 
+				& Não 
+				& Sim \\
+				\hline
+			\end{tabular}
+			\caption{Funcionalidades de Soluções Existentes}
+			\label{tab:aiops_capabilities}
+		\end{table}
+		
+		\begin{table}[h]
+			\centering
+			\begin{tabular}{|p{4cm}|c|c|c|c|c|c|}
+				\hline
+				\textbf{Solução} 
+				& \textbf{Agentes \gls{LLM}} 
+				& \textbf{\gls{RAG}} 
+				& \textbf{Clustering} 
+				& \textbf{Grafos} \\
+				\hline
+				
+				AWS AIOps 
+				& Não 
+				& Não 
+				& Sim 
+				& Não \\
+				\hline
+				
+				New Relic AIOps 
+				& Não 
+				& Não 
+				& Sim 
+				& Sim \\
+				\hline
+				
+				Atlassian Ops Guide Agent 
+				& Sim 
+				& Sim 
+				& Não 
+				& Não \\
+				\hline
+				
+				Elastic AI Assistant 
+				& Sim 
+				& Sim 
+				& Não 
+				& Não \\
+				\hline
+			\end{tabular}
+			\caption{Técnicas usadas por Soluções Existentes}
+			\label{tab:aiops_techniques}
+		\end{table}
 		
