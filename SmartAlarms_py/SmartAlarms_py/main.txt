@@ -1,0 +1,1793 @@
+Sugestões de resolução de incidentes
+     através do uso de LLM's
+
+
+                          João Sousa
+
+
+
+        Dissertação para obtenção do Grau de Mestre em
+
+       Engenharia Informática, Área de Especialização em
+                       Engenharia de Software
+
+
+
+
+Orientador: Paulo Gandra Sousa
+Supervisor: João Peixoto
+
+
+
+
+                         Porto, 7 de abril de 2026
+                                                                                       iii
+
+
+
+
+Declaração de Integridade
+
+Declaro ter conduzido este trabalho académico com integridade.
+
+
+
+Não plagiei ou apliquei qualquer forma de uso indevido de informações ou falsicação de
+
+resultados ao longo do processo que levou à sua elaboração.
+
+
+
+Portanto, o trabalho apresentado neste documento é original e de minha autoria, não tendo
+
+sido utilizado anteriormente para nenhum outro m.
+
+
+
+Declaro ainda que tenho pleno conhecimento do Código de Conduta Ética do P.PORTO.
+
+
+
+ISEP, Porto, 7 de abril de 2026
+                                                                                           v
+
+
+
+
+Resumo
+
+O presente documento foi elaborado com o intuito de descrever o trabalho de investigação
+
+realizado com base numa proposta de solução apresentada pela empresa      Critical Techworks
+(CTW ).
+A proposta consiste em desenvolver uma ferramenta capaz de ajudar os membros de equipas
+
+de suporte, no decorrer do seu dia a dia.   Através dessa ferramenta, pretende-se fornecer
+
+funcionalidades como: correlação de incidentes, sumarização de descrições em linguagem
+
+natural, sugestões de mitigação e análise de registos de aplicações como informação adicional
+
+aos incidentes e o objetivo de diminuir os tempos médios de resposta.
+
+
+Este trabalho de investigação, é apenas uma primeira parte onde é denido o problema,
+
+os objetivos e é delineado o planeamento para o desenvolvimento da solução.       Para além
+
+disso, é realizada uma análise cientica e das soluções que já existem no mercado de forma
+
+a contextualizar melhor o problema em questão.
+
+
+Para concluir, a investigação foi bem sucedida, uma vez que, a questão de investigação foi
+
+respondida, concluindo que o desenvolvimento da solução é viável e que as ferramentas de
+
+LLM podem ajudar a alcançar os objetivos pretendidos.
+
+Palavras-chave: Modelo de Linguagem de Grande Escala, Inteligência Articial, Processa-
+mento da Linguagem Natural, Incidente, Mitigação, Sugestão
+                                                                                            vii
+
+
+
+
+Abstract
+
+This document was prepared to describe the research work carried out based on a solution
+
+proposal presented by the company Critical Techworks (CTW).
+
+
+The proposal was based on the development of a tool capable of helping support team mem-
+
+bers in their day-to-day work. It provides features such as incident correlation, summarization
+
+of descriptions in natural language, mitigation suggestions, and analysis of application logs
+
+as additional information on incidents, with the aim of reducing average response times.
+
+
+This research is only the rst part, in which the problem and objectives are dened and
+
+the plan for developing the solution is outlined. In addition, a scientic analysis of existing
+
+solutions on the market is carried out in order to better contextualize the problem at hand.
+
+
+In conclusion, the research was successful, with the work answering the research questions
+
+and concluding that the development of the solution is feasible and that LLM tools can help
+
+achieve the desired objectives.
+
+
+Keywords: Large Language Model, Articial Intelligence, Natural Language Processing,
+Incident, Mitigation, Suggestion
+                                                                                           ix
+
+
+
+
+Agradecimentos
+
+Gostaria primeiramente de agradecer ao meu orientador de estágio, o Doutor Paulo Gandra
+
+Sousa, professor coordenador do Instituto Superior de Engenharia do Porto, pela sua cons-
+
+tante disponibilidade, apoio e conselhos que tornaram o projeto muito mais enriquecedor.
+
+
+Um agradecimento também ao supervisor da empresa João Peixoto, o melhor (e único)
+
+Chief Technical Titan que tive, não só pela conança depositada em mim, mas também pelo
+acompanhamento e suporte prestado ao longo do meu percurso prossional na empresa.
+
+
+Um obrigado em especial a todos os professores que me acompanharam, por todo o esforço
+
+que tiveram em transmitir os seus conhecimentos, tornando possível a realização dos meus
+
+objetivos prossionais e académicos, e ao ISEP por disponibilizar a estrutura para tudo isso
+
+poder acontecer.
+
+
+Fica também um forte agradecimento ao meu colega universitário, João Brito, pelo com-
+
+panheirismo e disponibilidade para que, juntos, superássemos os mais variados obstáculos
+
+encontrados pelo caminho até este momento.
+
+
+Agradecer especialmente à minha namorada, que me apoiou desde a minha entrada na vida
+
+universitária, pelos conselhos dados e pelos domingos bem passados a estudar, fazer projetos
+
+e a redigir este documento.
+
+
+Por m, a todos os meus colegas, amigos e família que sempre prestaram um enorme apoio,
+
+o meu imenso obrigado.
+                                                                                                 xi
+
+
+
+
+Conteúdo
+
+Lista de Figuras                                                                               xiii
+
+Lista de Tabelas                                                                                xv
+
+Lista de Código                                                                                xvii
+
+Lista de Acrónimos                                                                             xix
+
+1 Introdução                                                                                     1
+   1.1   Organização e Contexto        . . . . . . . . . . . . . . . . . . . . . . . . . . .     1
+
+   1.2   Problema      . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     1
+
+   1.3   Objetivos     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     2
+
+   1.4   Planeamento       . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     3
+
+   1.5   Considerações Éticas      . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     3
+
+   1.6   Estrutura do Documento        . . . . . . . . . . . . . . . . . . . . . . . . . . .     4
+
+
+2 Estado da Arte                                                                                 5
+   2.1   Metodologia de Investigação       . . . . . . . . . . . . . . . . . . . . . . . . .     5
+
+         2.1.1     Pergunta(s) de Investigação     . . . . . . . . . . . . . . . . . . . . .     5
+
+         2.1.2     Metodologia PICOC(T)        . . . . . . . . . . . . . . . . . . . . . . .     5
+
+         2.1.3     Palavras-Chave    . . . . . . . . . . . . . . . . . . . . . . . . . . . .     6
+
+         2.1.4     Critérios de Inclusão e Exclusão    . . . . . . . . . . . . . . . . . . .     7
+
+         2.1.5     PRISMA      . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     8
+
+   2.2   Revisão de Literatura . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         9
+
+         2.2.1     Análise de Causa Raiz e Correlação de Incidentes . . . . . . . . . .         10
+
+         2.2.2     Sugestões de Mitigação e Uso de Incidentes Anteriores . . . . . . .          10
+
+         2.2.3     Apoio à Contextualização de Incidentes com      LLMs . . . . . . . . .       11
+
+         2.2.4     Técnicas e Modelos para Análise de Incidentes       . . . . . . . . . . .    12
+
+         2.2.5     Conclusão . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      13
+
+   2.3   Soluções no Mercado . . . . . . . . . . . . . . . . . . . . . . . . . . . . .          13
+
+         2.3.1     AWS AIOps . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        13
+
+         2.3.2     New Relic AIOps . . . . . . . . . . . . . . . . . . . . . . . . . . .        14
+
+         2.3.3     Atlassian Ops Guide Agent . . . . . . . . . . . . . . . . . . . . . .        14
+
+         2.3.4     Elastic AI Assistant . . . . . . . . . . . . . . . . . . . . . . . . . .     14
+
+         2.3.5     Conclusão . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      15
+
+
+3 Futuros Desenvolvimentos                                                                      17
+   3.1   Metodologia Proposta . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         17
+
+   3.2   Desenho da Solução . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         17
+
+   3.3   Fluxo de Funcionamento        . . . . . . . . . . . . . . . . . . . . . . . . . . .    19
+
+   3.4   Pressupostos e Restrições . . . . . . . . . . . . . . . . . . . . . . . . . . .        20
+xii
+
+
+
+
+        3.4.1   Pressupostos   . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+        3.4.2   Restrições . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+
+Bibliograa                                                                                23
+
+Apêndice A Registos de incidentes                                                          25
+                                                                                          xiii
+
+
+
+
+Lista de Figuras
+
+ 1.1   WBS Detalhado . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        3
+
+ 1.2   Diagrama de Gantt . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        3
+
+
+ 2.1   Diagrama   PRISMA . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        9
+
+
+ 3.1   Diagrama de Implantação . . . . . . . . . . . . . . . . . . . . . . . . . . .      18
+
+ 3.2   Diagrama de Atividade    . . . . . . . . . . . . . . . . . . . . . . . . . . . .   20
+
+
+ A.1   Detalhes do incidente . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    25
+
+ A.2   Detalhes do incidente . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    26
+
+ A.3   Detalhes do incidente . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    26
+
+ A.4   Detalhes do incidente . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    27
+                                                                                           xv
+
+
+
+
+Lista de Tabelas
+
+ 2.1   Metodologia PICOCT . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        6
+
+ 2.2   Repositórios de Pesquisa    . . . . . . . . . . . . . . . . . . . . . . . . . . .   7
+
+ 2.3   Critérios de Inclusão . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    8
+
+ 2.4   Critérios de Exclusão   . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   8
+
+ 2.5   Funcionalidades de Soluções Existentes      . . . . . . . . . . . . . . . . . . .   15
+
+ 2.6   Técnicas usadas por Soluções Existentes . . . . . . . . . . . . . . . . . . .       15
+
+
+ 3.1   Pressupostos do Projeto     . . . . . . . . . . . . . . . . . . . . . . . . . . .   21
+                                                                                        xvii
+
+
+
+
+Lista de Código
+
+ 2.1   Termos de Pesquisa . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     7
+                                                                xix
+
+
+
+
+Lista de Acrónimos
+
+      ACM      Association for Computing Machinery .
+      API      Interface de Programação de Aplicações.
+
+      ASE      Automated Software Engineering .
+      AUC      Area Under the Curve .
+      BMW      Bayerische Motoren Werke .
+      CTW      Critical Techworks .
+      CoT      Chain-of-Thought .
+      DBSCAN   Density-Based Spatial Clustering of Applicati-
+               ons with Noise .
+      DSL      Domain-Specic Language .
+      FSE      ACM International Conference on the Founda-
+               tions of Software Engineering .
+      GNNs     Graph Neural Networks .
+      ICSE     International Conference on Software Enginee-
+               ring .
+      LLM      Large Language Model .
+      ML       Machine Learning .
+      NSPE     National Society of Professional Engineers .
+      OCEs     On-Call Engineers .
+      PRISMA   Preferred Reporting Items for Systematic revi-
+               ews and Meta-Analyses .
+      RAG      Retrieval-Augmented Generation.
+      RQ       Research Question.
+      SMS      Systematic Mapping Study .
+      TSG      Troubleshooting Guide .
+      TTM      Time to mitigate .
+      WBS      Work Breakdown Structure .
+
+      IA       Inteligência Articial.
+
+      IPP      Instituto Politécnico do Porto.
+
+      ISEP     Instituto Superior de Engenharia do Porto.
+
+
+
+      PICOCT   População,       Intervenção,     Comparação,
+
+               Outcome, Contexto e Tipo de estudo.
+
+      PLN      Processamento de Linguagem Natural.
+
+      PREPD    Preparação para Dissertação.
+
+
+
+      TI       Tecnologias de Informação.
+
+      TMR      Tempo Médio de Resposta.
+                                                                                          1
+
+
+
+
+Capítulo 1
+
+Introdução
+
+Este capítulo apresenta a organização responsável pela ideia do tema a ser desenvolvido, o
+
+contexto do seu surgimento e os problemas que a originaram. São abordados os objetivos, o
+
+planeamento e as considerações éticas tidas em conta para executar a proposta. Por último,
+
+é descrita a estrutura deste documento de forma a facilitar a leitura do mesmo.
+
+
+
+
+1.1     Organização e Contexto
+
+A Critical Techworks (CTW) nasceu de um empreendimento conjunto entre a Critical Soft-
+ware e o grupo Bayerische Motoren Werke (BMW). Estabelecida em 2018, esta empresa
+desenvolve software exclusivamente para os produtos da BMW. A sua missão é "transfor-
+
+mar a forma como o mundo se move"focando-se para isso na transformação digital com as
+
+melhores práticas do mercado.
+
+
+A organização estrutura-se em equipas ágeis multidisciplinares, agrupadas em unidades e
+
+domínios tecnológicos, o que promove autonomia, ciclos de desenvolvimento rápidos e co-
+
+laboração contínua.   Esta abordagem permite alinhar o desenvolvimento de     software com
+necessidades reais dos veículos e serviços digitais da   BMW.
+O presente relatório foi desenvolvido no âmbito da unidade curricular de Preparação para
+
+Dissertação (PREPD) do Instituto Superior de Engenharia do Porto (ISEP), com o intuito
+
+de demonstrar a viabilidade de uma solução para o problema em causa.
+
+
+
+
+1.2     Problema
+
+A análise e resolução de incidentes está no dia a dia das equipas que lidam com projetos
+
+potencialmente críticos.   Um incidente é um evento que provoca interrupção ou degrada-
+
+ção num qualquer serviço, e podem comprometer signicativamente a disponibilidade dos
+
+serviços e resultar em perdas nanceiras substanciais (J. Jiang et al. 2020). Estes inciden-
+
+tes podem ter por origem duas principais fontes: automático, através de métricas denidas
+
+pelas equipas; e manuais, criados por clientes das aplicações desenvolvidas. Um registo de
+
+          ticket ) é um documento, normalmente gerido por um sistema externo (como
+incidente (
+
+ServiceNow ou Jira Service Management ), onde é possível visualizar detalhes do incidente,
+tais como a sua descrição e prioridade, e onde um elemento da equipa pode descrever os
+
+passos de resolução efetuados.
+
+
+Na área de Tecnologias de Informação (TI), as equipas podem manter vários serviços em
+
+simultâneo e por essa razão os membros da equipa de suporte (responsáveis por manter os
+
+serviços estáveis 24x7) podem car sobrecarregados de incidentes, fazendo com que tenham
+2                                                                      Capítulo 1. Introdução
+
+de lidar com eventos provenientes de vários serviços paralelamente. Numa situação como
+
+esta, os membros da equipa de suporte podem ter um sentimento de confusão, misturando
+
+temas e errando nas suas análises, o que pode causar piores resoluções de incidentes e o
+
+aumento do tempo para mitigação (   Time to mitigate (TTM)). Outro cenário frequente para
+os   On-Call Engineers (OCEs) envolve incidentes que ocorrem fora do horário de expediente,
+especialmente durante a madrugada, quando o membro da equipa de suporte pode não estar
+
+na sua plena capacidade de raciocínio e operacional.
+
+
+Foi também referido anteriormente os incidente com origem manual.          Estes, são criados
+
+por clientes nais e/ou equipas de testes e podem conter mais ou menos informação. Mui-
+
+tas vezes, os   OCEs necessitam de realizar uma análise mais extensa para compreender o
+conteúdo do incidente e a resolução mais ecaz a aplicar.
+
+
+Uma interpretação ou resolução inadequada das ocorrências pode reduzir a disponibilidade
+
+dos serviços, o que, por sua vez, pode gerar prejuízos signicativos para a organização, seja
+
+pela perda de receitas, seja pelo impacto negativo na experiência do utilizador nal.
+
+
+
+
+1.3      Objetivos
+
+O objetivo desta investigação passa por realizar uma revisão de literatura sobre o problema
+
+em questão, a m de perceber que ferramentas existem atualmente para solucionar o pro-
+
+blema mencionado anteriormente. Dessa forma, entender se as ferramentas foram ecazes
+
+nos seus contextos e concluir se é possível desenvolver uma solução que preencha todos os
+
+requisitos necessários para satisfazer todas as partes interessadas.
+
+
+No nal, o propósito principal consiste em preparar e idealizar o desenvolvimento de uma
+
+solução capaz de:
+
+
+      Gerar resumos de um incidente especico, com base na sua descrição e no histórico
+       de incidentes semelhantes.
+
+
+      Gerar sugestões de mitigação com base no histórico de incidentes semelhantes.
+      Analisar registos das aplicações para melhorar resumos e sugestões.
+Sugestão de objectivos mais concretos (sub-objectivos para concretizar os objectivos)
+
+
+
+A m de alcançar estes objetivos, foram denidos um conjunto de passos necessários de
+
+forma a organizar o trabalho a ser desenvolvido. Assim, foi selecionada uma metodologia
+
+de investigação, que ajuda no processo de categorização e análise de literatura relevante ao
+
+tema em estudo, que serve de base para a proposta de um projeto.
+
+
+Espera-se que, com a geração de textos em linguagem natural, se consiga uma resposta
+
+mais rápida e consistente, o que se reete numa redução do Tempo Médio de Resposta
+
+(TMR) aos incidentes.     Assim, a carga de trabalho associada a operações por parte dos
+
+membros da equipa de suporte envolvidos diminui, libertando-os para o desenvolvimento
+
+de novas funcionalidades.    De igual forma, é esperado que a diminuição do TMR possa
+
+aumentar a disponibilidade das aplicações, o que traz um impacto direto ao cliente nal.
+
+Adicionalmente, a utilização de informação histórica e, de forma opcional, de registos das
+
+aplicações, procura ir ao encontro dos requisitos das diferentes partes interessadas, apoiando
+
+a tomada de decisão e permitindo que as equipas dediquem mais tempo a outras atividades
+
+de valor.
+1.4. Planeamento                                                                             3
+
+
+
+
+1.4     Planeamento
+
+O planeamento do trabalho foi denido com base numa  Work Breakdown Structure (WBS),
+que serviu de base à construção do diagrama de Gantt (Figura 1.1 e 1.2). A WBS permite
+
+estruturar o projeto em três fases distintas, cada uma com as respetivas tarefas e entregáveis.
+
+Por sua vez, o diagrama de     Gantt é utilizado para calendarizar as atividades, identicar
+dependências entre tarefas e denir marcos de controlo.
+
+
+
+
+                                 Figura 1.1:   WBS Detalhado
+
+
+
+
+                                Figura 1.2: Diagrama de   Gantt
+
+Este planeamento assegura a ligação entre os objetivos do projeto, os entregáveis previstos
+
+e o respetivo calendário, facilitando o acompanhamento do progresso ao longo de todo o
+
+seu desenvolvimento.
+
+
+
+
+1.5     Considerações Éticas
+
+Neste projeto, foram seguidos os princípios do Código de Ética e Conduta Prossional da
+
+Association for Computing Machinery (ACM), do Código de Ética para Engenheiros da
+National Society of Professional Engineers (NSPE) e do Código de Engenharia de Software
+4                                                                    Capítulo 1. Introdução
+
+da   ACM/IEEE-CS, de forma a orientar o estudo e a atuar com responsabilidade, tanto em
+relação aos dados como às pessoas afetadas pela solução.
+
+
+Tendo em conta que os dados a serem utilizados podem conter informações condenciais,
+
+foi avaliada a possibilidade de os anonimizar e, caso não seja satisfatório para as partes
+
+interessadas, será garantido que apenas os resultados agregados sejam apresentados, evi-
+
+tando quaisquer riscos de exposição de dados condenciais.      Para além disso, não foram
+
+identicados outros riscos éticos relevantes no projeto.
+
+
+Para além dos códigos acima mencionados, foi também seguido o Código de Boas Práticas
+
+e de Conduta do Instituto Politécnico do Porto (IPP).
+
+
+Quanto às competências necessárias, o autor é também um dos muitos membros de equipa
+
+de suporte que lidam com o tipo de problema que este projeto aborda, estando também a
+
+aprofundar os conceitos no mestrado que originou esta investigação. Essa combinação de
+
+experiência na área e aprendizagem académica ajuda a assegurar que o trabalho é feito com
+
+rigor, ética e atenção às melhores práticas prossionais.
+
+
+
+
+1.6      Estrutura do Documento
+
+O relatório encontra-se dividido em três capítulos. No capítulo dois, está presente o estado
+
+da arte, onde foi apresentada a metodologia de investigação utilizada, a revisão de literatura
+
+e as soluções semelhantes à que se pretende desenvolver. No capítulo três, abordam-se os
+
+resultados obtidos no capítulo anterior e sugere-se uma arquitetura para o desenvolvimento
+
+da solução.
+                                                                                           5
+
+
+
+
+Capítulo 2
+
+Estado da Arte
+
+Este capítulo apresenta o estado da arte sobre o tema em estudo. Para esse efeito, é descrita
+
+a metodologia de investigação adotada para analisar a utilização de modelos de linguagem de
+
+grande dimensão, que apoia a análise e resolução de incidentes em contextos de operações
+
+de TI. De seguida, são apresentados os principais artigos obtidos a partir da revisão da
+
+literatura, bem como uma discussão dos aspetos comuns e divergentes identicados nesses
+
+estudos. Esta análise permite consolidar uma base de conhecimento que serve de suporte à
+
+avaliação da viabilidade do desenvolvimento de uma solução para o problema identicado.
+
+Por m, avaliamos quais são as ferramentas que estão disponíveis no mercado, concluindo
+
+quais as funcionalidades que o mercado já cobre.
+
+
+
+
+2.1       Metodologia de Investigação
+
+Optou-se por utilizar um método de pesquisa com base num estudo sistemático de ma-
+
+peamento ou   Systematic Mapping Study (SMS ), a m de realizar a revisão de literatura.
+Primeiramente, foi denida uma pergunta de investigação, para estudar soluções já exis-
+
+tentes no mercado.   De seguida, com base na    Research Question (RQ ) denida e com o
+suporte da metodologia: População, Intervenção, Comparação, Outcome, Contexto e Tipo
+
+de estudo (PICOCT), foram identicados os elementos necessários para estruturar a pes-
+
+quisa. Com a questão já enquadrada, prosseguiu-se para a denição das palavras-chave e
+
+dos limites de inclusão e exclusão.   Por m, para obter os artigos, foram utilizadas bases
+
+de dados de artigos cientícos reconhecidas, tais como, a    ACM Digital Library e a IEEE
+Xplore.
+
+2.1.1     Pergunta(s) de Investigação
+
+Com base nas diculdades identicadas pelas equipas    DevOps e CorpOps na análise e re-
+solução de incidentes, surgiu a hipótese de recorrer a ferramentas de Inteligência Articial
+
+(IA), como técnicas de Processamento de Linguagem Natural (PLN), para apoiar a com-
+
+preensão e o tratamento destes registos. Desta forma, foi formulada a questão: Como é
+
+que as ferramentas de   Large Language Models podem melhorar a interpretação e análise de
+registos de incidentes de TI?.
+
+
+
+2.1.2     Metodologia PICOC(T)
+
+A metodologia PICOCT é, geralmente, usada como guia para organizar e claricar perguntas
+
+de investigação, ajudando a estruturar o problema de forma clara. Através desta abordagem,
+
+a pergunta é dividida em componentes simples, como a população em estudo, a solução
+6                                                                        Capítulo 2. Estado da Arte
+
+analisada, os resultados esperados e o contexto, tornando mais fácil de perceber o foco da
+
+investigação.
+
+
+Existem várias variantes desta metodologia, como PICO, PCC ou POT, sendo a escolha da
+
+variante dependente do tipo de estudo e da área cientíca. Neste trabalho, a metodologia
+
+PICOCT foi utilizada para apoiar a formulação da pergunta de investigação e para identicar
+
+as palavras-chave usadas na pesquisa bibliográca.
+
+
+Com base na pergunta de investigação descrita anteriormente, foi possível realizar a decom-
+
+posição pelos componentes da metodologia e a obtenção de palavras-chave para cada um
+
+desses componentes (Tabela 2.1).
+
+
+    Componente           Descrição                  Inclusão/Exclusão Palavras-Chave
+    P  População        Registos    de     inci-   I         Ferramenta     "incident management";
+
+                         dentes                     ServiceNow                "incident         analysis";
+
+                                                                              "incident     resolution";
+
+                                                    E  Estudos so-           "incident        interpreta-
+
+                                                    bre gestão de alar-       tion"; "ticket analysis";
+
+                                                    mes                       "ticket   interpretation";
+
+                                                                              "ServiceNow"
+
+    I  Intervenção      Uso de LLMs para           I           Técnicas     "Large    Language     Mo-
+
+                         análise de inciden-        conhecidas           de   del";   "LLM";    "Natural
+
+                         tes                        LLMs                      Language     Processing";
+
+                                                                              "NLP";      "RAG";    "ne-
+
+                                                    E  - - -                 tuning"
+
+    C  Comparação                                                      
+
+    O  Outcome          Redução              do    I  - - -                 "incident"; "ticket"
+
+                         MTTR,       melhoria
+
+                         na        priorização      E  Estudos não
+
+                         e     diminuição     de    relacionados     com
+
+                         erros de analise           incidentes
+
+    C  Contexto         Ambientes          De-     I         Estudos   na   "DevOps"; "CorpOps";
+
+                         vOps/CorpOps               área                      "IT"
+
+
+
+                                                    E  Estudos fora
+
+                                                    da área
+
+    T  Tipo de estudo   Pesquisa empírica          I  - - -                 Exclude     >   "theoreti-
+
+                         ou com base em                                       cal"; "speculative"
+
+                         estudos                    E  Trabalho te-
+
+                                                    órico ou especula-
+
+                                                    tivo
+
+
+                                Tabela 2.1: Metodologia PICOCT
+
+
+
+
+2.1.3     Palavras-Chave
+
+Foi denida uma string de pesquisa (Código 2.1) com o intuito de orientar a revisão bi-
+
+bliográca. As palavras-chave utilizadas resultaram da aplicação da metodologia PICOCT,
+
+garantindo o alinhamento entre a pergunta de investigação e a pesquisa efetuada. Ao longo
+
+do processo, a pesquisa assumiu também um caráter exploratório e iterativo, permitindo o
+     2.1. Metodologia de Investigação                                                                                       7
+
+
+
+
+     ajuste dos termos sempre que necessário, de acordo com os resultados obtidos e com o
+
+     foco do trabalho. Os termos foram formulados em inglês, de modo a ampliar o número e a
+
+     relevância dos estudos encontrados.
+
+1             ( " i n c i d e n t management " OR " i n c i d e n t a n a l y s i s " OR " i n c i d e n t
+         r e s o l u t i o n " OR " i n c i d e n t i n t e r p r e t a t i o n " OR " t i c k e t a n a l y s i s " OR "
+         t i c k e t i n t e r p r e t a t i o n " OR " S e r v i c e N o w " )
+2             AND
+3             ( " L a r g e L a n g u a g e Model " OR "LLM" OR " N a t u r a l L a n g u a g e P r o c e s s i n g "
+         OR "NLP" OR "RAG" OR " f i n e = t u n i n g " )
+4             AND
+5             ( " i n c i d e n t " OR " t i c k e t " )
+6             AND
+7             ( " DevOps " OR " CorpOps " OR " IT " )
+8             NOT
+9             ( " t h e o r e t i c a l " OR " s p e c u l a t i v e " )
+10
+
+
+                                            Código 2.1: Termos de Pesquisa
+
+
+
+
+     Os termos nais foram posteriormente aplicados com a nalidade de obter os artigos cien-
+
+     tícos utilizados na investigação.
+
+
+     Os repositórios de pesquisa selecionados, mencionados na Tabela 2.2, possibilitaram a con-
+
+     sulta de artigos e procedimentos mais áveis, relacionados com a área de estudo.
+
+
+                         Repositório                    Acesso à plataforma (URL)
+                         ACM Digital Library            https://dl.acm.org/
+                         IEEE Xplore                    https://ieeexplore.ieee.org/
+
+                                         Tabela 2.2: Repositórios de Pesquisa
+
+
+
+
+     2.1.4    Critérios de Inclusão e Exclusão
+
+     Os critérios de inclusão e exclusão adotados neste trabalho, e denidos nas Tabelas 2.3
+
+     e 2.4, são adicionais ao já estipulados na metodologia PICOCT e tiveram como principal
+
+     objetivo delimitar o âmbito da revisão da literatura e garantir a sua relevância para a questão
+
+     de investigação. São ltros adicionais que não podem fazer parte dos termos de pesquisa
+
+     mas podem, normalmente, ser congurados nas próprias congurações dos repositórios de
+
+     pesquisa.
+
+
+     Devido ao elevado número de artigos foi denido no critérioCI1 que, dos procedimentos
+                                                                                 Internatio-
+     originários de conferências, apenas seriam considerados trabalhos resultantes da
+
+     nal Conference on Software Engineering (ICSE ), da ACM International Conference on the
+     Foundations of Software Engineering (FSE ) e a Automated Software Engineering (ASE ).
+     A ICSE é uma das principais conferências internacionais, focando-se em inovações e ten-
+     dências da área. Já a FSE , também conhecida como ESEC/FSE, destaca-se pelo foco em
+
+     métodos, ferramentas e técnicas para o desenvolvimento e manutenção de software. Por sua
+
+     vez, a ASE centra-se na automação de processos de engenharia de software, e em particular
+
+     nos estudos que envolvem o uso de técnicas de IA no apoio a atividades operacionais, como
+
+     é o caso deste estudo.
+8                                                                  Capítulo 2. Estado da Arte
+
+    Identicador     Critério de Inclusão
+    CI1              Artigos provenientes de conferências reconhecidas e relacionadas
+
+                     com o tema
+
+
+                               Tabela 2.3: Critérios de Inclusão
+
+
+
+
+Com o critério   CE1 procurou-se dar prioridade a trabalhos mais recentes, reduzindo a pro-
+babilidade de incluir tecnologias que já não são relevantes.
+
+
+    Identicador     Critério de Exclusão
+    CE1              Publicado antes de janeiro de 2020
+
+    CE2              Artigos que não contenham resumo ou       abstract
+    CE3              Artigos duplicados ou com conteúdos redundantes
+
+
+                               Tabela 2.4: Critérios de Exclusão
+
+
+
+
+2.1.5   PRISMA
+
+                                                         Preferred Reporting Items for
+Para organizar a revisão de literatura, recorreu-se ao método
+
+Systematic reviews and Meta-Analyses (PRISMA), que ajuda a tornar o processo de seleção
+de estudos mais claro e transparente. Com base nos artigos obtidos nos repositórios de
+
+pesquisa, e ltrando esses resultados pelos critérios de inclusão e exclusão, obtivemos os
+
+artigos que foram usados como base para esta investigação.
+2.2. Revisão de Literatura                                                               9
+
+
+
+
+                               Figura 2.1: Diagrama   PRISMA
+
+Como demonstrado na Figura 2.1, foram obtidos 145 artigos dos dois repositórios de pes-
+
+quisa dos quais 2 eram duplicados.   Após a identicação inicial, os artigos foram ltrados
+
+pelos critérios de exclusão, onde 76 dos mesmos foram descartados por terem sido publi-
+
+cados antes de janeiro de 2020.    De seguida, procedeu-se à ltragem pelos critérios de
+
+inclusão, que removeu 31 artigos que não se enquadravam nas conferências selecionadas.
+
+Por m, 30 artigos foram excluídos, após leitura do    abstract, por não se enquadrarem no
+tema. Sobraram, dessa foram, 6 artigos para analisar na revisão de literatura.
+
+
+
+
+2.2    Revisão de Literatura
+
+Nesta secção, é demonstrada a análise dos resultados obtidos pela metodologia    PRISMA,
+abordando os temas por categorias relevantes a esta investigação.
+10                                                              Capítulo 2. Estado da Arte
+
+2.2.1   Análise de Causa Raiz e Correlação de Incidentes
+
+As abordagens atuais para identicar as causas dos incidentes são, ainda, muito reativas
+
+e manuais, sendo que toda a investigação da origem do problema depende, quase exclusi-
+
+vamente, da experiência dos   OCEs e da consulta da documentação técnica e registos das
+aplicações.   Enquanto funcional, para ambientes controlados, estas abordagens tendem a
+
+apresentar limitações quando aplicadas a sistemas de grande escala.
+
+
+Em paralelo, nos ambientes de grande escala, um único problema pode propagar-se por
+
+vários serviços e originar múltiplas ocorrências aparentemente independentes, fenómeno já
+
+identicado em sistemas reais de gestão de incidentes (Yujun Chen et al. 2020). Também
+
+armado por Yiru Chen et al. (2024), em sistemas de grande escala, uma única falha pode
+
+acionar vários alertas, uma vez que os serviços são altamente interligados e dependem uns
+
+dos outros.   Consequentemente, é gerado um grande volume de alertas e incidentes em
+
+pouco tempo, o que diculta a identicação dos alertas pertencentes à mesma falha para
+
+análise da causa raiz.   Esta recorrência e repetição de incidentes está, assim, ligada ao
+
+aumento do tempo despendido na procura da causa e do melhor processo de mitigação e
+
+conduz, frequentemente, a diagnósticos redundantes ou demorados.
+
+
+Torna-se importante identicar correlações entre incidentes que, à primeira vista, pareçam
+
+diferentes. Esta ligação entre ocorrências pode ter a mesma origem, os mesmos sintomas
+
+ou até descrições semelhantes.   Trabalhos mais recentes mostram que a identicação de
+
+relações entre incidentes ou alertas relacionados é fundamental para apoiar atividades como
+
+a análise de causa raiz e a mitigação eciente (J. Jiang et al. 2020; Roy et al. 2024).
+
+
+Nos últimos anos, foi evidente o aumento da ênfase na reutilização do histórico de incidentes
+
+e na identicação dos padrões recorrentes entre eles. Estudos como J. Jiang et al. (2020)
+
+mostraram que a maioria dos incidentes acontecem de forma repetida ao longo do tempo
+
+e, muitas vezes, são mitigados utilizando o mesmo procedimento. Este trabalho apresenta
+
+o conceito de recomendação automática por meio de      Troubleshooting Guide (TSG )s, de-
+monstrando que a avaliação de incidentes anteriores pode ajudar ecientemente o processo
+
+de solução, diminuindo o esforço cognitivo das equipas de operações.      De acordo com o
+
+mesmo estudo, apenas 27.2% dos incidentes tinham       TSG s associados, revelando falta de
+documentação e, principalmente, que em maioria dos incidentes, os membros da equipa de
+
+suporte têm necessidade de investigar a fundo a causa das ocorrências. De notar ainda que,
+
+o artigo arma que, 36.2% dos incidentes ocorreram pelo menos 2 vezes, podendo levar à
+
+reutilização dos métodos de mitigação.
+
+
+Neste sentido, abordagens baseadas em aprendizagem automática e, mais recentemente,
+
+em modelos de linguagem de grande escala, têm vindo a ser exploradas para consolidar
+
+informação dispersa e apoiar a tomada de decisão durante incidentes complexos (Goel et al.
+
+2024; Y. Jiang et al. 2024), reforçando a importância da correlação de   tickets como etapa
+central na gestão operacional moderna.
+
+
+
+2.2.2   Sugestões de Mitigação e Uso de Incidentes Anteriores
+
+A maioria dos incidentes que surgem não são totalmente novos, mas sim recorrências de
+
+situações já observadas no passado. Ainda assim, identicar rapidamente estes casos de se-
+
+melhança e as respetivas ações de mitigação continua a ser um desao para os membros das
+
+equipas de suporte. O trabalho de J. Jiang et al. (2020) mostra, uma vez mais, que apenas
+
+de 27.2% dos incidentes possuem um guia de mitigação associado e que os     OCEs despen-
+dem 36.3% do tempo total de mitigação apenas à procura do         TSG correto. No mesmo
+2.2. Revisão de Literatura                                                                  11
+
+
+
+
+estudo, a abordagem proposta foi capaz de recomendar o guia mais adequado como primeira
+
+sugestão em 80.3% dos casos, conrmando, assim, o impacto direto do reaproveitamento
+
+de conhecimento histórico na redução do tempo de resposta.
+
+
+Trabalhos mais recentes, exploram o uso de modelos de linguagem de grande escala para
+
+automatizar este processo de investigação de uma forma mais exível. O estudo de Roy et
+
+al. (2024) demonstra que agentes baseados em          Large Language Model (LLM ) conseguem
+gerar sugestões de mitigação quando combinam descrições de incidentes com informação
+
+histórica e dados adicionais, como métricas e registos das aplicações, o que faz melhorar
+
+a qualidade das sugestões.     De igual modo, o artigo de Goel et al. (2024) evidencia que
+
+a inclusão de contexto proveniente de diferentes fases do ciclo de vida do software me-
+
+lhora o desempenho dos modelos na geração de recomendações, quando comparados com
+
+abordagens que utilizam apenas uma fonte de informação.
+
+
+Estes resultados, indicam que a análise de incidentes anteriores, quando suportada por fontes
+
+de informação adicionais, pode reduzir a carga cognitiva dos membros de suporte e tornar
+
+o processo de mitigação mais rápido, mais consistente e mais independentemente do nível
+
+de experiência do elemento de prevenção.
+
+
+
+2.2.3    Apoio à Contextualização de Incidentes com LLMs
+
+Para além dos temas abordados anteriormente, existe ainda um desao inicial que os mem-
+
+bros das equipas de suporte têm de superar. Antes de atuar sobre um incidente, seja por
+
+análise própria, por sugestões de mitigação ou até       TSG s, os OCEs devem perceber o in-
+cidente em si, analisando as informações que são dadas de forma automática ou, quando
+
+criados manualmente, pelos clientes. Essas informações são muitas vezes pouco estruturadas
+
+e ambíguas.
+
+
+Esta falta de contexto na fase inicial, impele os   OCEs a iniciar uma investigação com base em
+informação limitada, o que faz com que os elementos de prevenção realizem várias tentativas
+
+para entender o impacto real do incidente e os serviços que são afetados. Em equipas com
+
+aplicações de grande escala, onde múltiplos incidentes podem ocorrer em simultâneo, uma
+
+primeira análise incompleta do incidente pode contribuir para atrasos na resposta e aumentar
+
+a pressão sobre os   OCEs .
+Desta forma, resolver incidentes torna-se num processo dependente da experiência dos mem-
+
+bros das equipas de suporte, o que realça a necessidade da exploração de diferentes fontes
+
+de informação, como a análise de incidentes anteriores, métricas ou registos de eventos dos
+
+sistemas. Como demonstrado por Roy et al. (2024), agentes baseados em         LLMs conseguem
+integrar várias fontes de dados durante a investigação, o que permite uma compreensão mais
+
+rápida do problema à medida que nova informação é incorporada.
+
+
+Goel et al. (2024) mostra ainda que, incluir contexto adicional proveniente de diferentes
+
+fases do ciclo de vida do software, pode melhorar a capacidade dos      LLMs em apoiar tarefas
+de análise e investigação. Este enriquecimento contextual, contribui para reduzir a incerteza
+
+                                          OCEs de forma mais ecaz no primeiro contacto
+inicial associada aos incidentes e orientar os
+
+com os   tickets. Adicionalmente, Y. Jiang et al. (2024) também apontam que os LLMs
+podem facilitar o acesso à informação operacional relevante, tornando tarefas que exigiam
+
+conhecimento especíco sobre ferramentas e linguagens internas em tarefas automatizadas.
+12                                                                 Capítulo 2. Estado da Arte
+
+Em suma, a consolidação de informação histórica e contextual dos incidentes, apoiada por
+
+modelos de linguagem de grande escala e fontes de informação adicionais, desempenha um
+
+papel fundamental na redução da incerteza associada à investigação inicial de incidentes.
+
+
+
+2.2.4     Técnicas e Modelos para Análise de Incidentes
+
+O estudo do estado da arte apresentado devia apresentar algumas técnicas e métodos
+
+que podem, eventualmente, ser utilizadas.
+
+
+As principais técnicas identicadas na literatura são apresentadas de seguida:
+
+
+      Retrieval-Augmented Generation (RAG): Combinação de mecanismos de recupera-
+        ção de informação com modelos de linguagem para gerar respostas com mais contexto.
+
+        Foi utilizado na geração de  queries e apoio à análise de incidentes, apresentando me-
+        lhorias na qualidade das respostas quando comparado com LLM s sem mecanismos de
+
+        retrieval. Como limitação, depende fortemente da qualidade dos dados recuperados.
+        (Goel et al. 2024; Y. Jiang et al. 2024)
+
+
+      Agentes de LLM: Agentes baseados em modelos de linguagem capazes de executar
+        raciocínio com várias etapas e interagir com ferramentas externas. São particularmente
+
+        ecazes na análise de causa raiz e apresentam maior precisão do que abordagens
+
+        baseadas em    LLM simples. No entanto, implicam maior custo computacional e tempo
+        de resposta. (Roy et al. 2024)
+
+
+      Chain-of-Thought (CoT): Técnica de instruções que incentiva o modelo a gerar
+        raciocínio passo-a-passo. Melhora a interpretabilidade e a qualidade das respostas em
+
+        tarefas de   debugging e análise de incidentes, embora aumente o tempo de análise.
+        (Y. Jiang et al. 2024; Roy et al. 2024)
+
+
+      Clustering: Permite agrupar incidentes com base na sua similaridade, sendo útil na
+        correlação de incidentes e apresentando uma maior robustez do que heurísticas simples,
+
+        mas sendo sensível à escolha de parâmetros. Um exemplo de um algoritmo referido
+
+        na revisão de literatura, foi o   Density-Based Spatial Clustering of Applications with
+        Noise (DBSCAN ). (Yujun Chen et al. 2020)
+      Graph Neural Networks (GNNs): Modelos que representam sistemas como grafos,
+        capturando, assim, relações entre componentes. Estes modelos, têm sido propostas
+
+        para prever relações entre alertas, sendo avaliadas através de métricas como   Area Un-
+        der the Curve (AUC ) e F1-Score, demonstrando desempenho superior face a métodos
+        tradicionais. Contudo, possuem elevada complexidade computacional. (Yiru Chen et
+
+        al. 2024)
+
+
+      Modelos de Grafos Temporais: Extensões de GNNs que incorporam informação
+        temporal, e que permitem modelar a evolução de incidentes ao longo do tempo. Ofe-
+
+        recem melhor desempenho do que grafos estáticos, no entanto, são mais complexos
+
+        de implementar. (Yiru Chen et al. 2024)
+
+
+      Learning-to-Rank: Abordagem que permite ordenar resultados com base na sua re-
+        levância.    É utilizada na recomendação de ações de mitigação, superando métodos
+
+        heurísticos, embora necessite de dados anotados para treino. (J. Jiang et al. 2020)
+2.3. Soluções no Mercado                                                                   13
+
+
+
+
+2.2.5     Conclusão
+
+Com este capítulo, foi possível vericar, com base nos trabalhos analisados, que a gestão de
+
+incidentes em sistemas de grande escala é, ainda, muito afetada pela fragmentação da infor-
+
+mação relacionada com as falhas que causam os incidentes, pela recorrência e duplicação de
+
+tickets em curtos intervalos de tempo e pela dependência da experiência dos OCEs . Assim,
+a literatura, mostrou que o uso de IA, como LLMs ou GNNs , facilita a contextualização
+
+inicial dos incidentes aos membros da equipa de suporte e ajuda na mitigação das falhas ao
+
+fornecer detalhes e sugestões de resolução com base em registos de incidentes anteriores.
+
+
+Em síntese, e respondendo à pergunta inicial "Como é que as ferramentas de  Large Language
+Models podem melhorar a interpretação e análise de registos de incidentes de TI?", é possível
+armar que estes Modelos de Linguagem de Grande Escala têm um papel importante no
+
+apoio da compreensão inicial, na análise e na procura de formas de mitigar os incidentes.
+
+São, assim, um apoio no desempenho por parte do trabalho dos membros das equipas de
+
+prevenção.
+
+
+No entanto, a análise critica da literatura, mostrou que os estudos efetuados foram realizados
+
+com conjuntos de dados (    datasets ) estáticos e abordam apenas fases especicas do ciclo
+de vida de um incidente. Assim, o desenvolvimento de uma nova solução, que agrega várias
+
+fases deste ciclo e use um conjunto de dados dinâmicos, pode acarretar riscos ainda não
+
+identicados por estudos já realizados.
+
+
+No capitulo 3, será discutido o futuro desta investigação, apresentando uma proposta de
+
+implementação capaz de alcançar os objetivos propostos no capitulo 1.
+
+
+
+
+2.3      Soluções no Mercado
+
+A Inteligência Articial é um tema em alta em todos os mercados e áreas, sendo esta uma
+
+área que não escapa à automatização de processos. Dessa forma, o mercado já apresenta
+
+algumas soluções para o correlacionamento de incidentes, para o resumo dos mesmo, para
+
+sugestões de mitigação e para análise de informação adicional (eventos das aplicações).
+
+Nesta secção abordamos quatros das principais ferramentas existentes, abordando as suas
+
+funcionalidades fundamentais.
+
+
+
+2.3.1     AWS AIOps
+
+AAWS recorreu a técnicas de IA e Machine Learning (ML), de forma a "ajudar a aprimorar,
+acelerar e automatizar os processos de operações em nuvem"( Operações de IA 2026). O
+AWS AIOps, permite que os OCEs observem facilmente a sua carga de trabalho, acelerando
+a solução de problemas operacionais e a toma de medidas para resolver e mitigar problemas,
+
+melhorando o    TTM .
+As principais funcionalidades da sua ferramenta, são:
+
+
+     Encontrar a causa raiz de um problema: É possível congurar o ambiente para
+        iniciar uma investigação mal um alarme seja disparado;
+
+
+     Sugestões de correção: A AWS fornece guias do seu próprio ambiente para a reso-
+      lução de problemas relacionados com ferramentas AWS ;
+14                                                                Capítulo 2. Estado da Arte
+
+      Capacitar operadores sem experiência: A ferramenta analisa pontos de dados para
+        descobrir relações entre serviços e desenvolver uma compreensão de como eles funci-
+
+        onam juntos;
+
+
+      Consulta de dados de telemetria usando linguagem natural: A AWS permite escre-
+        ver perguntas em linguagem natural sem precisar de aprender linguagens de consulta
+
+        complexas.
+
+
+
+2.3.2     New Relic AIOps
+
+A plataforma de AIOps da New Relic oferece funcionalidades orientadas por IA e ML, utili-
+zando técnicas como RAG , para gerar interfaces que ajudam as equipas a resolver incidentes
+com mais rapidez (AIOps and Applied Intelligence | New Relic 2026).
+
+
+As funcionalidade relevantes da plataforma, são:
+
+
+      Deteção de anomalias instantânea:           Identica problemas emergentes ou desvios
+
+        do sistema usando modelos adaptativos para conectar sintomas a todos os níveis da
+
+        arquitetura;
+
+
+      Correlação de alertas: Identica eventos de alerta semelhantes numa única questão
+        para facilitar a resolução de problemas;
+
+
+      Priorização e conexão com outros serviços: Oferece a possibilidade de congu-
+        rar alarmes como mais prioritários e integrar sistemas de noticação, como SMS ou
+
+        Microsoft Teams.
+
+2.3.3     Atlassian Ops Guide Agent
+
+O agente criado pela    Atlassian (Ops Guide ), é um agente projetado para ajudar na gestão
+de alertas e incidentes com mais eciência, fornecendo contexto histórico e recomendando
+
+ações, simplicando assim as tarefas das equipas de suporte (    Using the Ops Guide agent |
+Rovo 2026).
+Este agente fornece a possibilidade de:
+
+
+      Pesquisa em Linguagem Natural: Permite pesquisar por alertas e incidentes em
+        linguagem natural, convertendo de forma automática em sintaxe de pesquisa da fer-
+
+        ramenta;
+
+
+      Correlação de incidentes: O agente, analisa o histórico de incidentes anteriores para
+       contextualizar com informação adicional os tickets ;
+
+
+      Criação de Post-Mortems: Através da sua ferramenta Conuence, o agente concede
+       a opção de criar revisões pós incidentes baseado nos detalhes de um ticket.
+
+
+
+2.3.4     Elastic AI Assistant
+
+O assistente de Inteligência Articial fornecido pela   Elastic, foge um pouco ao âmbito das
+ferramentas apresentadas anteriormente, uma vez que este serviço não gere incidentes mas
+
+é sim uma ferramenta de observabilidade, onde é possível visualizar o registo dos eventos de
+
+                                                    LLMs que ajuda a perceber, analisar
+serviços. Assim, este assistente é uma integração com
+
+e interagir com os dados armazenados (Elastic AI Assistant for Observability and Search |
+
+Elastic Docs 2026).
+2.3. Soluções no Mercado                                                                     15
+
+
+
+
+Esta plataforma, ajuda a:
+
+
+      Descodicar mensagens de erro: Interpreta rastros dos serviços e registos de erros
+        para identicar as causas principais de falhas;
+
+
+      Identicar estrangulamentos de desempenho: Encontra operações que consomem
+        muitos recursos e consultas lentas na ferramenta;
+
+
+      Criar consultas em Linguagem Natural: A partir de linguagem natural, converte
+       sintaxe Domain-Specic Language (DSL) da consulta para linguagem de consultas do
+
+       ElasticSearch e executa-as diretamente a partir da interface de conversa.
+
+2.3.5     Conclusão
+
+Através das tabelas 2.5 e 2.6 conseguimos distinguir as capacidades oferecidas pelas soluções
+
+no mercado e as técnicas utilizadas para as implementar.
+
+
+É possível que soluções mais tradicionais, como       AWS AIOps e New Relic, têm maior foco
+em capacidades de correlação e análise de causa raiz suportadas por técnicas de    machine
+learning e análise de dados, apresentando um suporte limitado para contextualização baseada
+em modelos de linguagem e focando-se apenas no seu ambiente de ferramentas.
+
+
+Por outro lado, soluções mais recentes, como o Atlassian Ops Guide Agent e o Elastic
+AI Assistant, recorrem a modelos de linguagem, agentes e técnicas de RAG , permitindo
+melhorar signicativamente a contextualização e o suporte à decisão.
+
+
+Esta distinção evidencia uma evolução das abordagens, passando de sistemas centrados
+
+na análise de dados para sistemas orientados à interpretação, contextualização e assistência
+
+inteligente onde se torna evidente o uso mais frequente de agentes     LLM e sistemas baseados
+em   RAG .
+ Solução                          Correlação   Causa Raiz     Mitigação       Contextualização
+ AWS AIOps                           Sim             Sim         Sim               Parcial
+
+ New Relic AIOps                     Sim             Sim         Não                Não
+
+ Atlassian      Ops    Guide         Sim             Sim         Não                Sim
+
+ Agent
+
+ Elastic AI Assistant                Não             Sim         Não                Sim
+
+
+                        Tabela 2.5: Funcionalidades de Soluções Existentes
+
+
+
+
+           Solução                      Agentes LLM        RAG    Clustering     Grafos
+           AWS AIOps                           Não         Não         Sim        Não
+
+           New Relic AIOps                     Não         Não         Sim        Sim
+
+           Atlassian   Ops     Guide           Sim         Sim       Não          Não
+
+           Agent
+
+           Elastic AI Assistant                Sim         Sim       Não          Não
+
+
+                        Tabela 2.6: Técnicas usadas por Soluções Existentes
+                                                                                           17
+
+
+
+
+Capítulo 3
+
+Futuros Desenvolvimentos
+
+Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser
+
+proposta. Assim, é denida a metodologia a ser seguida na elaboração do projeto, é apre-
+
+sentado um desenho da solução onde, são identicados os sistemas externas a ser utilizados
+
+e é retratado um dos uxos principais da solução onde é possível vericar a interação entre
+
+os diversos sistemas.    Por m, são identicados os pressupostos e restrições inerentes à
+
+solução proposta neste documento.
+
+
+
+
+3.1      Metodologia Proposta
+
+Após a revisão da literatura, realizada no capitulo 2, conseguimos chegar à conclusão que
+
+as ferramentas de   LLM quando utilizadas para correlação de incidentes, análise do histórico
+de   tickets e sugestões de mitigação, podem ajudar os membros das equipas de suporte a
+compreender melhor os incidentes e resolvê-los de uma forma mais ecaz e eciente.
+
+
+Assim, pretendemos conceber uma solução que, através de       LLMs, seja capaz de apoiar os
+OCEs na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa
+fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a
+
+informação do incidente atual numa linguagem percetível para qualquer membro da equipa
+
+de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão.
+
+Em seguida, com a correlação de incidentes funcional, pretendemos gerar para o utilizador
+
+sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou
+
+denitivamente, o problema, diminuindo o TMR.
+
+
+Por m, com uma ferramenta sólida para ajudar os      OCEs na interpretação e mitigação de
+incidentes, propomos realizar a ligação com ferramentas externas de registos de eventos dos
+
+sistemas, ferramentas essas já utilizadas frequentemente na análise manual dos membros
+
+das equipas de suporte.     Dessa forma, pretendemos, reduzir o tempo gasto a analisar o
+
+incidente, diminuindo, uma vez mais, o tempo médio de resposta.
+
+
+
+
+3.2      Desenho da Solução
+
+Como referido anteriormente, o objetivo da solução passa por desenvolver um serviço capaz
+
+de integrar com diversos serviços externos, tais como:
+
+
+      Serviço de incidentes: apresenta-se como sendo a base da solução, é a partir deste
+       serviço que retiramos a informação do incidente a ser analisado e do histórico de
+
+       incidentes, para realizar a correlação;
+18                                                    Capítulo 3. Futuros Desenvolvimentos
+
+      Motor LLM: outro elemento que devemos considerar como base da solução, visto
+       que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem
+
+       natural e por recolher as sugestões de mitigação e as priorizar;
+
+
+      Serviço de logs: como observado na revisão de literatura, informação adicional como
+       registos de eventos dos serviços pode alavancar a performance do motor LLM , não
+
+       sendo uma componente obrigatória mas tornando-se numa ajuda para a análise dos
+
+       OCEs .
+Para além dos serviços funcionais descritos, a solução proposta deve ainda ser exposta atra-
+
+vés de uma interface de acesso controlada e escalável. Desta forma, propomos a utilização
+
+de um   API Gateway (Gateway de API) para agir como uma porta de entrada do serviço,
+controlando autorizações e acessos, e gerir o tráfego de pedidos feitos à Interface de Progra-
+
+mação de Aplicações (  API ). Em paralelo, apresentamos a necessidade de um Load Balancer
+(balanceador de carga) que ajuda a distribuir tráfego entre múltiplas instâncias do serviço,
+
+assegurando maior disponibilidade e tolerância a falhas.
+
+
+Adicionalmente, é sugerido o desenvolvimento de uma aplicação     Web que permita a visua-
+lização da informação gerada por parte dos    OCEs , onde estes poderão consultar o resumo
+do incidente pretendido,   tickets relacionados e sugestões de mitigação.
+
+
+
+
+                              Figura 3.1: Diagrama de Implantação
+
+
+
+
+Atendendo ao facto desta investigação se focar na proposta de uma solução, optou-se por
+
+apresentar apenas o diagrama de implantação (Figura 3.1), que permite evidenciar as inte-
+
+grações principais, deixando o detalhe da arquitetura interna para uma fase mais avançada
+
+da investigação.
+3.3. Fluxo de Funcionamento                                                                19
+
+
+
+
+3.3    Fluxo de Funcionamento
+
+Um processo de consulta de incidentes (Figura 3.2), tem inicio no serviço a ser desenvolvido,
+
+onde, após a receção de um pedido de pesquisa, é realizada a consulta do incidente na
+
+plataforma externa de gestão de incidentes, assim como o histórico de tickets anteriores.
+
+
+De seguida, o serviço prepara a informação, combinando os dados do incidente atual com o
+
+histórico de incidentes anteriores, de forma a enriquecer o contexto disponível para análise e
+
+permitindo uma visão mais abrangente do problema. Já com os dados do incidente, é feita
+
+uma recolha dos eventos das aplicações, num período próximo ao da falha, e esses dados
+
+são adicionados à informação pré-processada do incidente.
+
+
+Após esta etapa de enriquecimento e agregação de dados, o uxo é direcionado para o
+
+motor de modelos de linguagem de grande escala, responsável por duas tarefas principais.
+
+De forma paralela, o   LLM gera uma descrição do incidente em linguagem natural, tornando
+a informação técnica mais clara e acessível aos membros da equipa de suporte, e gera
+
+sugestões de mitigação priorizadas, com base no contexto do incidente, no histórico e nos
+
+eventos recolhidos, de forma a apoiar a tomada de decisão.
+
+
+Por m, os resultados produzidos pelo motor de    LLM são novamente integrados no serviço
+central, que retorna ao utilizador a informação detalhada e contextualizada do incidente,
+
+incluindo a sumarização e as sugestões de mitigação.
+20                                                  Capítulo 3. Futuros Desenvolvimentos
+
+
+
+
+                             Figura 3.2: Diagrama de Atividade
+
+
+
+
+3.4    Pressupostos e Restrições
+
+Projetos de soluções na área de TI, apresentam sempre riscos suscetíveis de acontecer
+
+durante a sua implementação ou até características que restringem o desenvolvimento da
+
+proposta. Por esse motivo, torna-se importante denir, logo de inicio, informações que possa
+
+limitar o progresso do projeto e criar planos alternativos que nos permitam, de forma mais
+
+controlada, lidar ou contornar estes problemas.
+3.4. Pressupostos e Restrições                                                                21
+
+
+
+
+3.4.1     Pressupostos
+
+Durante o planeamento do projeto, nem todas as informações podem ser assumidas como
+
+certas, sendo que muitos dos fatores não são controlados pelos membros das equipas de
+
+desenvolvimento.   Os pressupostos são um conjunto de suposições que se assume que se
+
+vão realizar mas, que têm algum risco associado. Por norma, quando estas hipóteses são
+
+conrmadas, tornam-se restrições do projeto, porém, quando não é possível conrmar a sua
+
+premissa, acabam por se tornar em riscos do projeto. Dessa forma, devem ser criados planos
+
+alternativos para evitar que os riscos possam se tornar em barreiras ao desenvolvimento da
+
+solução. Os pressupostos e os planos de contingências foram identicados na Tabela 3.1.
+
+
+ Pressuposto                                    Plano Alternativo(s)
+ O conjunto de dados será entregue por uma      Plano B - Obter um conjunto de dados so-
+
+ das equipas da   CTW num formato passível      bre incidentes online de plataformas reco-
+
+ de utilização                                  nhecidas, como     Microsoft
+                                                Plano B - Compilar localmente um        LLM
+ O motor  LLM a utilizar será disponibilizado
+ pela   CTW de forma a não comprometer          Plano   C   -   Utilizar   um   LLM   disponível
+
+ dados                                          com um   dataset sem informação conden-
+                                                cial
+
+
+                             Tabela 3.1: Pressupostos do Projeto
+
+
+
+
+3.4.2     Restrições
+
+As restrições do projeto são fatores que limitam as opções a tomar durante o desenvolvi-
+
+mento da solução. Estes fatores não são negociáveis e por isso a sua identicação precoce,
+
+é essencial para avaliar o futuro e a qualidade que proposta pode ter.
+
+
+As restrições identicadas são:
+
+
+  1. Os dados presentes no    dataset fornecido pela empresa terão de ser parcialmente/to-
+        talmente anonimizados.
+                                                                                             23
+
+
+
+
+Bibliograa
+
+AIOps and Applied Intelligence | New Relic (2026). en. url: https : / / newrelic . com /
+  platform/applied-intelligence?has_gdpr=true (acedido em 06/01/2026).
+Chen, Yiru et al. (2024). Dynamic Graph Neural Networks-Based Alert Link Prediction for
+
+  Online Service Systems. Em: Proceedings of the 38th IEEE/ACM International Con-
+  ference on Automated Software Engineering. ASE '23. Echternach, Luxembourg: IEEE
+  Press, pp. 7990. isbn: 9798350329964. doi: 10 . 1109 / ASE56229 . 2023 . 00177. url:
+
+  https://doi.org/10.1109/ASE56229.2023.00177.
+Chen, Yujun et al. (2020). Identifying linked incidents in large-scale online service systems.
+
+  Em: Proceedings of the 28th ACM Joint Meeting on European Software Engineering
+  Conference and Symposium on the Foundations of Software Engineering. ESEC/FSE
+  2020. event-place: Virtual Event, USA. New York, NY, USA: Association for Computing
+
+  Machinery, pp. 304314. isbn: 978-1-4503-7043-1. doi:      10.1145/3368089.3409768. url:
+  https://doi.org/10.1145/3368089.3409768.
+Elastic AI Assistant for Observability and Search | Elastic Docs (2026). en. url: https://
+  www.elastic.co/docs/solutions/observability/observability-ai-assistant
+  (acedido em 06/01/2026).
+
+Goel, Drishti et al. (2024). X-Lifecycle Learning for Cloud Incident Management using
+
+  LLMs. Em:  Companion Proceedings of the 32nd ACM International Conference on the
+  Foundations of Software Engineering. FSE 2024. event-place: Porto de Galinhas, Brazil.
+  New York, NY, USA: Association for Computing Machinery, pp. 417428. isbn: 979-8-
+
+  4007-0658-5. doi:   10 . 1145 / 3663529 . 3663861. url: https : / / doi . org / 10 . 1145 /
+  3663529.3663861.
+Jiang, Jiajun et al. (2020). How to mitigate the incident? an eective troubleshooting
+
+  guide recommendation technique for online service systems. Em:   Proceedings of the
+  28th ACM Joint Meeting on European Software Engineering Conference and Symposium
+  on the Foundations of Software Engineering. ESEC/FSE 2020. event-place: Virtual Event,
+  USA. New York, NY, USA: Association for Computing Machinery, pp. 14101420. isbn:
+
+  978-1-4503-7043-1. doi:    10.1145/3368089.3417054. url: https://doi.org/10.1145/
+  3368089.3417054.
+Jiang, Yuxuan et al. (2024). Xpert: Empowering Incident Management with Query Re-
+
+  commendations via Large Language Models. Em:          Proceedings of the IEEE/ACM 46th
+  International Conference on Software Engineering. ICSE '24. event-place: Lisbon, Portu-
+  gal. New York, NY, USA: Association for Computing Machinery. isbn: 979-8-4007-0217-4.
+
+  doi:10.1145/3597503.3639081. url: https://doi.org/10.1145/3597503.3639081.
+Operações de IA (2026). pt-BR. url: https : / / aws . amazon . com / pt / cloudwatch /
+  features/aiops/ (acedido em 06/01/2026).
+Roy, Devjeet et al. (2024). Exploring LLM-Based Agents for Root Cause Analysis. Em:
+
+  Companion Proceedings of the 32nd ACM International Conference on the Foundations
+  of Software Engineering. FSE 2024. event-place: Porto de Galinhas, Brazil. New York,
+  NY, USA: Association for Computing Machinery, pp. 208219. isbn: 979-8-4007-0658-5.
+
+  doi:   10.1145/3663529.3663841. url: https://doi.org/10.1145/3663529.3663841.
+24                                                                   Bibliograa
+
+Using the Ops Guide agent | Rovo (2026). en-US. url: https://support.atlassian.
+  com/rovo/docs/using-ops-guide/ (acedido em 06/01/2026).
+                                                                                         25
+
+
+
+
+Apêndice A
+
+Registos de incidentes
+
+O registo de um incidente, é um conjunto de informações sobre um incidente em especico.
+
+Nesse registo é possível visualizar os detalhes desse mesmo   ticket, como o identicador, o
+cliente, equipa ou alarme que originou o incidente, o serviço afetado, a sua prioridade e o
+
+estado atual (Figura A.1).
+
+
+
+
+                              Figura A.1: Detalhes do incidente
+
+
+
+
+Associado a cada incidente, existe ainda um titulo, normalmente sucinto e objetivo, e uma
+
+descrição mais detalhada do problema.      É nestes campos que o membro da equipa de
+
+suporta inicia a sua análise, sendo bastante importante conter descrições detalhadas, o que
+
+nem sempre é possível (Figura A.2).
+26                                                      Apêndice A. Registos de incidentes
+
+
+
+
+                              Figura A.2: Detalhes do incidente
+
+
+
+
+Para além dos campos originais do incidente, os desenvolvedores podem ainda deixar co-
+
+mentários extra que podem ser visíveis para o cliente ou apenas para as equipas de suporte.
+
+Esta abordagem é útil quando um incidente afeta várias equipas (Figura A.3).
+
+
+
+
+                              Figura A.3: Detalhes do incidente
+
+
+
+
+Por m, o incidente precise de notas de resolução onde os    OCEs podem informar sobre os
+passos efetuados, origem do problema e outros comentários que achar necessário (Figura
+
+A.4).
+Apêndice A. Registos de incidentes                              27
+
+
+
+
+                            Figura A.4: Detalhes do incidente
+
