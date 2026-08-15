@@ -1,7 +1,7 @@
 # SmartAlarms Requirements
 
 **Status:** Draft v1  
-**Last updated:** 2026-07-28  
+**Last updated:** 2026-08-15  
 **Scope:** Academic incident analysis service for CI/IDE and API usage
 
 ## 1) Product Goal
@@ -11,8 +11,8 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 ## 2) In Scope
 
 - Analyze incident context and produce actionable diagnosis and mitigation suggestions.
-- Provide an API endpoint that returns a full analysis payload.
-- Allow per-request control of external integrations (logs, Confluence, ITSM history).
+- Provide an API endpoint that enriches and analyzes incidents by ID.
+- Keep source-selection policy server-side in the initial version (no per-request source toggles).
 - Keep architecture aligned with layered design (`domain`, `application`, `infrastructure`, `presentation`).
 - Measure token usage, latency, and source usage for experiments and evaluation.
 
@@ -27,19 +27,16 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 
 ### 4.1 Entry Points
 
-- **FR-1.1 API analysis trigger:** users can request incident analysis via HTTP endpoint.
+- **FR-1.1 API analysis trigger:** users can request incident enrichment and analysis via `GET /incident/details`.
 - **FR-1.2 IDE/automation compatibility:** endpoint and service design must support IDE-assisted and automation-driven workflows.
 
-### 4.2 Configurable Analysis Endpoint
+### 4.2 Analysis via GET Details Endpoint
 
-- **FR-2.1 Full analysis response:** endpoint returns a complete analysis object (incident summary, correlated signals, probable causes, mitigation suggestions, confidence/justification metadata).
-- **FR-2.2 External integration toggles:** request supports flags to enable/disable external calls:
-    - `use_logs` (Kibana/Elastic/CloudWatch)
-    - `use_confluence` (knowledge/guidelines)
-    - `use_itsm_history` (historical incidents)
-- **FR-2.3 Incident details always available:** even when `use_itsm_history=false`, the analysis must still use incident details provided in the request or primary incident record.
-- **FR-2.4 Graceful degradation:** if a disabled or unavailable source exists, pipeline continues with available sources and records source availability in output.
-- **FR-2.5 Source traceability:** response explicitly states which sources were used, skipped by config, or failed.
+- **FR-2.1 Request model:** endpoint accepts one or more `incidentIds` query parameters.
+- **FR-2.2 Response model:** endpoint returns incident details enriched with analysis outputs relevant to mitigation (for example mitigation suggestions and related log/event references).
+- **FR-2.3 Incident details availability:** analysis must be based on incident data fetched from the primary incident record (and optional related history when available).
+- **FR-2.4 Graceful degradation:** if an optional source is unavailable, pipeline continues with available sources and still returns a valid response for found incidents.
+- **FR-2.5 Source policy:** source enablement is controlled by server configuration/default behavior in this phase; client-side per-request toggles are deferred.
 
 ### 4.3 Data & Services Layer
 
@@ -68,7 +65,7 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 ## 7) Observability & Cost Requirements
 
 - Track `tokens_in`, `tokens_out`, model name, latency, cache hit/miss per request.
-- Track source usage fields: `logs_used`, `confluence_used`, `itsm_history_used`.
+- Track source usage fields internally: `logs_used`, `confluence_used`, `itsm_history_used`.
 - Attribute requests by `user` (when available), `workflow`, and `credential_source`.
 - Export metrics to Prometheus-compatible format and traces to OTel/Langfuse-compatible backends.
 
@@ -81,14 +78,14 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 
 ## 9) Assumptions
 
-- Incident payload contains enough minimum context for baseline analysis.
+- Incident identifiers (`incidentIds`) are sufficient to fetch minimum context for baseline analysis.
 - External systems (ITSM/logs/Confluence) may be intermittently unavailable.
-- Users can choose analysis depth by toggling source usage per request.
+- Analysis depth is controlled by server defaults/configuration in the initial version.
 - The system can run useful analysis even with only incident-local data.
 
 ## 10) Open Questions
 
-- Exact request/response schema for source toggles and source-status reporting.
+- Whether source toggles should be reintroduced later (and if so, via query parameters, headers, or a separate endpoint contract).
 - Confidence scoring strategy and thresholds for low-confidence guidance.
 - Default toggle policy per workflow (API direct vs IDE-assisted).
 - Minimum dataset and benchmark protocol for academic evaluation.

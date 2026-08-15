@@ -152,8 +152,8 @@ Should not contain business logic.
 # Expected Flow (Phase 1)
 
 ```text
-1. Receive incident (number, description, type, etc.)
-2. Query history of similar incidents
+1. Receive one or more incident IDs via GET /incident/details
+2. Fetch primary incident details from ITSM (and related history when available)
 3. Call LLM to:
    - Generate natural-language summary
    - Correlate with previous incidents

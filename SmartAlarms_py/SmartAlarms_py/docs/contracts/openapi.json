@@ -1,0 +1,196 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SmartAlarms API",
+    "version": "v1",
+    "description": "API contract for incident analysis and incident detail enrichment. Incident analysis is performed through the GET details endpoint.\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Incidents",
+      "description": "Incident detail enrichment and analysis operations"
+    }
+  ],
+  "paths": {
+    "/incident/details": {
+      "get": {
+        "tags": ["Incidents"],
+        "summary": "Fetches and analyzes specified incidents",
+        "description": "Returns incident details and analysis-relevant enrichment from related incidents and log events for a list of incident identifiers.\n",
+        "operationId": "getIncidentDetailsAndAnalysis",
+        "parameters": [
+          {
+            "name": "incidentIds",
+            "in": "query",
+            "required": true,
+            "description": "List of incident identifiers",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "example": "INC000000000000"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful retrieval and analysis containing one or more results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailsResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "The requested incidents were not found"
+          },
+          "400": {
+            "description": "The incoming request did not pass input validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ResolutionSuggestion": {
+        "type": "object",
+        "description": "Information about a resolution suggestion and where it came from",
+        "additionalProperties": false,
+        "properties": {
+          "suggestion": {
+            "type": "string",
+            "description": "The action that is suggested",
+            "example": "Restart the ECS tasks for the affected service"
+          },
+          "relatedIncidents": {
+            "type": "array",
+            "description": "The list of incidents that led to this suggestion",
+            "items": {
+              "type": "string"
+            },
+            "example": ["INC000000000001", "INC000000000002"]
+          },
+          "relatedLogIds": {
+            "type": "array",
+            "description": "The list of log events that led to this suggestion",
+            "items": {
+              "type": "string"
+            },
+            "example": ["transactionId1", "transactionId2"]
+          }
+        }
+      },
+      "DetailsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "incidents": {
+            "type": "array",
+            "description": "List with incident details",
+            "items": {
+              "$ref": "#/components/schemas/IncidentData"
+            }
+          }
+        }
+      },
+      "IncidentData": {
+        "type": "object",
+        "description": "Contains additional information about an incident",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique incident identifier",
+            "example": "INC000000000000"
+          },
+          "shortDescription": {
+            "type": "string",
+            "description": "A small description of what the incident is about",
+            "example": "An increase of cpu was observed due to a high number of requests to the path /endpoint"
+          },
+          "description": {
+            "type": "string",
+            "description": "A broader description with incident context",
+            "example": "The tasks from ECS of the service billing-api were increasing CPU usage due to high requests."
+          },
+          "resolutionSuggestions": {
+            "type": "array",
+            "description": "The list of ordered suggestions to mitigate the incident",
+            "items": {
+              "$ref": "#/components/schemas/ResolutionSuggestion"
+            }
+          },
+          "relatedLogIds": {
+            "type": "array",
+            "description": "The list of log events that may have a connection with the incident",
+            "items": {
+              "type": "string"
+            },
+            "example": ["transactionId1", "transactionId2"]
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["message"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Invalid request payload"
+          },
+          "code": {
+            "type": "string",
+            "example": "BAD_REQUEST"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
