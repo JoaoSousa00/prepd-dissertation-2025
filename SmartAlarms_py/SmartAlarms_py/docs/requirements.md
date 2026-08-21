@@ -1,7 +1,7 @@
 # SmartAlarms Requirements
 
 **Status:** Draft v1  
-**Last updated:** 2026-08-15  
+**Last updated:** 2026-08-21  
 **Scope:** Academic incident analysis service for CI/IDE and API usage
 
 ## 1) Product Goal
@@ -13,7 +13,7 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - Analyze incident context and produce actionable diagnosis and mitigation suggestions.
 - Provide an API endpoint that enriches and analyzes incidents by ID.
 - Keep source-selection policy server-side in the initial version (no per-request source toggles).
-- Keep architecture aligned with layered design (`domain`, `application`, `infrastructure`, `presentation`).
+- Keep architecture aligned with layered design (`domain`, `infrastructure`, `presentation`).
 - Measure token usage, latency, and source usage for experiments and evaluation.
 
 ## 3) Out of Scope (Current)
@@ -23,7 +23,12 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - Full enterprise SLA/SLO commitments.
 - Mandatory dependency on all external systems for every analysis request.
 
-## 4) Functional Requirements
+## 4) Runtime and Hosting Assumptions
+
+- The service must run locally inside a Docker image for development and evaluation.
+- Environment-specific configuration must be provided through externalized settings, not hardcoded values.
+
+## 5) Functional Requirements
 
 ### 4.1 Entry Points
 
@@ -47,14 +52,14 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - **FR-3.5 LLM gateway:** provider abstraction for analysis/summarization tasks.
 - **FR-3.6 Isolation by layer:** all external API calls remain in `infrastructure` adapters only.
 
-## 5) Pipeline Constraints (Efficiency)
+## 6) Pipeline Constraints (Efficiency)
 
 - Source filtering and normalization happen before expensive LLM calls.
 - Prompt construction must be incident-focused and bounded by configurable size limits.
 - Cache use must prioritize repeated guideline/context reuse.
 - Startup warmup is best-effort; system falls back to on-demand fetch and cache.
 
-## 6) Non-Functional Requirements
+## 7) Non-Functional Requirements
 
 - **NFR-1 Academic scale:** support classroom/lab workloads with concurrent users.
 - **NFR-2 Reliability:** partial-source failures do not block full response generation.
@@ -62,28 +67,28 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - **NFR-4 Security:** secrets through environment/secret manager; no hardcoded credentials.
 - **NFR-5 Extensibility:** new providers/sources can be added without rewriting core orchestration.
 
-## 7) Observability & Cost Requirements
+## 8) Observability & Cost Requirements
 
 - Track `tokens_in`, `tokens_out`, model name, latency, cache hit/miss per request.
 - Track source usage fields internally: `logs_used`, `confluence_used`, `itsm_history_used`.
 - Attribute requests by `user` (when available), `workflow`, and `credential_source`.
 - Export metrics to Prometheus-compatible format and traces to OTel/Langfuse-compatible backends.
 
-## 8) Success Metrics
+## 9) Success Metrics
 
 - Reduced mean time to understand incidents in evaluation scenarios.
 - Higher relevance of mitigation suggestions in human assessment.
 - Lower token consumption when optional sources are disabled versus full-source baseline.
 - Stable p95 latency under expected academic concurrency.
 
-## 9) Assumptions
+## 10) Assumptions
 
 - Incident identifiers (`incidentIds`) are sufficient to fetch minimum context for baseline analysis.
 - External systems (ITSM/logs/Confluence) may be intermittently unavailable.
 - Analysis depth is controlled by server defaults/configuration in the initial version.
 - The system can run useful analysis even with only incident-local data.
 
-## 10) Open Questions
+## 11) Open Questions
 
 - Whether source toggles should be reintroduced later (and if so, via query parameters, headers, or a separate endpoint contract).
 - Confidence scoring strategy and thresholds for low-confidence guidance.

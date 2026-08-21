@@ -15,8 +15,8 @@ The main focus of the project is not to build a complex AI system, but to valida
 
 Development should be organized into 2 phases, iteratively and in a comparable way:
 
-* **Phase 1**: basic service that communicates directly with required components (ITSM, logs, LLM), keeping the flow simple with direct integrations and minimal architectural complexity;
-* **Phase 2**: more robust service, with structured metrics, rich logs, exception handling, ability to handle multiple requests in parallel, and optional connection to ITSM and other components through MCP.
+* **Phase 1**: basic service that communicates directly with required components (ITSM, LLM), keeping the flow simple with direct integrations and minimal architectural complexity;
+* **Phase 2**: more robust service with log analysis, with structured metrics, rich logging, exception handling, ability to handle multiple requests in parallel, and optional connection to ITSM and other components through MCP.
 
 **Evaluation Metrics**: In both phases, collect lexical similarity metrics (**BLEU**, **METEOR**, **ROUGE**) over LLM outputs (summaries and suggestions) to enable comparison and validation of improvements between phases.
 
@@ -37,7 +37,7 @@ Avoid:
 
 Prefer:
 * Clear and direct code;
-* Simple separation between domain, application, and infrastructure;
+* Simple separation between domain, infrastructure, and presentation;
 * Small, testable components;
 * Decoupled and localized integrations.
 
@@ -51,10 +51,6 @@ src/
  │    ├── incident/
  │    ├── correlation/
  │    └── mitigation/
- │
- ├── application/
- │    ├── usecases/
- │    └── services/
  │
  ├── infrastructure/
  │    ├── adapters/
@@ -97,24 +93,6 @@ The domain layer should not know:
 
 ---
 
-## Application
-
-Contains use cases and orchestration:
-
-Examples:
-
-* AnalyzeIncidentUseCase
-* CorrelateIncidentsUseCase
-* GenerateMitigationUseCase
-
-Responsible for:
-
-* Coordinating services;
-* Orchestrating calls;
-* Applying application flow.
-
----
-
 ## Infrastructure
 
 Responsible for all external integrations:
@@ -131,7 +109,7 @@ Examples:
 * Repositories to store history;
 * Correlated incident cache (if needed).
 
-This layer can be replaced without changing domain or application.
+This layer can be replaced without changing domain.
 
 ---
 
@@ -169,7 +147,6 @@ Should not contain business logic.
 
 ### Integrations (enable as needed)
 * ITSM access
-* Log access
 * **LLM API** (Copilot, GAIA, configurable...)
 
 ### Output Evaluation
@@ -183,6 +160,7 @@ Should not contain business logic.
 
 Keeps everything from Phase 1 and adds:
 
+* **Log access**
 * **Structured logging**
 * **Metrics** (LLM usage and token cost with LangFuse)
 * **Tracing**
@@ -198,13 +176,19 @@ Do not implement for now. Future aspiration: browser extension developed in Type
 
 ---
 
+# Runtime and Deployment
+
+* The service is expected to run locally in Docker during development and evaluation;
+* Runtime configuration should be externalized so local and hosted setups share the same codebase.
+
+---
+
 # Remaining Considerations
 
 ## Simple but Explicit Boundaries
 
-* Phase 1 does not handle multiple parallel requests with strong guarantees;
 * Phase 1 does not include structured observability;
-* Phase 2 refactors only what is necessary for robustness, without radical domain changes.
+* Phase 2 refactors only what is necessary for robustness and efficiency, without radical domain changes.
 
 ## Success Metrics
 
@@ -213,8 +197,8 @@ Do not implement for now. Future aspiration: browser extension developed in Type
 
 ## Next Steps
 
-1. Implement domain and application (Phase 1);
-2. Integrate ITSM, LLM, and logs locally;
+1. Implement domain (Phase 1);
+2. Integrate ITSM and LLM;
 3. Collect output metrics;
 4. Evaluate feasibility with real data;
 5. Outline Phase 2 with robustness and MCP.

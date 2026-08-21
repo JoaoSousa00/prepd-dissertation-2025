@@ -41,7 +41,7 @@ Use this template for each user story/specification in `docs/specs/phase*/`.
 ## 6) Functional Design
 
 - Entry point(s): CI trigger, MCP tool, or both.
-- Inputs and outputs (refer to `docs/contracts/tools.md` when applicable).
+- Inputs and outputs (refer to `docs/contracts` when applicable).
 - Happy-path flow.
 - Error-path flow.
 
@@ -63,9 +63,9 @@ Use this template for each user story/specification in `docs/specs/phase*/`.
 
 ## 9) Observability
 
-- Metrics to emit (Prometheus names).
-- Tracing spans and attributes (Langfuse/OTel).
-- Cost attribution fields (`user`).
+- Metrics to emit (Prometheus names and lexical similarity metrics if applicable).
+- Tracing spans and attributes (Langfuse).
+- Cost attribution fields (`user`, `incident`).
 
 ## 10) Risks and Mitigations
 

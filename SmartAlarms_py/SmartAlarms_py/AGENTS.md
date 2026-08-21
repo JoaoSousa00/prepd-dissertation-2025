@@ -11,14 +11,14 @@ Use this file as a coordination guide for an SDD workflow with three roles: **Sp
 ### Simplicity and Pragmatism
 
 - Clear, direct code without design-pattern ceremony;
-- Simple separation between domain (business logic), application (orchestration), and infrastructure (integrations);
+- Simple separation between domain (business logic), infrastructure (integrations), and presentation (exposure);
 - Lightweight domain models: model only important concepts (Incident, CorrelatedIncident, MitigationSuggestion);
 - Avoid premature abstractions.
 
 ### Structural Rules
 
-- Keep `src/` organized according to `architechture.md`: `domain/`, `application/`, `infrastructure/`, `presentation/`, `shared/`;
-- Keep incident correlation, mitigation suggestions, and summarization logic in `domain/` or `application/`, never spread across controllers or scripts;
+- Keep `src/` organized according to `architechture.md`: `domain/`, `infrastructure/`, `presentation/`, `shared/`;
+- Keep incident correlation, mitigation suggestions, and summarization logic in `domain/`, never spread across controllers or scripts;
 - Keep all calls to ServiceNow, Kibana/Elastic, CloudWatch, LLM, and MCP **exclusively** in `infrastructure/` adapters;
 - Domain code must never know external APIs, databases, or frameworks;
 - Keep interfaces and contracts clear between layers, without unnecessary layers.
@@ -56,7 +56,7 @@ Each feature must follow the structure in specs/spec-template.md.
 # Agent: Software Engineer
 
 ## Mission
-Implement code based on specifications in the `/specs` directory and, after implementation, mark the corresponding user story as completed in `/docs/impl_checklist.md`.
+Implement code based on specifications in the `/specs` directory.
 
 This agent turns specifications into functional and tested code.
 
@@ -66,7 +66,6 @@ This agent turns specifications into functional and tested code.
 - Never implement without acceptance criteria
 - Code must be simple and readable
 - Avoid overengineering
-- Mark the user story as completed in `/docs/impl_checklist.md`
 
 ## Required workflow
 
@@ -75,7 +74,7 @@ This agent turns specifications into functional and tested code.
 3. Implement based on tasks
 4. Create automated tests
 5. Ensure all acceptance criteria pass
-6. Mark the user story as completed in `/docs/impl_checklist.md`
+6. Mark the spec status as `implemented`
 
 ## Tests
 
