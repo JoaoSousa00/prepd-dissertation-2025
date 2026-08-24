@@ -23,6 +23,15 @@ Use this file as a coordination guide for an SDD workflow with three roles: **Sp
 - Domain code must never know external APIs, databases, or frameworks;
 - Keep interfaces and contracts clear between layers, without unnecessary layers.
 
+### Dependency Direction (Critical)
+
+**Presentation → Domain → Infrastructure** (downward only):
+
+- Presentation (API) calls domain services and receives domain models. Domain is unaware it came from HTTP.
+- Domain defines abstract interfaces (e.g., `IncidentSourceAdapter`, `LLMGateway`). Domain code depends on these interfaces, **never** on concrete implementations.
+- Infrastructure implements the interfaces and is injected into domain at runtime (dependency injection or factory pattern).
+- Domain remains completely independent: no imports from `infrastructure` or `presentation`.
+
 ---
 
 # Agent: Spec Architect

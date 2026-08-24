@@ -70,6 +70,27 @@ src/
 
 # Layer Responsibilities
 
+## Dependency Rules
+
+The architecture follows a strict dependency direction:
+
+```
+Presentation (API) ──→ Domain ──→ Infrastructure
+    ↓                    ↓               ↓
+   HTTP            Business Logic    External APIs
+   Routing         + Orchestration      + Adapters
+   Validation
+```
+
+### Key Rules
+
+1. **Presentation → Domain + Infrastructure**: The API layer calls domain services and may handle HTTP concerns (routing, authentication, error mapping).
+2. **Domain → Infrastructure (via interfaces only)**: Domain code defines abstract interfaces (contracts) that infrastructure must implement. Domain is unaware of concrete implementations.
+3. **Domain ← Infrastructure (never)**: Domain code is completely independent. It knows nothing of external APIs, databases, HTTP, or frameworks.
+4. **Inversion of Control**: Dependencies are injected into domain. Tests can swap real adapters for mocks without changing domain code.
+
+---
+
 ## Domain
 
 Contains:
@@ -77,19 +98,24 @@ Contains:
 * Main entities;
 * Domain objects;
 * Business rules;
-* Important interfaces.
+* **Abstract interfaces** (contracts that infrastructure must honor);
+* Orchestration logic.
 
 Examples:
 
-* Incident
-* RelatedIncident
-* MitigationSuggestion
+* `Incident` entity
+* `RelatedIncident` model
+* `MitigationSuggestion` model
+* `IncidentSourceAdapter` interface (domain defines; infrastructure implements)
+* `LLMGateway` interface (domain defines; infrastructure implements)
 
 The domain layer should not know:
 
 * External APIs;
 * Databases;
-* Frameworks.
+* Frameworks;
+* Concrete adapter implementations;
+* HTTP or presentation concerns.
 
 ---
 
@@ -99,17 +125,15 @@ Responsible for all external integrations:
 
 Examples:
 
-* ServiceNow connector;
-* Kibana connector;
-* CloudWatch connector;
-* LLM provider;
-* Repositories.
+* ServiceNow connector (implements `IncidentSourceAdapter`)
+* Kibana connector (implements `LogsAdapter`)
+* CloudWatch connector (implements `LogsAdapter`)
+* LLM provider (implements `LLMGateway`)
+* Repositories and caches
 
-### Persistence
-* Repositories to store history;
-* Correlated incident cache (if needed).
+### Adapters
 
-This layer can be replaced without changing domain.
+Each adapter implements a domain-defined interface. This layer can be replaced without changing domain code.
 
 ---
 
@@ -119,11 +143,12 @@ Responsible for exposure:
 
 Examples:
 
-* REST API;
-* Web application;
-* Controllers.
+* REST API controllers
+* Request validation and routing
+* Error response mapping
+* Authentication/authorization enforcement
 
-Should not contain business logic.
+Should not contain business logic. Orchestration lives in domain.
 
 ---
 
