@@ -1,5 +1,26 @@
-from typing import Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Optional, Protocol, runtime_checkable
+
+
+@dataclass(frozen=True)
+class BaseIncident:
+    id: str
+    short_description: Optional[str] = None
+    description: Optional[str] = None
+
+
+class IncidentSourceUnavailableError(RuntimeError):
+    """Raised when the incident source cannot serve a request."""
+
+
+class IncidentSourceUnauthorizedError(RuntimeError):
+    """Raised when the incident source credentials are missing or rejected."""
+
+
+@runtime_checkable
+class IncidentSourceAdapter(Protocol):
+    def fetch_base_incident(self, incident_id: str) -> Optional[BaseIncident]:
+        """Fetch a single incident record by id."""
 
 
 @dataclass
@@ -14,11 +35,5 @@ class IncidentDetails:
     id: str
     short_description: Optional[str] = None
     description: Optional[str] = None
-    resolution_suggestions: List[ResolutionSuggestion] = None
-    related_log_ids: List[str] = None
-
-    def __post_init__(self):
-        if self.resolution_suggestions is None:
-            self.resolution_suggestions = []
-        if self.related_log_ids is None:
-            self.related_log_ids = []
+    resolution_suggestions: List[ResolutionSuggestion] = field(default_factory=list)
+    related_log_ids: List[str] = field(default_factory=list)

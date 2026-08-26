@@ -42,11 +42,11 @@ class IncidentData(BaseModel):
     description: Optional[str] = Field(
         None, description="A broader description with incident context"
     )
-    resolutionSuggestions: List[ResolutionSuggestion] = Field(
-        default_factory=list, description="The list of ordered suggestions to mitigate the incident"
+    resolutionSuggestions: Optional[List[ResolutionSuggestion]] = Field(
+        None, description="The list of ordered suggestions to mitigate the incident"
     )
-    relatedLogIds: List[str] = Field(
-        default_factory=list, description="The list of log events that may have a connection with the incident"
+    relatedLogIds: Optional[List[str]] = Field(
+        None, description="The list of log events that may have a connection with the incident"
     )
 
 

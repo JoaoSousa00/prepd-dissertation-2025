@@ -1,9 +1,20 @@
+import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+from dotenv import load_dotenv
+from starlette.status import HTTP_400_BAD_REQUEST
 from src.presentation.api.incidents import router as incidents_router
 from src.shared.http.models import ErrorResponse
+
+load_dotenv()
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(levelname)s %(name)s: %(message)s",
+)
 
 
 app = FastAPI(
@@ -35,7 +46,7 @@ async def validation_exception_handler(request, exc: RequestValidationError):
         "details": details,
     }
     return JSONResponse(
-        status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=HTTP_400_BAD_REQUEST,
         content=error_response,
     )
 
