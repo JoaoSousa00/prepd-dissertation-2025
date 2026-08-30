@@ -21,11 +21,14 @@ class IncidentEnrichment:
     """Result from LLM enrichment of an incident."""
     summary: Optional[LlmSummary] = None
     mitigation_suggestions: List[MitigationSuggestion] = None
-    
+    related_incidents: List[str] = None
+
     def __post_init__(self):
         # Ensure mitigation_suggestions is a list
         if self.mitigation_suggestions is None:
-            object.__setattr__(self, 'mitigation_suggestions', [])
+            object.__setattr__(self, "mitigation_suggestions", [])
+        if self.related_incidents is None:
+            object.__setattr__(self, "related_incidents", [])
 
 
 class LlmGatewayError(RuntimeError):

@@ -2,18 +2,24 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from src.application.incident_details import IncidentDetailsService
 from src.application.incident_fetching import IncidentFetchingService
+from src.domain.llm import IncidentEnrichment, LlmGatewayUnavailableError, LlmSummary, MitigationSuggestion
 from src.infrastructure.itsm_client import ItsmClientSettings, ItsmIncidentSourceAdapter
 from src.main import app
+
+AUTHORIZED_HEADER = "test-authorization"
+AUTHORIZED_API_KEY = "test-api-key"
+AUTHORIZED_HOST = "api.int.gcp.bmw.cloud"
 
 
 def build_itsm_transport():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
         assert request.headers["accept"] == "application/json"
-        assert request.headers["authorization"] == "Bearer test-token"
-        assert request.headers["x-apikey"] == "test-api-key"
-        assert request.headers["host"] == "api.int.gcp.bmw.cloud"
+        assert request.headers["authorization"] == AUTHORIZED_HEADER
+        assert request.headers["x-apikey"] == AUTHORIZED_API_KEY
+        assert request.headers["host"] == AUTHORIZED_HOST
 
         incident_id = request.url.path.rsplit("/", 1)[-1]
         if incident_id == "INC999999999999":
@@ -45,21 +51,25 @@ def build_itsm_transport():
     return httpx.MockTransport(handler)
 
 
+def build_authorized_adapter():
+    return ItsmIncidentSourceAdapter(
+        settings=ItsmClientSettings(
+            authorization=AUTHORIZED_HEADER,
+            api_key=AUTHORIZED_API_KEY,
+            host=AUTHORIZED_HOST,
+        ),
+        transport=build_itsm_transport(),
+    )
+
+
 @pytest.fixture
 def client():
-    transport = build_itsm_transport()
-    adapter = ItsmIncidentSourceAdapter(
-        settings=ItsmClientSettings(
-            authorization="Bearer test-token",
-            api_key="test-api-key",
-            host="api.int.gcp.bmw.cloud",
-        ),
-        transport=transport,
+    app.state.incident_details_service = IncidentDetailsService(
+        IncidentFetchingService(build_authorized_adapter())
     )
-    app.state.incident_fetching_service = IncidentFetchingService(adapter)
     with TestClient(app) as test_client:
         yield test_client
-    del app.state.incident_fetching_service
+    del app.state.incident_details_service
 
 
 @pytest.fixture
@@ -68,14 +78,58 @@ def unauthorized_client():
         settings=ItsmClientSettings(
             authorization="",
             api_key="",
-            host="api.int.gcp.bmw.cloud",
+            host=AUTHORIZED_HOST,
         ),
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json={})),
     )
-    app.state.incident_fetching_service = IncidentFetchingService(adapter)
+    app.state.incident_details_service = IncidentDetailsService(
+        IncidentFetchingService(adapter)
+    )
     with TestClient(app) as test_client:
         yield test_client
-    del app.state.incident_fetching_service
+    del app.state.incident_details_service
+
+
+class FakeLlmGateway:
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+        return IncidentEnrichment(
+            summary=LlmSummary(text=f"Summary for {incident_id}"),
+            related_incidents=["INC000000000111", "INC000000000222"],
+            mitigation_suggestions=[
+                MitigationSuggestion(
+                    suggestion="Restart impacted worker pods",
+                    related_incidents=["INC000000000111"],
+                    related_log_ids=["txn-1"],
+                )
+            ],
+        )
+
+
+class FailingLlmGateway:
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+        raise LlmGatewayUnavailableError("gateway unavailable")
+
+
+@pytest.fixture
+def enriched_client():
+    app.state.incident_details_service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(build_authorized_adapter()),
+        llm_gateway=FakeLlmGateway(),
+    )
+    with TestClient(app) as test_client:
+        yield test_client
+    del app.state.incident_details_service
+
+
+@pytest.fixture
+def failing_llm_client():
+    app.state.incident_details_service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(build_authorized_adapter()),
+        llm_gateway=FailingLlmGateway(),
+    )
+    with TestClient(app) as test_client:
+        yield test_client
+    del app.state.incident_details_service
 
 
 class TestIncidentDetailsEndpoint:
@@ -177,6 +231,47 @@ class TestIncidentDetailsEmptyResponse:
         response = client.get("/incident/details", params={"incidentIds": "INC999999999999"})
         assert response.status_code == 200
         assert response.json() == {"incidents": []}
+
+
+class TestIncidentDetailsLlmEnrichment:
+    def test_returns_llm_enrichment_when_available(self, enriched_client):
+        response = enriched_client.get(
+            "/incident/details", params={"incidentIds": "INC000000000001"}
+        )
+        assert response.status_code == 200
+        assert response.json() == {
+            "incidents": [
+                {
+                    "id": "INC000000000001",
+                    "shortDescription": "Billing API latency spike",
+                    "description": "Billing API requests exceeded the expected latency threshold.",
+                    "summary": "Summary for INC000000000001",
+                    "relatedIncidents": ["INC000000000111", "INC000000000222"],
+                    "resolutionSuggestions": [
+                        {
+                            "suggestion": "Restart impacted worker pods",
+                            "relatedIncidents": ["INC000000000111"],
+                            "relatedLogIds": ["txn-1"],
+                        }
+                    ],
+                }
+            ]
+        }
+
+    def test_returns_base_data_when_llm_fails(self, failing_llm_client):
+        response = failing_llm_client.get(
+            "/incident/details", params={"incidentIds": "INC000000000001"}
+        )
+        assert response.status_code == 200
+        assert response.json() == {
+            "incidents": [
+                {
+                    "id": "INC000000000001",
+                    "shortDescription": "Billing API latency spike",
+                    "description": "Billing API requests exceeded the expected latency threshold.",
+                }
+            ]
+        }
 
 
 class TestIncidentDetailsHealthCheck:

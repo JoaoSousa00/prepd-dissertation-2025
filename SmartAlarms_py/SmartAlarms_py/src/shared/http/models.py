@@ -29,6 +29,8 @@ class IncidentData(BaseModel):
                 "id": "INC000000000000",
                 "shortDescription": "An increase of cpu was observed due to a high number of requests to the path /endpoint",
                 "description": "The tasks from ECS of the service billing-api were increasing CPU usage due to high requests.",
+                "summary": "The billing API is experiencing elevated CPU due to request spikes on /endpoint.",
+                "relatedIncidents": ["INC000000000001", "INC000000000002"],
                 "resolutionSuggestions": [],
                 "relatedLogIds": ["transactionId1", "transactionId2"],
             }
@@ -41,6 +43,12 @@ class IncidentData(BaseModel):
     )
     description: Optional[str] = Field(
         None, description="A broader description with incident context"
+    )
+    summary: Optional[str] = Field(
+        None, description="Natural-language summary generated for the incident"
+    )
+    relatedIncidents: Optional[List[str]] = Field(
+        None, description="Related incident references when available"
     )
     resolutionSuggestions: Optional[List[ResolutionSuggestion]] = Field(
         None, description="The list of ordered suggestions to mitigate the incident"

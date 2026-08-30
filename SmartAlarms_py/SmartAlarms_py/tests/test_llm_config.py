@@ -218,6 +218,22 @@ class TestLoadLlmGatewaySettings:
         with patch.dict(os.environ, env_vars, clear=False):
             settings = load_llm_gateway_settings()
             assert settings.gateway_enabled is False
+
+    def test_load_without_request_timeout_uses_four_minute_default(self):
+        env_vars = {
+            "GAIA_LLM_ENDPOINT": "https://gaia.api/v1",
+            "GAIA_MODEL": "gpt-4",
+            "GAIA_AUTH_ENDPOINT": "https://auth.api/token",
+            "LLM_API_KEY": "test-api-key",
+            "LLM_CLIENT_SECRET": "test-secret",
+            "CA_CERT_PATH": "/path/to/cert",
+            "CA_CERT_URL": "https://ca.url/cert.pem",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = load_llm_gateway_settings()
+            assert settings.request_timeout_seconds == 240.0
+            assert settings.auth_timeout_seconds == 10.0
     
     def test_load_with_no_timeout_disables_request_timeout(self):
         env_vars = {

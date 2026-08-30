@@ -5,15 +5,12 @@ import httpx
 import pytest
 
 from src.domain.llm import (
-    IncidentEnrichment,
     LlmGatewayConfigurationError,
     LlmGatewayDisabledError,
     LlmGatewayUnavailableError,
-    LlmSummary,
-    MitigationSuggestion,
 )
 from src.infrastructure.llm_config import LlmGatewaySettings
-from src.infrastructure.llm_gateway import GaiaLlmGatewayAdapter
+from src.infrastructure.llm_gateway import GaiaLlmGatewayAdapter, _resolve_cert
 
 
 @pytest.fixture
@@ -83,7 +80,22 @@ class TestGaiaLlmGatewayAdapterAuthentication:
             token = adapter._get_access_token()
             
             assert token == "test-token-123"
+            mock_client_class.assert_called_once_with(
+                timeout=llm_settings.auth_timeout_seconds,
+                verify="/path/to/cert",
+            )
             mock_instance.post.assert_called_once()
+            _, kwargs = mock_instance.post.call_args
+            assert kwargs["data"] == {
+                "client_id": "test-api-key",
+                "client_secret": "test-secret",
+                "grant_type": "client_credentials",
+                "scope": "machine2machine",
+            }
+            assert kwargs["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
+            assert kwargs["headers"] == {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
     
     def test_get_access_token_caches_token(self, llm_settings):
         token_response = httpx.Response(
@@ -184,6 +196,29 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
         assert "INC001" in prompt
         assert "N/A" in prompt
 
+    def test_build_prompt_uses_template_file(self, llm_settings, tmp_path):
+        prompt_file = tmp_path / "incident_enrichment_prompt.txt"
+        prompt_file.write_text(
+            "ID={incident_id}|SHORT={short_description}|DESC={description}",
+            encoding="utf-8",
+        )
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings, prompt_path=prompt_file)
+
+        prompt = adapter._build_prompt("INC123", "Short text", "Detailed text")
+
+        assert prompt == "ID=INC123|SHORT=Short text|DESC=Detailed text"
+
+
+class TestGaiaLlmGatewayAdapterHeaders:
+    def test_llm_headers_match_gaia_gateway_shape(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        headers = adapter._get_llm_headers("test-token")
+
+        assert headers["Content-Type"] == "application/json"
+        assert headers["Accept"] == "application/json"
+        assert headers["x-apikey"] == "test-api-key"
+
 
 class TestGaiaLlmGatewayAdapterResponseParsing:
     """Tests for LLM response parsing."""
@@ -215,6 +250,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         
         assert enrichment.summary is not None
         assert enrichment.summary.text == "The API is experiencing latency issues."
+        assert enrichment.related_incidents == ["INC002", "INC003"]
         assert len(enrichment.mitigation_suggestions) == 1
         assert enrichment.mitigation_suggestions[0].suggestion == "Scale up the API servers"
     
@@ -238,6 +274,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         enrichment = adapter._parse_llm_response(response)
         
         assert enrichment.summary is not None
+        assert enrichment.related_incidents == []
         assert len(enrichment.mitigation_suggestions) == 0
     
     def test_parse_llm_response_with_invalid_json(self, llm_settings):
@@ -257,6 +294,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         
         assert enrichment.summary is not None
         assert enrichment.summary.text == "This is not JSON but raw text"
+        assert enrichment.related_incidents == []
     
     def test_parse_llm_response_with_missing_choices(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
@@ -266,6 +304,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         enrichment = adapter._parse_llm_response(response)
         
         assert enrichment.summary is None
+        assert enrichment.related_incidents == []
         assert len(enrichment.mitigation_suggestions) == 0
     
     def test_parse_llm_response_with_empty_choices(self, llm_settings):
@@ -276,6 +315,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         enrichment = adapter._parse_llm_response(response)
         
         assert enrichment.summary is None
+        assert enrichment.related_incidents == []
         assert len(enrichment.mitigation_suggestions) == 0
 
 
@@ -311,6 +351,13 @@ class TestGaiaLlmGatewayAdapterRetries:
             result = adapter._call_llm(prompt="test", token="token", max_tokens=100)
             
             assert result == {"choices": [{"message": {"content": "ok"}}]}
+            assert mock_client_class.call_count == 2
+            for call in mock_client_class.call_args_list:
+                assert call.kwargs == {
+                    "timeout": settings.request_timeout_seconds,
+                    "transport": None,
+                    "verify": "/path/to/cert",
+                }
             assert mock_instance.post.call_count == 2
     
     def test_call_llm_fails_after_max_retries(self, llm_settings):
@@ -340,4 +387,23 @@ class TestGaiaLlmGatewayAdapterRetries:
             with pytest.raises(LlmGatewayUnavailableError):
                 adapter._call_llm(prompt="test", token="token", max_tokens=100)
             
+            assert mock_client_class.call_count == 2
+            for call in mock_client_class.call_args_list:
+                assert call.kwargs == {
+                    "timeout": settings.request_timeout_seconds,
+                    "transport": None,
+                    "verify": "/path/to/cert",
+                }
             assert mock_instance.post.call_count == 2
+
+
+class TestCertResolution:
+    def test_resolve_cert_uses_relative_path_from_cwd(self, monkeypatch, tmp_path):
+        cert_name = "BMW_Trusted_Certificates_Latest.pem"
+        cert_path = tmp_path / cert_name
+        cert_path.write_text("dummy cert", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        resolved = _resolve_cert(cert_name, "https://ca.url/cert.pem")
+
+        assert resolved == str(cert_path)

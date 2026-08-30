@@ -153,6 +153,19 @@
             "description": "A broader description with incident context",
             "example": "The tasks from ECS of the service billing-api were increasing CPU usage due to high requests."
           },
+          "summary": {
+            "type": "string",
+            "description": "Natural-language summary generated for the incident",
+            "example": "The billing API is experiencing elevated CPU due to request spikes on /endpoint."
+          },
+          "relatedIncidents": {
+            "type": "array",
+            "description": "Related incident references when available",
+            "items": {
+              "type": "string"
+            },
+            "example": ["INC000000000001", "INC000000000002"]
+          },
           "resolutionSuggestions": {
             "type": "array",
             "description": "The list of ordered suggestions to mitigate the incident",

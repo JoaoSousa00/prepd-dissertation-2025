@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -17,6 +18,78 @@ from src.domain.llm import (
 from src.infrastructure.llm_config import LlmGatewaySettings, load_llm_gateway_settings
 
 logger = logging.getLogger(__name__)
+DEFAULT_PROMPT_PATH = (
+    Path(__file__).resolve().parent / "prompt" / "incident_enrichment_prompt.txt"
+)
+DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS = 30.0
+
+
+def _download_bmw_ca_cert(path: Path, ca_cert_url: str) -> str:
+    """Download the BMW CA certificate when it is not present locally."""
+    if path.exists():
+        return str(path)
+
+    if not ca_cert_url:
+        raise LlmGatewayConfigurationError(
+            "CA_CERT_URL is required when the BMW CA certificate is missing"
+        )
+
+    logger.info("Downloading BMW CA certificate from %s to %s", ca_cert_url, path)
+    try:
+        response = httpx.get(ca_cert_url, timeout=DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS)
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise LlmGatewayConfigurationError(
+            f"Failed to download BMW CA certificate from '{ca_cert_url}'"
+        ) from exc
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(response.content)
+    return str(path)
+
+
+def _cert_candidates(relative: Path) -> list[Path]:
+    """Return candidate locations for a relative BMW CA certificate path."""
+    here = Path(__file__).resolve()
+    return [
+        Path.cwd() / relative,
+        Path("/app/certs") / relative,
+        Path("/app") / relative,
+        here.parents[2] / "certs" / relative,
+        here.parents[3] / "SmartAlarms_py" / "SmartAlarms_py" / "certs" / relative,
+    ]
+
+
+def _resolve_cert(ca_cert_path: str, ca_cert_url: str) -> str | bool:
+    """Resolve the TLS certificate path for the BMW internal CA."""
+    cert_path = ca_cert_path.strip()
+    if cert_path:
+        resolved = Path(cert_path)
+        if resolved.is_absolute():
+            return str(resolved)
+
+        candidates = _cert_candidates(resolved)
+        found = next((candidate for candidate in candidates if candidate.exists()), None)
+        if found:
+            logger.debug("Resolved BMW CA certificate via %s", found)
+            return str(found)
+
+        logger.warning(
+            "CA_CERT_PATH=%r could not be resolved to an existing file; tried: %s",
+            cert_path,
+            candidates,
+        )
+        return str(candidates[0])
+
+    default = Path(__file__).resolve().parents[2] / "certs" / "BMW_Trusted_Certificates_Latest.pem"
+    try:
+        return _download_bmw_ca_cert(default, ca_cert_url.strip())
+    except LlmGatewayConfigurationError as exc:
+        logger.warning(
+            "Could not obtain BMW CA certificate (%s); falling back to system CA bundle.",
+            exc,
+        )
+        return True
 
 
 class GaiaLlmGatewayAdapter(LlmGateway):
@@ -29,9 +102,16 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         self,
         settings: Optional[LlmGatewaySettings] = None,
         transport: Optional[httpx.BaseTransport] = None,
+        prompt_path: Optional[Path] = None,
     ):
         self._settings = settings or load_llm_gateway_settings()
         self._transport = transport
+        self._prompt_path = prompt_path or DEFAULT_PROMPT_PATH
+        self._prompt_template = self._load_prompt_template(self._prompt_path)
+        self._verify = _resolve_cert(
+            self._settings.ca_cert_path,
+            self._settings.ca_cert_url,
+        )
         self._token_cache: Optional[str] = None
         self._token_expiry: float = 0
     
@@ -71,13 +151,20 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             return self._token_cache
         
         try:
-            with httpx.Client(timeout=self._settings.auth_timeout_seconds) as client:
+            with httpx.Client(
+                timeout=self._settings.auth_timeout_seconds,
+                verify=self._verify,
+            ) as client:
                 response = client.post(
                     self._settings.auth_endpoint,
-                    json={
+                    data={
                         "client_id": self._settings.api_key,
                         "client_secret": self._settings.client_secret,
                         "grant_type": "client_credentials",
+                        "scope": "machine2machine",
+                    },
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
                     },
                 )
         except httpx.HTTPError as exc:
@@ -120,6 +207,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 with httpx.Client(
                     timeout=self._settings.request_timeout_seconds,
                     transport=self._transport,
+                    verify=self._verify,
                 ) as client:
                     response = client.post(
                         f"{self._settings.endpoint.rstrip('/')}/chat/completions",
@@ -189,6 +277,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
         }
         
         # Add x-apikey header if configured
@@ -205,16 +294,25 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         description: Optional[str],
     ) -> str:
         """Build prompt for LLM enrichment."""
-        return f"""Analyze the following incident and provide:
-1. A natural-language summary (1-2 sentences)
-2. Related incident references if applicable
-3. Mitigation suggestions
+        return self._prompt_template.format(
+            incident_id=incident_id,
+            short_description=short_description or "N/A",
+            description=description or "N/A",
+        )
 
-Incident ID: {incident_id}
-Short Description: {short_description or 'N/A'}
-Description: {description or 'N/A'}
-
-Respond in JSON format with keys: summary, related_incidents (array of IDs), mitigation_suggestions (array of objects with 'suggestion', 'related_incidents', 'related_log_ids')."""
+    @staticmethod
+    def _load_prompt_template(prompt_path: Path) -> str:
+        try:
+            template = prompt_path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise LlmGatewayConfigurationError(
+                f"Could not read LLM prompt template: {prompt_path}"
+            ) from exc
+        if not template:
+            raise LlmGatewayConfigurationError(
+                f"LLM prompt template is empty: {prompt_path}"
+            )
+        return template
     
     def _parse_llm_response(self, response: dict) -> IncidentEnrichment:
         """Parse LLM response into IncidentEnrichment."""
@@ -242,6 +340,12 @@ Respond in JSON format with keys: summary, related_incidents (array of IDs), mit
             summary = None
             if "summary" in data:
                 summary = LlmSummary(text=data["summary"])
+
+            related_incidents = [
+                related_id
+                for related_id in data.get("related_incidents", [])
+                if isinstance(related_id, str) and related_id.strip()
+            ]
             
             # Extract mitigation suggestions
             suggestions = []
@@ -258,6 +362,7 @@ Respond in JSON format with keys: summary, related_incidents (array of IDs), mit
             return IncidentEnrichment(
                 summary=summary,
                 mitigation_suggestions=suggestions,
+                related_incidents=related_incidents,
             )
         except (KeyError, TypeError) as exc:
             logger.error("Failed to parse LLM response: %s", exc)

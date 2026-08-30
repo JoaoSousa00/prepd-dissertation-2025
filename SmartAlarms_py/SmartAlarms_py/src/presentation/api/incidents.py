@@ -1,13 +1,22 @@
+import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import JSONResponse
+from src.application.incident_details import IncidentDetailsService
 from src.application.incident_fetching import IncidentFetchingService
 from src.domain.incident import IncidentSourceUnauthorizedError
 from src.infrastructure.itsm_client import ItsmIncidentSourceAdapter
-from src.shared.http.models import DetailsResponse, ErrorResponse, IncidentData
+from src.infrastructure.llm_gateway import GaiaLlmGatewayAdapter
+from src.shared.http.models import (
+    DetailsResponse,
+    ErrorResponse,
+    IncidentData,
+    ResolutionSuggestion,
+)
 
 router = APIRouter(prefix="/incident", tags=["Incidents"])
+logger = logging.getLogger(__name__)
 
 
 def create_error_response(message: str, code: str, details: Optional[List[str]] = None):
@@ -70,9 +79,9 @@ async def get_incident_details(
             ["incidentIds must be non-empty strings"],
         )
 
-    incident_fetching_service = get_incident_fetching_service(request)
+    incident_details_service = get_incident_details_service(request)
     try:
-        base_incidents = incident_fetching_service.fetch_base_incidents(incidentIds)
+        incident_details = incident_details_service.fetch_incident_details(incidentIds)
     except IncidentSourceUnauthorizedError as exc:
         return create_unauthorized_response(str(exc))
     return DetailsResponse(
@@ -81,15 +90,40 @@ async def get_incident_details(
                 id=incident.id,
                 shortDescription=incident.short_description,
                 description=incident.description,
+                summary=incident.summary,
+                relatedIncidents=incident.related_incidents or None,
+                resolutionSuggestions=[
+                    ResolutionSuggestion(
+                        suggestion=suggestion.suggestion,
+                        relatedIncidents=suggestion.related_incidents,
+                        relatedLogIds=suggestion.related_log_ids,
+                    )
+                    for suggestion in incident.resolution_suggestions
+                ]
+                or None,
+                relatedLogIds=incident.related_log_ids or None,
             )
-            for incident in base_incidents
+            for incident in incident_details
         ]
     )
 
 
-def get_incident_fetching_service(request: Request) -> IncidentFetchingService:
-    service = getattr(request.app.state, "incident_fetching_service", None)
+def get_incident_details_service(request: Request) -> IncidentDetailsService:
+    service = getattr(request.app.state, "incident_details_service", None)
     if service is None:
-        service = IncidentFetchingService(ItsmIncidentSourceAdapter())
-        request.app.state.incident_fetching_service = service
+        incident_fetching_service = IncidentFetchingService(ItsmIncidentSourceAdapter())
+        llm_gateway = _build_llm_gateway()
+        service = IncidentDetailsService(
+            incident_fetching_service=incident_fetching_service,
+            llm_gateway=llm_gateway,
+        )
+        request.app.state.incident_details_service = service
     return service
+
+
+def _build_llm_gateway() -> Optional[GaiaLlmGatewayAdapter]:
+    try:
+        return GaiaLlmGatewayAdapter()
+    except ValueError as exc:
+        logger.warning("LLM gateway disabled due to configuration error: %s", exc)
+        return None

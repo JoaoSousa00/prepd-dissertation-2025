@@ -35,5 +35,7 @@ class IncidentDetails:
     id: str
     short_description: Optional[str] = None
     description: Optional[str] = None
+    summary: Optional[str] = None
+    related_incidents: List[str] = field(default_factory=list)
     resolution_suggestions: List[ResolutionSuggestion] = field(default_factory=list)
     related_log_ids: List[str] = field(default_factory=list)
