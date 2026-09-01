@@ -119,6 +119,38 @@
           }
         }
       },
+      "LlmUsageData": {
+        "type": "object",
+        "description": "LLM usage and estimated cost metadata",
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model name used for the LLM request",
+            "example": "openai/gpt-5"
+          },
+          "tokensIn": {
+            "type": "integer",
+            "description": "Prompt token count",
+            "example": 120
+          },
+          "tokensOut": {
+            "type": "integer",
+            "description": "Completion token count",
+            "example": 80
+          },
+          "tokensTotal": {
+            "type": "integer",
+            "description": "Total token count",
+            "example": 200
+          },
+          "estimatedCost": {
+            "type": "number",
+            "description": "Estimated monetary cost",
+            "example": 0.0123
+          }
+        }
+      },
       "DetailsResponse": {
         "type": "object",
         "additionalProperties": false,
@@ -180,6 +212,13 @@
               "type": "string"
             },
             "example": ["transactionId1", "transactionId2"]
+          },
+          "llmUsage": {
+            "$ref": "#/components/schemas/LlmUsageData"
+          },
+          "requestLatencyMs": {
+            "type": "number",
+            "description": "End-to-end latency for generating the incident details"
           }
         }
       },

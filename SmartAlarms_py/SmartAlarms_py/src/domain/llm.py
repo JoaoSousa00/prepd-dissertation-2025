@@ -17,11 +17,22 @@ class MitigationSuggestion:
 
 
 @dataclass(frozen=True)
+class LlmUsage:
+    """Usage and cost telemetry returned by the LLM gateway."""
+    model: Optional[str] = None
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+    tokens_total: Optional[int] = None
+    estimated_cost: Optional[float] = None
+
+
+@dataclass(frozen=True)
 class IncidentEnrichment:
     """Result from LLM enrichment of an incident."""
     summary: Optional[LlmSummary] = None
     mitigation_suggestions: List[MitigationSuggestion] = None
     related_incidents: List[str] = None
+    usage: Optional[LlmUsage] = None
 
     def __post_init__(self):
         # Ensure mitigation_suggestions is a list

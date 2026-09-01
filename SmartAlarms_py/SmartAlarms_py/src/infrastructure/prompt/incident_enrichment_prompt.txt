@@ -11,3 +11,5 @@ Respond in JSON format with:
 - "summary": string
 - "related_incidents": array of incident IDs
 - "mitigation_suggestions": array of objects with keys "suggestion", "related_incidents", and "related_log_ids".
+
+Rule: never include the original Incident ID ({incident_id}) inside any "related_incidents" list, including nested ones under "mitigation_suggestions".

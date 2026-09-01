@@ -4,7 +4,13 @@ from fastapi.testclient import TestClient
 
 from src.application.incident_details import IncidentDetailsService
 from src.application.incident_fetching import IncidentFetchingService
-from src.domain.llm import IncidentEnrichment, LlmGatewayUnavailableError, LlmSummary, MitigationSuggestion
+from src.domain.llm import (
+    IncidentEnrichment,
+    LlmGatewayUnavailableError,
+    LlmSummary,
+    LlmUsage,
+    MitigationSuggestion,
+)
 from src.infrastructure.itsm_client import ItsmClientSettings, ItsmIncidentSourceAdapter
 from src.main import app
 
@@ -102,6 +108,13 @@ class FakeLlmGateway:
                     related_log_ids=["txn-1"],
                 )
             ],
+            usage=LlmUsage(
+                model="openai/gpt-5",
+                tokens_in=120,
+                tokens_out=80,
+                tokens_total=200,
+                estimated_cost=0.021,
+            ),
         )
 
 
@@ -136,15 +149,12 @@ class TestIncidentDetailsEndpoint:
     def test_endpoint_exists_with_valid_incident_ids(self, client):
         response = client.get("/incident/details", params={"incidentIds": "INC000000000001"})
         assert response.status_code == 200
-        assert response.json() == {
-            "incidents": [
-                {
-                    "id": "INC000000000001",
-                    "shortDescription": "Billing API latency spike",
-                    "description": "Billing API requests exceeded the expected latency threshold.",
-                }
-            ]
-        }
+        payload = response.json()
+        incident = payload["incidents"][0]
+        assert incident["id"] == "INC000000000001"
+        assert incident["shortDescription"] == "Billing API latency spike"
+        assert incident["description"] == "Billing API requests exceeded the expected latency threshold."
+        assert incident["requestLatencyMs"] is not None
 
     def test_endpoint_returns_contract_aligned_response(self, client):
         response = client.get(
@@ -152,20 +162,12 @@ class TestIncidentDetailsEndpoint:
             params={"incidentIds": ["INC000000000001", "INC000000000002"]},
         )
         assert response.status_code == 200
-        assert response.json() == {
-            "incidents": [
-                {
-                    "id": "INC000000000001",
-                    "shortDescription": "Billing API latency spike",
-                    "description": "Billing API requests exceeded the expected latency threshold.",
-                },
-                {
-                    "id": "INC000000000002",
-                    "shortDescription": "Checkout timeout surge",
-                    "description": "Checkout requests timed out while calling downstream services.",
-                },
-            ]
-        }
+        payload = response.json()
+        assert len(payload["incidents"]) == 2
+        assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["requestLatencyMs"] is not None
+        assert payload["incidents"][1]["id"] == "INC000000000002"
+        assert payload["incidents"][1]["requestLatencyMs"] is not None
 
     def test_endpoint_accepts_multiple_incident_ids(self, client):
         response = client.get(
@@ -181,15 +183,10 @@ class TestIncidentDetailsEndpoint:
             params={"incidentIds": ["INC000000000001", "INC999999999999"]},
         )
         assert response.status_code == 200
-        assert response.json() == {
-            "incidents": [
-                {
-                    "id": "INC000000000001",
-                    "shortDescription": "Billing API latency spike",
-                    "description": "Billing API requests exceeded the expected latency threshold.",
-                }
-            ]
-        }
+        payload = response.json()
+        assert len(payload["incidents"]) == 1
+        assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["requestLatencyMs"] is not None
 
     def test_missing_credentials_return_401(self, unauthorized_client):
         response = unauthorized_client.get(
@@ -239,39 +236,38 @@ class TestIncidentDetailsLlmEnrichment:
             "/incident/details", params={"incidentIds": "INC000000000001"}
         )
         assert response.status_code == 200
-        assert response.json() == {
-            "incidents": [
-                {
-                    "id": "INC000000000001",
-                    "shortDescription": "Billing API latency spike",
-                    "description": "Billing API requests exceeded the expected latency threshold.",
-                    "summary": "Summary for INC000000000001",
-                    "relatedIncidents": ["INC000000000111", "INC000000000222"],
-                    "resolutionSuggestions": [
-                        {
-                            "suggestion": "Restart impacted worker pods",
-                            "relatedIncidents": ["INC000000000111"],
-                            "relatedLogIds": ["txn-1"],
-                        }
-                    ],
-                }
-            ]
+        payload = response.json()
+        incident = payload["incidents"][0]
+        assert incident["id"] == "INC000000000001"
+        assert incident["shortDescription"] == "Billing API latency spike"
+        assert incident["description"] == "Billing API requests exceeded the expected latency threshold."
+        assert incident["summary"] == "Summary for INC000000000001"
+        assert incident["relatedIncidents"] == ["INC000000000111", "INC000000000222"]
+        assert incident["resolutionSuggestions"] == [
+            {
+                "suggestion": "Restart impacted worker pods",
+                "relatedIncidents": ["INC000000000111"],
+            }
+        ]
+        assert incident["llmUsage"] == {
+            "model": "openai/gpt-5",
+            "tokensIn": 120,
+            "tokensOut": 80,
+            "tokensTotal": 200,
+            "estimatedCost": 0.021,
         }
+        assert incident["requestLatencyMs"] is not None
+        assert incident["requestLatencyMs"] > 0
 
     def test_returns_base_data_when_llm_fails(self, failing_llm_client):
         response = failing_llm_client.get(
             "/incident/details", params={"incidentIds": "INC000000000001"}
         )
         assert response.status_code == 200
-        assert response.json() == {
-            "incidents": [
-                {
-                    "id": "INC000000000001",
-                    "shortDescription": "Billing API latency spike",
-                    "description": "Billing API requests exceeded the expected latency threshold.",
-                }
-            ]
-        }
+        payload = response.json()
+        assert len(payload["incidents"]) == 1
+        assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["requestLatencyMs"] is not None
 
 
 class TestIncidentDetailsHealthCheck:

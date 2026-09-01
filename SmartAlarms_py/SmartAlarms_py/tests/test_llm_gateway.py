@@ -215,9 +215,25 @@ class TestGaiaLlmGatewayAdapterHeaders:
 
         headers = adapter._get_llm_headers("test-token")
 
+        assert headers["Authorization"] == "Bearer test-token"
         assert headers["Content-Type"] == "application/json"
         assert headers["Accept"] == "application/json"
         assert headers["x-apikey"] == "test-api-key"
+
+    def test_sanitize_headers_masks_sensitive_values(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        sanitized = adapter._sanitize_headers(
+            {
+                "Authorization": "Bearer test-token",
+                "x-apikey": "secret",
+                "Accept": "application/json",
+            }
+        )
+
+        assert sanitized["Authorization"] == "******"
+        assert sanitized["x-apikey"] == "******"
+        assert sanitized["Accept"] == "application/json"
 
 
 class TestGaiaLlmGatewayAdapterResponseParsing:
@@ -253,7 +269,160 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         assert enrichment.related_incidents == ["INC002", "INC003"]
         assert len(enrichment.mitigation_suggestions) == 1
         assert enrichment.mitigation_suggestions[0].suggestion == "Scale up the API servers"
-    
+
+    def test_parse_llm_response_extracts_usage_metadata(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 80,
+                "total_tokens": 200,
+                "cost": 0.021,
+            },
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({
+                            "summary": "The API is experiencing latency issues.",
+                        })
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.model == "openai/gpt-5"
+        assert enrichment.usage.tokens_in == 120
+        assert enrichment.usage.tokens_out == 80
+        assert enrichment.usage.tokens_total == 200
+        assert enrichment.usage.estimated_cost == 0.021
+
+    def test_parse_llm_response_estimates_cost_from_model_pricing(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 80,
+                "total_tokens": 200,
+            },
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({
+                            "summary": "The API is experiencing latency issues.",
+                        })
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.estimated_cost == pytest.approx(0.010456)
+
+    def test_parse_llm_response_extracts_text_from_content_blocks(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "{\"summary\":\"Latency increased after deployment\"}",
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.summary is not None
+        assert enrichment.summary.text == "Latency increased after deployment"
+
+    def test_parse_llm_response_logs_response_body_on_invalid_json(self, llm_settings, caplog):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "id": "resp-1",
+            "choices": [{"message": {"content": "not-json"}}],
+        }
+
+        with caplog.at_level("WARNING"):
+            enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.summary is not None
+        assert enrichment.summary.text == "not-json"
+        assert "response=" in caplog.text
+        assert "\"id\": \"resp-1\"" in caplog.text
+
+    def test_parse_llm_response_handles_empty_content_with_usage(self, llm_settings, caplog):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "id": "resp-empty",
+            "model": "openai/gpt-5",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {"content": "", "role": "assistant"},
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 212,
+                "completion_tokens": 2048,
+                "total_tokens": 2260,
+            },
+        }
+
+        with caplog.at_level("WARNING"):
+            enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.summary is None
+        assert enrichment.usage is not None
+        assert enrichment.usage.tokens_total == 2260
+        assert "LLM returned empty message content" in caplog.text
+        assert "finish_reason=length" in caplog.text
+
+    def test_parse_llm_response_uses_nested_cost_total(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "usage": {
+                "prompt_tokens": 212,
+                "completion_tokens": 2048,
+                "total_tokens": 2260,
+            },
+            "cost": {
+                "interaction": {"total": 0.0228206, "currency": "USD"},
+                "total": 0.0228206,
+                "currency": "USD",
+            },
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"summary": "Latency incident summary"}),
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.estimated_cost == pytest.approx(0.0228206)
+
     def test_parse_llm_response_with_empty_suggestions(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
@@ -359,6 +528,30 @@ class TestGaiaLlmGatewayAdapterRetries:
                     "verify": "/path/to/cert",
                 }
             assert mock_instance.post.call_count == 2
+
+    def test_call_llm_logs_request_and_response_payloads(self, llm_settings, caplog):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response_payload = {"choices": [{"message": {"content": "ok"}}]}
+        response = httpx.Response(
+            status_code=200,
+            headers={"x-request-id": "abc-123"},
+            json=response_payload,
+        )
+
+        with patch("httpx.Client") as mock_client_class:
+            mock_instance = MagicMock()
+            mock_instance.post.return_value = response
+            mock_client_class.return_value.__enter__.return_value = mock_instance
+            mock_client_class.return_value.__exit__.return_value = None
+
+            with caplog.at_level("INFO"):
+                adapter._call_llm(prompt="test prompt", token="token-123", max_tokens=100)
+
+        assert "Sending LLM request." in caplog.text
+        assert "Received LLM response." in caplog.text
+        assert "headers={'Authorization': '******'" in caplog.text
+        assert "\"content\": \"test prompt\"" in caplog.text
     
     def test_call_llm_fails_after_max_retries(self, llm_settings):
         settings = LlmGatewaySettings(

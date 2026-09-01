@@ -12,6 +12,7 @@ from src.domain.llm import (
     LlmGatewayConfigurationError,
     LlmGatewayDisabledError,
     LlmGatewayUnavailableError,
+    LlmUsage,
     LlmSummary,
     MitigationSuggestion,
 )
@@ -22,6 +23,27 @@ DEFAULT_PROMPT_PATH = (
     Path(__file__).resolve().parent / "prompt" / "incident_enrichment_prompt.txt"
 )
 DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS = 30.0
+
+MODEL_PRICING = {
+    "gpt-5": {
+        "prompt_tokens": 1.38e-5,
+        "cached_prompt_tokens": 1.4e-6,
+        "reasoning_tokens": 1.38e-5,
+        "completion_tokens": 1.10e-4,
+    },
+    "claude-haiku-4-5": {
+        "prompt_tokens": 1.1e-5,
+        "cached_prompt_tokens": 1.1e-6,
+        "reasoning_tokens": 5.5e-5,
+        "completion_tokens": 5.5e-5,
+    },
+    "claude-haiku-4.5": {
+        "prompt_tokens": 1.1e-5,
+        "cached_prompt_tokens": 1.1e-6,
+        "reasoning_tokens": 5.5e-5,
+        "completion_tokens": 5.5e-5,
+    },
+}
 
 
 def _download_bmw_ca_cert(path: Path, ca_cert_url: str) -> str:
@@ -202,6 +224,19 @@ class GaiaLlmGatewayAdapter(LlmGateway):
     
     def _call_llm(self, prompt: str, token: str, max_tokens: int) -> dict:
         """Call LLM gateway with retry logic."""
+        endpoint = f"{self._settings.endpoint.rstrip('/')}/chat/completions"
+        headers = self._get_llm_headers(token)
+        request_body = {
+            "model": self._settings.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "max_tokens": max_tokens,
+        }
+
         for attempt in range(self._settings.max_retries):
             try:
                 with httpx.Client(
@@ -209,19 +244,22 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     transport=self._transport,
                     verify=self._verify,
                 ) as client:
+                    logger.info(
+                        "Sending LLM request. url=%s headers=%s body=%s",
+                        endpoint,
+                        self._sanitize_headers(headers),
+                        self._safe_preview(request_body),
+                    )
                     response = client.post(
-                        f"{self._settings.endpoint.rstrip('/')}/chat/completions",
-                        headers=self._get_llm_headers(token),
-                        json={
-                            "model": self._settings.model,
-                            "messages": [
-                                {
-                                    "role": "user",
-                                    "content": prompt,
-                                }
-                            ],
-                            "max_tokens": max_tokens,
-                        },
+                        endpoint,
+                        headers=headers,
+                        json=request_body,
+                    )
+                    logger.info(
+                        "Received LLM response. status=%s headers=%s body=%s",
+                        response.status_code,
+                        self._sanitize_headers(dict(response.headers)),
+                        self._safe_preview(response.text),
                     )
             except httpx.HTTPError as exc:
                 if attempt < self._settings.max_retries - 1:
@@ -319,21 +357,38 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         try:
             # Extract the content from the response
             choices = response.get("choices", [])
+            usage = self._parse_usage(response)
             if not choices:
-                logger.warning("LLM response has no choices")
-                return IncidentEnrichment()
+                logger.warning(
+                    "LLM response has no choices. response=%s",
+                    self._safe_preview(response),
+                )
+                return IncidentEnrichment(usage=usage)
             
             message = choices[0].get("message", {})
-            content = message.get("content", "")
+            content = self._extract_message_content(message.get("content"))
+            if not content.strip():
+                finish_reason = choices[0].get("finish_reason")
+                logger.warning(
+                    "LLM returned empty message content. finish_reason=%s response=%s",
+                    finish_reason,
+                    self._safe_preview(response),
+                )
+                return IncidentEnrichment(usage=usage)
             
             # Try to parse as JSON
             try:
                 data = json.loads(content)
             except json.JSONDecodeError:
-                logger.warning("Could not parse LLM response as JSON: %s", content[:500])
+                logger.warning(
+                    "Could not parse LLM response as JSON. content=%s response=%s",
+                    content[:500],
+                    self._safe_preview(response),
+                )
                 # Fallback: use the raw content as summary
                 return IncidentEnrichment(
                     summary=LlmSummary(text=content),
+                    usage=usage,
                 )
             
             # Extract summary
@@ -346,7 +401,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 for related_id in data.get("related_incidents", [])
                 if isinstance(related_id, str) and related_id.strip()
             ]
-            
+
             # Extract mitigation suggestions
             suggestions = []
             if "mitigation_suggestions" in data:
@@ -363,7 +418,256 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 summary=summary,
                 mitigation_suggestions=suggestions,
                 related_incidents=related_incidents,
+                usage=usage,
             )
         except (KeyError, TypeError) as exc:
             logger.error("Failed to parse LLM response: %s", exc)
             raise LlmGatewayUnavailableError("Invalid LLM response format") from exc
+
+    @staticmethod
+    def _extract_message_content(content: object) -> str:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, dict):
+            text = content.get("text")
+            return text if isinstance(text, str) else json.dumps(content)
+        if isinstance(content, list):
+            chunks: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    if item.strip():
+                        chunks.append(item)
+                    continue
+                if isinstance(item, dict):
+                    text = item.get("text")
+                    if isinstance(text, str) and text.strip():
+                        chunks.append(text)
+                        continue
+                    value = item.get("content")
+                    if isinstance(value, str) and value.strip():
+                        chunks.append(value)
+            return "\n".join(chunks)
+        return ""
+
+    @staticmethod
+    def _safe_preview(payload: object, max_chars: int = 1200) -> str:
+        try:
+            serialized = json.dumps(payload, ensure_ascii=True)
+        except TypeError:
+            serialized = str(payload)
+        if len(serialized) <= max_chars:
+            return serialized
+        return f"{serialized[:max_chars]}...(truncated)"
+
+    @staticmethod
+    def _sanitize_headers(headers: dict[str, object]) -> dict[str, str]:
+        redacted_headers = {
+            "authorization",
+            "proxy-authorization",
+            "x-apikey",
+            "api-key",
+            "x-api-key",
+        }
+        sanitized: dict[str, str] = {}
+        for key, value in headers.items():
+            sanitized[key] = "******" if key.lower() in redacted_headers else str(value)
+        return sanitized
+
+    def _parse_usage(self, response: dict) -> Optional[LlmUsage]:
+        usage_data = response.get("usage")
+        if not isinstance(usage_data, dict):
+            return None
+
+        tokens_in = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("prompt_tokens"),
+                usage_data.get("input_tokens"),
+                usage_data.get("tokens_in"),
+            )
+        )
+        tokens_out = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("completion_tokens"),
+                usage_data.get("output_tokens"),
+                usage_data.get("tokens_out"),
+            )
+        )
+        tokens_total = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("total_tokens"),
+                usage_data.get("tokens_total"),
+            )
+        )
+        if tokens_total is None and tokens_in is not None and tokens_out is not None:
+            tokens_total = tokens_in + tokens_out
+
+        model = self._first_non_none(
+            response.get("model"),
+            usage_data.get("model"),
+            self._settings.model,
+        )
+
+        estimated_cost = self._extract_reported_cost(response, usage_data)
+        if estimated_cost is None:
+            estimated_cost = self._estimate_usage_cost(model, usage_data)
+
+        if all(
+            value is None
+            for value in (model, tokens_in, tokens_out, tokens_total, estimated_cost)
+        ):
+            return None
+
+        return LlmUsage(
+            model=model,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            tokens_total=tokens_total,
+            estimated_cost=estimated_cost,
+        )
+
+    def _extract_reported_cost(self, response: dict, usage_data: dict) -> Optional[float]:
+        response_cost = response.get("cost")
+        usage_cost = usage_data.get("cost")
+        candidates = (
+            usage_data.get("estimated_cost"),
+            usage_data.get("total_cost"),
+            self._deep_get(usage_cost, "total"),
+            self._deep_get(usage_cost, "interaction", "total"),
+            self._deep_get(response_cost, "total"),
+            self._deep_get(response_cost, "interaction", "total"),
+            usage_cost,
+            response_cost,
+        )
+        for candidate in candidates:
+            parsed = self._coerce_float(candidate)
+            if parsed is not None:
+                return parsed
+        return None
+
+    def _estimate_usage_cost(self, model: object, usage_data: dict) -> Optional[float]:
+        """Estimate LLM usage cost from model pricing when the provider omits it."""
+        normalized_model = self._normalize_model_name(model)
+        if normalized_model is None:
+            return None
+
+        pricing = self._lookup_model_pricing(normalized_model)
+        if pricing is None:
+            return None
+
+        tokens_in = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("prompt_tokens"),
+                usage_data.get("input_tokens"),
+                usage_data.get("tokens_in"),
+            )
+        )
+        tokens_out = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("completion_tokens"),
+                usage_data.get("output_tokens"),
+                usage_data.get("tokens_out"),
+            )
+        )
+        cached_prompt_tokens = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("cached_prompt_tokens"),
+                usage_data.get("cached_input_tokens"),
+                usage_data.get("cached_tokens_in"),
+                self._deep_get(usage_data, "prompt_tokens_details", "cached_tokens"),
+            )
+        )
+        reasoning_tokens = self._coerce_int(
+            self._first_non_none(
+                usage_data.get("reasoning_tokens"),
+                usage_data.get("reasoning_tokens_in"),
+                self._deep_get(usage_data, "completion_tokens_details", "reasoning_tokens"),
+            )
+        )
+
+        total_cost = 0.0
+        if tokens_in is not None:
+            total_cost += tokens_in * pricing.get("prompt_tokens", 0.0)
+        if cached_prompt_tokens is not None:
+            total_cost += cached_prompt_tokens * pricing.get("cached_prompt_tokens", pricing.get("prompt_tokens", 0.0))
+        if tokens_out is not None:
+            total_cost += tokens_out * pricing.get("completion_tokens", 0.0)
+        if reasoning_tokens is not None:
+            total_cost += reasoning_tokens * pricing.get("reasoning_tokens", pricing.get("completion_tokens", 0.0))
+
+        return round(total_cost, 12) if total_cost > 0 else None
+
+    @staticmethod
+    def _normalize_model_name(model: object) -> Optional[str]:
+        if model is None:
+            return None
+        normalized = str(model).strip().lower()
+        if not normalized:
+            return None
+        for prefix in ("openai/", "anthropic/", "azure-openai/", "azure/", "aws/", "bedrock/"):
+            if normalized.startswith(prefix):
+                normalized = normalized[len(prefix):]
+                break
+        return normalized.replace(" ", "")
+
+    @staticmethod
+    def _lookup_model_pricing(model_name: str) -> Optional[dict[str, float]]:
+        if not model_name:
+            return None
+        for key, pricing in MODEL_PRICING.items():
+            if model_name == key or model_name.startswith(key):
+                return pricing
+        return None
+
+    @staticmethod
+    def _first_non_none(*values: object) -> object:
+        for value in values:
+            if value is not None:
+                return value
+        return None
+
+    @staticmethod
+    def _deep_get(value: object, *keys: str) -> object:
+        current = value
+        for key in keys:
+            if not isinstance(current, dict):
+                return None
+            current = current.get(key)
+        return current
+
+    @staticmethod
+    def _coerce_int(value: object) -> Optional[int]:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                return int(stripped)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _coerce_float(value: object) -> Optional[float]:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                return float(stripped)
+            except ValueError:
+                return None
+        return None

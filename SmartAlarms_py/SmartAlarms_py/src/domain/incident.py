@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Protocol, runtime_checkable
 
+from src.domain.llm import LlmUsage
+
 
 @dataclass(frozen=True)
 class BaseIncident:
@@ -39,3 +41,5 @@ class IncidentDetails:
     related_incidents: List[str] = field(default_factory=list)
     resolution_suggestions: List[ResolutionSuggestion] = field(default_factory=list)
     related_log_ids: List[str] = field(default_factory=list)
+    request_latency_ms: Optional[float] = None
+    llm_usage: Optional[LlmUsage] = None

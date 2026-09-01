@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Iterable, List, Optional
 
 from src.application.incident_fetching import IncidentFetchingService
@@ -22,6 +23,7 @@ class IncidentDetailsService:
         details: List[IncidentDetails] = []
 
         for incident in base_incidents:
+            started_at = time.perf_counter()
             detail = IncidentDetails(
                 id=incident.id,
                 short_description=incident.short_description,
@@ -52,6 +54,8 @@ class IncidentDetailsService:
                         )
                         for suggestion in enrichment.mitigation_suggestions
                     ]
+                    detail.llm_usage = enrichment.usage
+            detail.request_latency_ms = (time.perf_counter() - started_at) * 1000
             details.append(detail)
 
         return details

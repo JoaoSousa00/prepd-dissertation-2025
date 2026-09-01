@@ -1,7 +1,13 @@
 from src.application.incident_details import IncidentDetailsService
 from src.application.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident
-from src.domain.llm import IncidentEnrichment, LlmGatewayUnavailableError, LlmSummary, MitigationSuggestion
+from src.domain.llm import (
+    IncidentEnrichment,
+    LlmGatewayUnavailableError,
+    LlmSummary,
+    LlmUsage,
+    MitigationSuggestion,
+)
 
 
 class FakeIncidentSource:
@@ -24,6 +30,13 @@ class SuccessfulLlmGateway:
                     related_log_ids=["log-1"],
                 )
             ],
+            usage=LlmUsage(
+                model="openai/gpt-5",
+                tokens_in=100,
+                tokens_out=25,
+                tokens_total=125,
+                estimated_cost=0.0125,
+            ),
         )
 
 
@@ -79,6 +92,9 @@ def test_fetch_incident_details_with_llm_adds_enrichment_fields():
     assert details[0].related_incidents == ["INC0002", "INC0003"]
     assert len(details[0].resolution_suggestions) == 1
     assert details[0].resolution_suggestions[0].suggestion == "Restart service"
+    assert details[0].llm_usage is not None
+    assert details[0].llm_usage.tokens_total == 125
+    assert details[0].request_latency_ms is not None
 
 
 def test_fetch_incident_details_with_failing_llm_returns_base_data():

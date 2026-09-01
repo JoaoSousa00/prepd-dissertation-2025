@@ -2,6 +2,26 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
 
+class LlmUsageData(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "model": "openai/gpt-5",
+                "tokensIn": 120,
+                "tokensOut": 80,
+                "tokensTotal": 200,
+                "estimatedCost": 0.0123,
+            }
+        }
+    )
+
+    model: Optional[str] = Field(None, description="Model name used for the LLM request")
+    tokensIn: Optional[int] = Field(None, description="Prompt token count")
+    tokensOut: Optional[int] = Field(None, description="Completion token count")
+    tokensTotal: Optional[int] = Field(None, description="Total token count")
+    estimatedCost: Optional[float] = Field(None, description="Estimated monetary cost")
+
+
 class ResolutionSuggestion(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
@@ -17,8 +37,8 @@ class ResolutionSuggestion(BaseModel):
     relatedIncidents: List[str] = Field(
         default_factory=list, description="The list of incidents that led to this suggestion"
     )
-    relatedLogIds: List[str] = Field(
-        default_factory=list, description="The list of log events that led to this suggestion"
+    relatedLogIds: Optional[List[str]] = Field(
+        None, description="The list of log events that led to this suggestion"
     )
 
 
@@ -55,6 +75,12 @@ class IncidentData(BaseModel):
     )
     relatedLogIds: Optional[List[str]] = Field(
         None, description="The list of log events that may have a connection with the incident"
+    )
+    llmUsage: Optional[LlmUsageData] = Field(
+        None, description="LLM usage and estimated cost metadata"
+    )
+    requestLatencyMs: Optional[float] = Field(
+        None, description="End-to-end latency for generating the incident details"
     )
 
 

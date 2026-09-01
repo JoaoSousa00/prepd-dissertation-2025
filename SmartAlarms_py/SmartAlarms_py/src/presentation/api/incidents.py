@@ -12,6 +12,7 @@ from src.shared.http.models import (
     DetailsResponse,
     ErrorResponse,
     IncidentData,
+    LlmUsageData,
     ResolutionSuggestion,
 )
 
@@ -96,12 +97,22 @@ async def get_incident_details(
                     ResolutionSuggestion(
                         suggestion=suggestion.suggestion,
                         relatedIncidents=suggestion.related_incidents,
-                        relatedLogIds=suggestion.related_log_ids,
                     )
                     for suggestion in incident.resolution_suggestions
                 ]
                 or None,
-                relatedLogIds=incident.related_log_ids or None,
+                llmUsage=(
+                    LlmUsageData(
+                        model=incident.llm_usage.model,
+                        tokensIn=incident.llm_usage.tokens_in,
+                        tokensOut=incident.llm_usage.tokens_out,
+                        tokensTotal=incident.llm_usage.tokens_total,
+                        estimatedCost=incident.llm_usage.estimated_cost,
+                    )
+                    if incident.llm_usage is not None
+                    else None
+                ),
+                requestLatencyMs=incident.request_latency_ms,
             )
             for incident in incident_details
         ]

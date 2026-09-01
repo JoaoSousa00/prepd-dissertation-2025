@@ -10,7 +10,8 @@
 
 ## 2) Problem Statement
 
-The service needs a first stable entry point so clients can call the incident analysis flow through a documented API contract.
+The service needs a first stable entry point so clients can call the incident analysis flow through a documented API
+contract.
 
 ## 3) User Story
 
@@ -19,12 +20,14 @@ The service needs a first stable entry point so clients can call the incident an
 ## 4) Scope
 
 ### In scope
+
 - `GET /incident/details`
 - Query parameter validation for `incidentIds`
 - Structured success and error responses following the contract
 - Basic request routing through the presentation layer
 
 ### Out of scope
+
 - External client integrations
 - LLM calls
 - Metrics
@@ -32,11 +35,11 @@ The service needs a first stable entry point so clients can call the incident an
 
 ## 5) Acceptance Criteria
 
-| ID | Given | When | Then |
-|----|-------|------|------|
-| CA-1 | The API is running | A client calls `GET /incident/details` with `incidentIds` | The endpoint exists and responds through the documented contract |
-| CA-2 | `incidentIds` is missing or invalid | The endpoint is called | The service returns `400` with a structured error response |
-| CA-3 | The request is valid but no incidents are available yet | The endpoint is called | The service returns a valid contract-aligned response shape |
+| ID   | Given                                                   | When                                                      | Then                                                             |
+|------|---------------------------------------------------------|-----------------------------------------------------------|------------------------------------------------------------------|
+| CA-1 | The API is running                                      | A client calls `GET /incident/details` with `incidentIds` | The endpoint exists and responds through the documented contract |
+| CA-2 | `incidentIds` is missing or invalid                     | The endpoint is called                                    | The service returns `400` with a structured error response       |
+| CA-3 | The request is valid but no incidents are available yet | The endpoint is called                                    | The service returns a valid contract-aligned response shape      |
 
 ## 6) Functional Design
 
@@ -63,25 +66,27 @@ The service needs a first stable entry point so clients can call the incident an
 
 ## 10) Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Endpoint contract drifts from the OpenAPI file | Integration breaks | Keep response shapes aligned with `docs/contracts/openapi.json` |
-| Validation becomes inconsistent | Unclear client errors | Centralize query validation in the presentation layer |
+| Risk                                           | Impact                | Mitigation                                                      |
+|------------------------------------------------|-----------------------|-----------------------------------------------------------------|
+| Endpoint contract drifts from the OpenAPI file | Integration breaks    | Keep response shapes aligned with `docs/contracts/openapi.json` |
+| Validation becomes inconsistent                | Unclear client errors | Centralize query validation in the presentation layer           |
 
 ## 11) Test Plan
 
 ### Unit tests
+
 - Query validation.
 - Error response formatting.
 
 ### Integration tests
+
 - Endpoint reachable with the documented route.
 
 ## 12) Implementation Notes
 
 - Planned files/modules:
-  - `src/presentation/api/*`
-  - `src/shared/http/*`
+    - `src/presentation/api/*`
+    - `src/shared/http/*`
 - Dependency changes: none yet.
 
 ## 13) Definition of Done
