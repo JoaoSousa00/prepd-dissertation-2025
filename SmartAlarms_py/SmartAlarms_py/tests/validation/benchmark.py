@@ -179,7 +179,7 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
     usage_tokens_in = llm_usage.get("tokensIn", llm_usage.get("tokens_in"))
     usage_tokens_out = llm_usage.get("tokensOut", llm_usage.get("tokens_out"))
     usage_tokens_total = llm_usage.get("tokensTotal", llm_usage.get("tokens_total"))
-    usage_cost = llm_usage.get("estimatedCost", llm_usage.get("estimated_cost"))
+    usage_cost = llm_usage.get("cost_USD", llm_usage.get("estimatedCost", llm_usage.get("estimated_cost")))
     return BenchmarkCaseOutput(
         incident_id=item.get("id", item.get("incident_id", "")),
         generated_summary=item.get("summary", ""),
@@ -278,6 +278,12 @@ def evaluate_benchmark_run(
 
 
 def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, Any]:
+    cases = []
+    for case in result.cases:
+        case_dict = asdict(case)
+        case_dict["cost_USD"] = case_dict.pop("estimated_cost")
+        cases.append(case_dict)
+
     return {
         "run_id": result.metadata.run_id,
         "release_label": result.metadata.release_label,
@@ -290,12 +296,12 @@ def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, An
             "top_k_accuracy": result.metrics.get("top_k_accuracy"),
             "related_incident_precision": result.metrics.get("related_incident_precision"),
             "related_incident_correlation": result.metrics.get("related_incident_precision"),
-            "estimated_cost": result.metrics.get("estimated_cost"),
+            "cost_USD": result.metrics.get("estimated_cost"),
             "latency_ms": result.metrics.get("latency_ms"),
         },
         "manual_notes": result.metadata.manual_notes,
         "status": "complete" if result.cases else "empty",
-        "cases": [asdict(case) for case in result.cases],
+        "cases": cases,
     }
 
 

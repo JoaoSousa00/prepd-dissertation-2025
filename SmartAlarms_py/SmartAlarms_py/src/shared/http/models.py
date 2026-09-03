@@ -10,7 +10,7 @@ class LlmUsageData(BaseModel):
                 "tokensIn": 120,
                 "tokensOut": 80,
                 "tokensTotal": 200,
-                "estimatedCost": 0.0123,
+                "cost_USD": 0.0123,
             }
         }
     )
@@ -19,7 +19,7 @@ class LlmUsageData(BaseModel):
     tokensIn: Optional[int] = Field(None, description="Prompt token count")
     tokensOut: Optional[int] = Field(None, description="Completion token count")
     tokensTotal: Optional[int] = Field(None, description="Total token count")
-    estimatedCost: Optional[float] = Field(None, description="Estimated monetary cost")
+    cost_USD: Optional[float] = Field(None, description="Monetary cost in USD")
 
 
 class ResolutionSuggestion(BaseModel):

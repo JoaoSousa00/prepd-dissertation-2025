@@ -254,7 +254,7 @@ class TestIncidentDetailsLlmEnrichment:
             "tokensIn": 120,
             "tokensOut": 80,
             "tokensTotal": 200,
-            "estimatedCost": 0.021,
+            "cost_USD": 0.021,
         }
         assert incident["requestLatencyMs"] is not None
         assert incident["requestLatencyMs"] > 0

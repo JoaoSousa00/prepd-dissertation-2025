@@ -14,7 +14,7 @@
     "top_k_accuracy": null,
     "related_incident_precision": null,
     "related_incident_correlation": null,
-    "estimated_cost": null,
+    "cost_USD": null,
     "latency_ms": null
   },
   "manual_notes": "",

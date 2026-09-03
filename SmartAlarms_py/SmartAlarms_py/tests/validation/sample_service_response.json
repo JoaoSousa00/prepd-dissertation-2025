@@ -48,7 +48,7 @@
         "tokensIn": 246,
         "tokensOut": 2543,
         "tokensTotal": 2789,
-        "estimatedCost": 0.0283125
+        "cost_USD": 0.0283125
       },
       "requestLatencyMs": 30894.249000004493
     },
@@ -102,7 +102,7 @@
         "tokensIn": 1516,
         "tokensOut": 3652,
         "tokensTotal": 5168,
-        "estimatedCost": 0.0422641
+        "cost_USD": 0.0422641
       },
       "requestLatencyMs": 39711.3302499929
     }

@@ -61,6 +61,7 @@ def test_render_iteration_template_includes_all_required_sections():
     assert template["model_name"] == "openai/gpt-5"
     assert template["metrics"]["top_k_accuracy"] == pytest.approx(1.0)
     assert template["metrics"]["related_incident_correlation"] == pytest.approx(1.0)
+    assert template["metrics"]["cost_USD"] == pytest.approx(0.0352883)
     assert template["manual_notes"] == ""
     assert template["cases"]
 

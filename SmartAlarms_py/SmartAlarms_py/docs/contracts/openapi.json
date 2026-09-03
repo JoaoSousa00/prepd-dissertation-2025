@@ -144,9 +144,9 @@
             "description": "Total token count",
             "example": 200
           },
-          "estimatedCost": {
+          "cost_USD": {
             "type": "number",
-            "description": "Estimated monetary cost",
+            "description": "Monetary cost in USD",
             "example": 0.0123
           }
         }

@@ -5,7 +5,7 @@
 - **Title:** Capturing LLM usage cost and request latency
 - **Phase:** Phase 1
 - **Owner:** Spec Architect
-- **Status:** Draft
+- **Status:** Implemented
 - **Related documents:** `docs/requirements.md`, `docs/architechture.md`
 
 ## 2) Problem Statement
@@ -27,6 +27,7 @@ instead of offline evaluation artifacts.
 - LLM usage metadata capture (`tokens_in`, `tokens_out`, total tokens, estimated monetary cost, model name)
 - Return or emit runtime telemetry for later comparison by request and release
 - Best-effort handling when the LLM provider does not supply all usage fields
+- Provider-reported total cost takes precedence over derived estimates
 
 ### Out of scope
 
@@ -41,7 +42,7 @@ instead of offline evaluation artifacts.
 |------|----------------------------------------------------------------------------|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | CA-1 | An analysis request triggers LLM enrichment                                | The request completes | The service records or returns request latency together with the LLM model name and usage metadata when available                      |
 | CA-2 | The LLM provider returns usage metadata for a request                      | The request completes | `tokens_in`, `tokens_out`, `tokens_total`, and estimated monetary cost are normalized and linked to the analyzed incident/request      |
-| CA-3 | The LLM provider omits some usage fields or cost cannot be derived exactly | The request completes | The main response is still returned, available telemetry is preserved, and missing fields are explicit rather than silently fabricated |
+| CA-3 | The LLM provider omits some usage fields or returns an empty cost value | The request completes | The main response is still returned, available telemetry is preserved, and missing fields are explicit rather than silently fabricated |
 | CA-4 | A live request is processed for a real incident                            | The response is built | Only runtime telemetry fields are included; offline evaluation artifacts are not emitted                                               |
 
 ## 6) Functional Design
@@ -63,6 +64,7 @@ instead of offline evaluation artifacts.
 - External dependencies: LLM provider or gateway usage metadata response.
 - Cost derivation source: provider-native usage/cost fields when available, otherwise configured pricing rules applied
   to normalized token counts.
+- Cost precedence: use provider-reported `cost.total` first, then nested provider totals such as `cost.interaction.total`, and only fall back to derived estimates when the reported cost is missing or empty.
 - Cache usage: none required for the telemetry values themselves.
 - Identity/permissions assumptions: none beyond request context.
 
@@ -73,7 +75,7 @@ instead of offline evaluation artifacts.
 
 ## 9) Observability
 
-- Store or emit `tokens_in`, `tokens_out`, `tokens_total`, estimated cost, model name, and end-to-end request latency.
+- Store or emit `tokens_in`, `tokens_out`, `tokens_total`, `cost_USD`, model name, and end-to-end request latency.
 
 ## 10) Risks and Mitigations
 

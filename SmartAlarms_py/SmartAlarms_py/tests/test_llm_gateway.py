@@ -423,6 +423,85 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         assert enrichment.usage is not None
         assert enrichment.usage.estimated_cost == pytest.approx(0.0228206)
 
+    def test_parse_llm_response_prioritizes_response_total_cost(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 80,
+                "total_tokens": 200,
+                "estimated_cost": 0.12345,
+            },
+            "cost": {
+                "interaction": {"total": 0.0000574, "currency": "USD"},
+                "total": 0.0000574,
+                "currency": "USD",
+            },
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"summary": "Latency incident summary"}),
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.estimated_cost == pytest.approx(0.0000574)
+
+    def test_parse_llm_response_uses_reported_cost_without_usage_object(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "cost": {"total": 0.0000574, "currency": "USD"},
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"summary": "Latency incident summary"}),
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.model == "openai/gpt-5"
+        assert enrichment.usage.tokens_in is None
+        assert enrichment.usage.tokens_out is None
+        assert enrichment.usage.tokens_total is None
+        assert enrichment.usage.estimated_cost == pytest.approx(0.0000574)
+
+    def test_parse_llm_response_estimates_cost_when_reported_cost_is_empty(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "model": "openai/gpt-5",
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 80,
+                "total_tokens": 200,
+            },
+            "cost": {"total": "", "currency": "USD"},
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"summary": "Latency incident summary"}),
+                    }
+                }
+            ],
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.usage is not None
+        assert enrichment.usage.estimated_cost == pytest.approx(0.010456)
+
     def test_parse_llm_response_with_empty_suggestions(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         

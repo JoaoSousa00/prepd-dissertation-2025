@@ -1,5 +1,5 @@
 {
-  "run_id": "20260903T000016Z",
+  "run_id": "20260903T153021Z",
   "release_label": "manual",
   "dataset_version": "manual",
   "incident_id": null,
@@ -14,7 +14,7 @@
     "top_k_accuracy": 1.0,
     "related_incident_precision": 1.0,
     "related_incident_correlation": 1.0,
-    "estimated_cost": 0.0352883,
+    "cost_USD": 0.0352883,
     "latency_ms": 35302.789624998695
   },
   "manual_notes": "",
@@ -33,9 +33,9 @@
       "tokens_in": 246,
       "tokens_out": 2543,
       "tokens_total": 2789,
-      "estimated_cost": 0.0283125,
       "latency_ms": 30894.249000004493,
-      "error_notes": ""
+      "error_notes": "",
+      "cost_USD": 0.0283125
     },
     {
       "incident_id": "INC000111048388",
@@ -50,9 +50,9 @@
       "tokens_in": 1516,
       "tokens_out": 3652,
       "tokens_total": 5168,
-      "estimated_cost": 0.0422641,
       "latency_ms": 39711.3302499929,
-      "error_notes": ""
+      "error_notes": "",
+      "cost_USD": 0.0422641
     }
   ]
 }

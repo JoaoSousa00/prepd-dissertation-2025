@@ -474,9 +474,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         return sanitized
 
     def _parse_usage(self, response: dict) -> Optional[LlmUsage]:
-        usage_data = response.get("usage")
-        if not isinstance(usage_data, dict):
-            return None
+        usage_data_raw = response.get("usage")
+        usage_data = usage_data_raw if isinstance(usage_data_raw, dict) else {}
 
         tokens_in = self._coerce_int(
             self._first_non_none(
@@ -529,12 +528,12 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         response_cost = response.get("cost")
         usage_cost = usage_data.get("cost")
         candidates = (
+            self._deep_get(response_cost, "total"),
+            self._deep_get(response_cost, "interaction", "total"),
             usage_data.get("estimated_cost"),
             usage_data.get("total_cost"),
             self._deep_get(usage_cost, "total"),
             self._deep_get(usage_cost, "interaction", "total"),
-            self._deep_get(response_cost, "total"),
-            self._deep_get(response_cost, "interaction", "total"),
             usage_cost,
             response_cost,
         )

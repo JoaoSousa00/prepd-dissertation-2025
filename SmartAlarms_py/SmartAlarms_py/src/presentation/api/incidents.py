@@ -107,7 +107,7 @@ async def get_incident_details(
                         tokensIn=incident.llm_usage.tokens_in,
                         tokensOut=incident.llm_usage.tokens_out,
                         tokensTotal=incident.llm_usage.tokens_total,
-                        estimatedCost=incident.llm_usage.estimated_cost,
+                        cost_USD=incident.llm_usage.estimated_cost,
                     )
                     if incident.llm_usage is not None
                     else None
