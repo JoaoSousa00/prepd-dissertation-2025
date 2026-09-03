@@ -1,0 +1,26 @@
+{
+  "dataset_version": "phase1-validation-v1",
+  "incidents": [
+    {
+      "incident_id": "INC000111017580",
+      "reference_summary": "AWS CloudWatch raised a warning for increased 4xx client errors on the EMEA production Place-Search translations/public endpoint, indicating client request issues or recent config/deploy changes may be causing validation, authorization, or routing failures. Impact currently noted for Location Services (global).",
+      "reference_mitigation_suggestions": [
+        "Break down 4xx errors by status code and route to pinpoint the source: analyze CloudWatch metrics and access logs for translations/public, segment by 400/401/403/404/429, and identify top offending clients, user agents, and paths."
+      ],
+      "reference_related_incidents": [],
+      "notes": "Automated incident for EMEA Place-Search 4xx errors"
+    },
+    {
+      "incident_id": "INC000111048388",
+      "reference_summary": "Customer’s ID7/HU_MGU navigation shows German gas stations without prices when searching along the route near 49.20378, 8.59601 on 2026-08-29, while fuel prices display normally for France and Spain, indicating a Germany-specific fuel price data or entitlement issue rather than connectivity or hardware.",
+      "reference_mitigation_suggestions": [
+        "Verify the DE fuel price provider/feed status (EMEA PROD) around 2026-08-29 13:34 UTC; check backend health dashboards and logs for Germany-only fuel price services (e.g., TPEG/POI price feed) to confirm a regional data outage or suppression."
+      ],
+      "reference_related_incidents": [
+        "INC000110826815",
+        "INC000110805256"
+      ],
+      "notes": "Manual incident for DE fuel price issue"
+    }
+  ]
+}

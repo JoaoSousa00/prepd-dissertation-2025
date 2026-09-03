@@ -1,0 +1,110 @@
+{
+  "incidents": [
+    {
+      "id": "INC000111017580",
+      "shortDescription": "CloudWatch EMEA PROD Place-Search-emea-prod-4xx-errors-translations-public-low\nnull",
+      "description": "CloudWatch EMEA PROD Place-Search-emea-prod-4xx-errors-translations-public-low\nnull\nWarning alert [Alert000006910263] .\nCreated on [663636559450].\nMetric name is [Place-Search-emea-prod-4xx-errors-translations-public-low] of type [CloudWatch] from data source [AWS].\n\nTotal impacted services by the CI: [Location Services global] is 1.",
+      "summary": "AWS CloudWatch raised a warning for increased 4xx client errors on the EMEA production Place-Search translations/public endpoint, indicating client request issues or recent config/deploy changes may be causing validation, authorization, or routing failures. Impact currently noted for Location Services (global).",
+      "resolutionSuggestions": [
+        {
+          "suggestion": "Break down 4xx errors by status code and route to pinpoint the source: analyze CloudWatch metrics and access logs for translations/public, segment by 400/401/403/404/429, and identify top offending clients, user agents, and paths.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Verify recent deployments and configuration changes in EMEA (service, API Gateway/ALB routes, WAF rules); if a spike aligns with a change, roll back or hotfix and re-run canaries.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Check authentication/authorization paths if 401/403 increased: validate IAM policies, authorizers (Cognito/OAuth/JWT), and ensure the translations/public endpoint hasn’t inadvertently been gated by new auth or WAF rules.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Inspect request validation and schema handling at the application layer: confirm supported locales, required query parameters, and input formats; improve validation and return informative errors to clients, and adjust server-side defaults where safe.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Assess routing and mapping templates: ensure API Gateway/ALB routing to translations/public is correct, no recent stage variable/mapping/template changes are causing 404s or misrouted requests.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Evaluate rate limiting and throttling if 429s are present: adjust API Gateway/ALB limits, coordinate client-side retry/backoff, and consider per-tenant quotas or caching for high-frequency queries.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Review WAF/edge configurations for false positives: look for new or tightened rules blocking legitimate requests (e.g., locale parameters, query patterns), and whitelist known-good patterns or clients as needed.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Set up targeted synthetic checks and dashboards for translations/public across common locales and inputs; create alarms per 4xx code to detect regressions early.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Engage top client integrators: share observed error patterns, provide request guidelines, and coordinate test cases; consider temporary feature flags or fallbacks (e.g., default locale) where appropriate and safe.",
+          "relatedIncidents": []
+        }
+      ],
+      "llmUsage": {
+        "model": "openai/gpt-5",
+        "tokensIn": 246,
+        "tokensOut": 2543,
+        "tokensTotal": 2789,
+        "estimatedCost": 0.0283125
+      },
+      "requestLatencyMs": 30894.249000004493
+    },
+    {
+      "id": "INC000111048388",
+      "shortDescription": "[Navigation][Search][FuelPriceNotDisplayed][Car][Other//]",
+      "description": "Hi Team,\n\nThis is a follow-up to INC000110826815. The customer has provided example coordinates in Germany: 49.203779503457866, 8.596010819111346. Can you please take a look?\n\nBest Regards,\n2nd Level Support\n\nIncident Summary:\nCustomer traveling on A5 toward France cannot view gas station prices for German gas stations, though prices display correctly in France and Spain. Issue occurred at 14:34 GMT+1 on 2026-08-29 at coordinates 49.203779503457866, 8.596010819111346, persists after app updates and head unit reset, and occurs when searching along route using Road Map EUROPE Live 2020-2 with haptic search in German system language.\n\nServices not working:\n- Gas station price display for German locations\n\nTicket Analysis Date: 2026-08-31T14:09:19.773919+00:00\n\nTimestamp of Incident: 2026-08-29T13:34:00+00:00\n\nVIN: WBACR610009G37633\nGCID: 486e0c2f-a383-45bc-8fa1-fa469aed8c62\nHUB: EMEA\nEnvironment: PROD\n\nInvestigation Results:\n1: Does the customer complain about any navigation hardware issue?\nResult: NO\n2: Does the customer complain that Data Privacy Settings enable by themselves?\nResult: NO\n3: Does the customer complain about position of the vehicle being displayed incorrectly in the navigation?\nResult: NO\n4: Does the customer complain about issues with wrongly displayed or missing content in the map material?\nResult: NO\n5: Does the customer complain about issues with Speed Limit Information function?\nResult: NO\n6: Was the vehicle online around the reported timestamp based on the correct connectivity analysis path?\nResult: YES\n7: Does the customer complain about routing issues within the navigation system?\nResult: NO\n8: Does the customer complain about RTTI service issues?\nResult: NO\n9: Does the customer complain about wrong navigation guidance?\nResult: NO\n10: Does the customer complain about issues while searching for a destination in the navigation system?\nResult: YES\n11: Is destination input via speech not possible and manual searching for destination working properly?\nResult: NO\n12: Is the online search in the navigation system not working?\nResult: NO\n13: Is searching for fuel prices in the navigation system not possible?\nResult: NO\n14: Are no fuel prices displayed in the navigation system?\nResult: YES\n\nTelematic Unit: ATM02\nHead Unit: HU_MGU\nHMI Version: ID7\nE-Series: G05\nMarket: DE\nOriginal iStep: 20-11-557\nCurrent iStep: 23-11-550\nMSISDN: N/A\nICCID: 89430301902012775850\n\nApp Version:\nSmartphone:\n\n----------------------------------------\n\n1st Level Ticket:\n\n----------------------------------------\n\n# Translation to English (US)\n\n[Search][Navigation]#0-#[DE][DE_BM_00][WBACR610009G37633][G05][S18A-20-11-557][S18A-23-11-550][G05][HU_MGU][ATM02][null][id7][436761829387697][][][]#-0#\n[Search][Navigation] Navigation Search\n\nVIN: WBACR610009G37633\n\nCRM number: thread::I3npJT7xHK-3spWfOooI1Q0::\n\nQuestions and answers:\n\nWas Knowledge Article 000040872 reviewed?\nYes\n\nDescribe the problem as precisely as possible, ideally in the exact wording of the customer's statement:\nReference to ticket: INC000110805256\n\nCustomer is on the A5 heading toward France and cannot view gas station prices.\nFrom France and Spain, the customer can view gas station prices in the respective country.\nOnly German gas stations are displayed without prices.\nFrom Germany, the customer can view gas station prices in France.\nNew ticket created.\n\nAt what time did the customer notice the problem?\n2026-08-29 14:34:00 GMT+1\n\nWhich map version does the customer use?\nRoad Map EUROPE Live 2020-2\n\nHas the customer updated the apps and services?\nYes, the problem persists.\n\nHas the customer already performed a Head Unit Reset?\nYes\n\nDo other ConnectedDrive Services work (e.g., BMW Online, RTTI)?\nYes\n\nDid the problem occur only once or persistently?\nPersistently\n\nIf the problem occurs persistently, please provide location information:\n49.203779503457866, 8.596010819111346\n\nIs the vehicle outdoors or in a building (in a garage)?\nOutdoors\n\nIs the search destination in the same country as the vehicle?\nYes.\n\nDid the customer perform a voice-based search (speech input) or a tactile search via the central control unit (iDrive) / the central touch display?\nTactile search\n\nWas there a specific event before the service failure? If yes, specify the event:\nNo\n\nWas an error message displayed when using this service?\nNo\n\nWere filters active in the search? If yes, which ones?\nYes. Gas station prices\n\nWhere did the customer click? What menu structure was he in?\nThematic map \"Search for gas stations\"\n\nWas a suggestion selected in the search or the OK button pressed in the search?\nYes\n\nWhich category or keyword or term or destination was entered for the search AND in which area (country, city)?\nAlong the route\n\nWas the search performed at the location, at the destination, or along the route?\nAlong the route\n\nDo the fuel prices match the vehicle type? (for ICE/PHEV only):\nYes, but are not displayed in Germany.\n\nAre the fuel prices current? Comparison of displayed prices with actual prices at the gas station (for ICE/PHEV only):\nYes\n\nIn which system language did the customer perform the search?\nGerman\n\n(For navigation positioning problems only!) What is the current status of the vehicle position arrow in the navigation system?\n\n\nWas the customer logged in with a driver profile at the time of the error?\nYes.\n\n[Search][Navigation]#0-#[DE][DE_BM_00][WBACR610009G37633][G05][S18A-20-11-557][S18A-23-11-550][G05][HU_MGU][ATM02][null][id7][436761829387697][][][]#-0#",
+      "summary": "Customer’s ID7/HU_MGU navigation shows German gas stations without prices when searching along the route near 49.20378, 8.59601 on 2026-08-29, while fuel prices display normally for France and Spain, indicating a Germany-specific fuel price data or entitlement issue rather than connectivity or hardware.",
+      "relatedIncidents": [
+        "INC000110826815",
+        "INC000110805256"
+      ],
+      "resolutionSuggestions": [
+        {
+          "suggestion": "Verify the DE fuel price provider/feed status (EMEA PROD) around 2026-08-29 13:34 UTC; check backend health dashboards and logs for Germany-only fuel price services (e.g., TPEG/POI price feed) to confirm a regional data outage or suppression.",
+          "relatedIncidents": [
+            "INC000110826815",
+            "INC000110805256"
+          ]
+        },
+        {
+          "suggestion": "Re-provision ConnectedDrive entitlements for fuel price display (Germany) for the VIN and push a service refresh to the head unit; after backend refresh, ask the customer to toggle Data Privacy/Online Services off/on to force token renewal and data reload.",
+          "relatedIncidents": [
+            "INC000110826815"
+          ]
+        },
+        {
+          "suggestion": "Confirm that any market-specific legal/consent requirements for displaying fuel prices in Germany are accepted; if applicable, re-prompt the customer to accept fuel price terms and conditions in the HMI or via their ConnectedDrive account and then retry.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "Check HMI filters and fuel type selection: clear all filters (show all fuels), test both the Thematic Map ‘Gas stations’ and the POI list via Online Search (at location vs along route); if list view shows prices but the thematic overlay doesn’t, log a UI/overlay defect for ID7.",
+          "relatedIncidents": [
+            "INC000110805256"
+          ]
+        },
+        {
+          "suggestion": "Ensure the head unit is on the latest available software and online map components; if there is a known defect affecting German fuel prices on iStep 23-11-550, plan an update to the corrective iStep or deploy the relevant online component fix, then retest.",
+          "relatedIncidents": []
+        },
+        {
+          "suggestion": "If a backend/provider issue is confirmed, communicate outage scope and ETA to the customer and offer a temporary workaround (e.g., using the BMW app or an external app to view DE fuel prices) until the feed is restored.",
+          "relatedIncidents": [
+            "INC000110826815",
+            "INC000110805256"
+          ]
+        }
+      ],
+      "llmUsage": {
+        "model": "openai/gpt-5",
+        "tokensIn": 1516,
+        "tokensOut": 3652,
+        "tokensTotal": 5168,
+        "estimatedCost": 0.0422641
+      },
+      "requestLatencyMs": 39711.3302499929
+    }
+  ]
+}

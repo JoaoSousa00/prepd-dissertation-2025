@@ -233,7 +233,7 @@ class TestLoadLlmGatewaySettings:
         with patch.dict(os.environ, env_vars, clear=True):
             settings = load_llm_gateway_settings()
             assert settings.request_timeout_seconds == 240.0
-            assert settings.auth_timeout_seconds == 10.0
+            assert settings.auth_timeout_seconds == 30.0
     
     def test_load_with_no_timeout_disables_request_timeout(self):
         env_vars = {

@@ -1,0 +1,22 @@
+{
+  "run_id": "",
+  "release_label": "",
+  "dataset_version": "",
+  "incident_id": null,
+  "model_name": "",
+  "configuration_notes": "",
+  "metrics": {
+    "rouge": {
+      "precision": null,
+      "recall": null,
+      "f1": null
+    },
+    "top_k_accuracy": null,
+    "related_incident_precision": null,
+    "related_incident_correlation": null,
+    "estimated_cost": null,
+    "latency_ms": null
+  },
+  "manual_notes": "",
+  "status": ""
+}
