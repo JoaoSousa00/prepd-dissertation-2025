@@ -6,6 +6,7 @@ from src.domain.incident import (
     IncidentSourceAdapter,
     IncidentSourceUnavailableError,
 )
+from src.shared.observability import get_current_request_context
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,11 @@ class IncidentFetchingService:
 
     def fetch_base_incidents(self, incident_ids: Iterable[str]) -> List[BaseIncident]:
         incidents: List[BaseIncident] = []
+        context = get_current_request_context()
+        if context is not None:
+            ordered_ids = [value.strip() for value in incident_ids if value and value.strip()]
+            if ordered_ids:
+                context.main_incident = context.main_incident or ordered_ids[0]
         for incident_id in incident_ids:
             normalized_id = incident_id.strip()
             if not normalized_id:
@@ -27,4 +33,6 @@ class IncidentFetchingService:
                 continue
             if incident is not None:
                 incidents.append(incident)
+                if context is not None:
+                    context.record_fetched_incident(incident.id)
         return incidents

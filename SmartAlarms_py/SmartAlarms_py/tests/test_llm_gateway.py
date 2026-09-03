@@ -624,7 +624,7 @@ class TestGaiaLlmGatewayAdapterRetries:
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_client_class.return_value.__exit__.return_value = None
 
-            with caplog.at_level("INFO"):
+            with caplog.at_level("DEBUG"):
                 adapter._call_llm(prompt="test prompt", token="token-123", max_tokens=100)
 
         assert "Sending LLM request." in caplog.text

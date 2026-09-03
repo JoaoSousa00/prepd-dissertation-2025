@@ -8,6 +8,7 @@ from src.domain.llm import (
     LlmUsage,
     MitigationSuggestion,
 )
+from src.shared.observability import RequestLogContext, bind_request_context, get_current_request_context
 
 
 class FakeIncidentSource:
@@ -119,3 +120,32 @@ def test_fetch_incident_details_with_failing_llm_returns_base_data():
     assert details[0].id == "INC0001"
     assert details[0].summary is None
     assert details[0].resolution_suggestions == []
+
+
+def test_fetch_incident_details_does_not_double_count_suggestions():
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(
+            FakeIncidentSource(
+                incidents={
+                    "INC0001": BaseIncident(
+                        id="INC0001",
+                        short_description="API latency spike",
+                        description="Requests slowed down during load peak.",
+                    ),
+                    "INC0002": BaseIncident(
+                        id="INC0002",
+                        short_description="DB latency spike",
+                        description="Database queries are slow.",
+                    ),
+                }
+            )
+        ),
+        llm_gateway=SuccessfulLlmGateway(),
+    )
+
+    with bind_request_context(RequestLogContext(request_id="req-dup")):
+        details = service.fetch_incident_details(["INC0001", "INC0002"])
+        payload = get_current_request_context().build_summary_payload()
+
+    assert len(details) == 2
+    assert payload["itsm_summary"]["suggestions_number"] == 2

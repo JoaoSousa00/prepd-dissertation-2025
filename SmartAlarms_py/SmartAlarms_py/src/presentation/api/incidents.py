@@ -15,6 +15,7 @@ from src.shared.http.models import (
     LlmUsageData,
     ResolutionSuggestion,
 )
+from src.shared.observability import get_current_request_context
 
 router = APIRouter(prefix="/incident", tags=["Incidents"])
 logger = logging.getLogger(__name__)
@@ -65,6 +66,10 @@ async def get_incident_details(
         description="List of incident identifiers",
     ),
 ):
+    context = get_current_request_context()
+    if context is not None:
+        context.main_incident = context.main_incident or next((value.strip() for value in incidentIds if value and value.strip()), None)
+
     if not incidentIds:
         return create_error_response(
             "Invalid request payload",
@@ -84,6 +89,9 @@ async def get_incident_details(
     try:
         incident_details = incident_details_service.fetch_incident_details(incidentIds)
     except IncidentSourceUnauthorizedError as exc:
+        if context is not None:
+            context.record_itsm_error(str(exc), 401)
+            context.summary_completed = False
         return create_unauthorized_response(str(exc))
     return DetailsResponse(
         incidents=[

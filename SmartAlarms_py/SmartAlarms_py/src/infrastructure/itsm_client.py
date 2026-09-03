@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -11,6 +12,7 @@ from src.domain.incident import (
     IncidentSourceUnauthorizedError,
     IncidentSourceUnavailableError,
 )
+from src.shared.observability import get_current_request_context
 
 logger = logging.getLogger(__name__)
 
@@ -53,24 +55,59 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
 
     def fetch_base_incident(self, incident_id: str) -> Optional[BaseIncident]:
         self._validate_credentials()
+        context = get_current_request_context()
+        started_at = time.perf_counter()
         try:
             response = self._client.get(
                 f"/incident/{incident_id}",
                 headers=self._headers(),
             )
         except httpx.HTTPError as exc:
+            if context is not None:
+                context.record_itsm_error(f"ITSM incident source is unavailable: {exc}", 500)
+                context.log_event(
+                    "ERROR",
+                    "itsm",
+                    500,
+                    f"ITSM incident source is unavailable: {exc}",
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
             raise IncidentSourceUnavailableError("ITSM incident source is unavailable") from exc
 
-        logger.info("ITSM %s → HTTP %s", incident_id, response.status_code)
+        latency_ms = (time.perf_counter() - started_at) * 1000
+        logger.debug("ITSM %s → HTTP %s", incident_id, response.status_code)
+        if context is not None:
+            context.record_itsm_status(response.status_code)
+            context.log_event(
+                "DEBUG",
+                "itsm",
+                response.status_code,
+                "",
+                latency_ms=latency_ms,
+            )
 
         if response.status_code == 404:
             return None
         if response.status_code in {401, 403}:
+            if context is not None:
+                context.record_itsm_error("ITSM credentials are missing or were rejected", response.status_code)
             raise IncidentSourceUnauthorizedError(
                 "ITSM credentials are missing or were rejected"
             )
         if response.status_code >= 400:
             logger.warning("ITSM returned %s for %s — body: %s", response.status_code, incident_id, response.text[:500])
+            if context is not None:
+                context.record_itsm_error(
+                    f"ITSM incident source returned {response.status_code}",
+                    response.status_code,
+                )
+                context.log_event(
+                    "ERROR",
+                    "itsm",
+                    response.status_code,
+                    f"ITSM incident source returned {response.status_code}",
+                    latency_ms=latency_ms,
+                )
             raise IncidentSourceUnavailableError(
                 f"ITSM incident source returned {response.status_code}"
             )
@@ -80,11 +117,16 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
         record = self._extract_record(payload)
         if record is None:
             logger.warning("ITSM payload for %s could not be extracted: %s", incident_id, payload)
+            if context is not None:
+                context.record_itsm_error("ITSM incident payload is empty", 500)
             raise IncidentSourceUnavailableError("ITSM incident payload is empty")
 
         record_id = str(record.get("id") or record.get("number") or incident_id)
         short_description = record.get("shortDescription") or record.get("short_description")
         description = record.get("description")
+
+        if context is not None:
+            context.record_fetched_incident(record_id)
 
         return BaseIncident(
             id=record_id,

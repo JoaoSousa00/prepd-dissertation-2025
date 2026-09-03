@@ -17,6 +17,7 @@ from src.domain.llm import (
     MitigationSuggestion,
 )
 from src.infrastructure.llm_config import LlmGatewaySettings, load_llm_gateway_settings
+from src.shared.observability import get_current_request_context
 
 logger = logging.getLogger(__name__)
 DEFAULT_PROMPT_PATH = (
@@ -56,7 +57,7 @@ def _download_bmw_ca_cert(path: Path, ca_cert_url: str) -> str:
             "CA_CERT_URL is required when the BMW CA certificate is missing"
         )
 
-    logger.info("Downloading BMW CA certificate from %s to %s", ca_cert_url, path)
+    logger.debug("Downloading BMW CA certificate from %s to %s", ca_cert_url, path)
     try:
         response = httpx.get(ca_cert_url, timeout=DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS)
         response.raise_for_status()
@@ -145,7 +146,12 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         max_tokens: Optional[int] = None,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content."""
+        context = get_current_request_context()
+        if context is not None:
+            context.main_incident = context.main_incident or incident_id
         if not self._settings.gateway_enabled:
+            if context is not None:
+                context.record_llm_error("LLM gateway is disabled", 503)
             raise LlmGatewayDisabledError("LLM gateway is disabled")
         
         try:
@@ -168,6 +174,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
     
     def _get_access_token(self) -> str:
         """Get OAuth access token from GAIA auth endpoint."""
+        context = get_current_request_context()
+        started_at = time.perf_counter()
         # Return cached token if still valid
         if self._token_cache and time.time() < self._token_expiry:
             return self._token_cache
@@ -190,10 +198,30 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     },
                 )
         except httpx.HTTPError as exc:
+            if context is not None:
+                context.record_llm_error(f"Failed to authenticate with LLM gateway: {exc}", 500)
+                context.log_event(
+                    "ERROR",
+                    "llm",
+                    500,
+                    f"Failed to authenticate with LLM gateway: {exc}",
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
             logger.error("Failed to connect to LLM auth endpoint: %s", exc)
             raise LlmGatewayUnavailableError(
                 f"Failed to authenticate with LLM gateway: {exc}"
             ) from exc
+
+        latency_ms = (time.perf_counter() - started_at) * 1000
+        if context is not None:
+            context.record_llm_status(response.status_code)
+            context.log_event(
+                "DEBUG",
+                "llm",
+                response.status_code,
+                "",
+                latency_ms=latency_ms,
+            )
         
         if response.status_code != 200:
             logger.error(
@@ -201,6 +229,11 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 response.status_code,
                 response.text[:500],
             )
+            if context is not None:
+                context.record_llm_error(
+                    f"LLM authentication failed with status {response.status_code}",
+                    response.status_code,
+                )
             raise LlmGatewayUnavailableError(
                 f"LLM authentication failed with status {response.status_code}"
             )
@@ -217,6 +250,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             self._token_expiry = time.time() + (expires_in * 0.9)  # Refresh at 90%
             return token
         except (ValueError, KeyError) as exc:
+            if context is not None:
+                context.record_llm_error("Invalid authentication response from LLM gateway", 500)
             logger.error("Invalid LLM auth response: %s", exc)
             raise LlmGatewayConfigurationError(
                 "Invalid authentication response from LLM gateway"
@@ -224,6 +259,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
     
     def _call_llm(self, prompt: str, token: str, max_tokens: int) -> dict:
         """Call LLM gateway with retry logic."""
+        context = get_current_request_context()
         endpoint = f"{self._settings.endpoint.rstrip('/')}/chat/completions"
         headers = self._get_llm_headers(token)
         request_body = {
@@ -238,13 +274,14 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         }
 
         for attempt in range(self._settings.max_retries):
+            started_at = time.perf_counter()
             try:
                 with httpx.Client(
                     timeout=self._settings.request_timeout_seconds,
                     transport=self._transport,
                     verify=self._verify,
                 ) as client:
-                    logger.info(
+                    logger.debug(
                         "Sending LLM request. url=%s headers=%s body=%s",
                         endpoint,
                         self._sanitize_headers(headers),
@@ -255,13 +292,22 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                         headers=headers,
                         json=request_body,
                     )
-                    logger.info(
+                    logger.debug(
                         "Received LLM response. status=%s headers=%s body=%s",
                         response.status_code,
                         self._sanitize_headers(dict(response.headers)),
                         self._safe_preview(response.text),
                     )
             except httpx.HTTPError as exc:
+                if context is not None:
+                    context.record_llm_error(f"LLM gateway unavailable after {attempt + 1} attempts: {exc}", 500)
+                    context.log_event(
+                        "ERROR",
+                        "llm",
+                        500,
+                        f"LLM gateway unavailable after {attempt + 1} attempts: {exc}",
+                        latency_ms=(time.perf_counter() - started_at) * 1000,
+                    )
                 if attempt < self._settings.max_retries - 1:
                     delay = self._settings.retry_base_delay_seconds * (2 ** attempt)
                     logger.warning(
@@ -278,6 +324,16 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     f"LLM gateway unavailable after {attempt + 1} attempts"
                 ) from exc
             
+            latency_ms = (time.perf_counter() - started_at) * 1000
+            if context is not None:
+                context.record_llm_status(response.status_code)
+                context.log_event(
+                    "DEBUG",
+                    "llm",
+                    response.status_code,
+                    "",
+                    latency_ms=latency_ms,
+                )
             if response.status_code >= 500:
                 if attempt < self._settings.max_retries - 1:
                     delay = self._settings.retry_base_delay_seconds * (2 ** attempt)
@@ -296,12 +352,22 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     attempt + 1,
                     response.text[:500],
                 )
+                if context is not None:
+                    context.record_llm_error(
+                        f"LLM gateway returned status {response.status_code}",
+                        response.status_code,
+                    )
                 raise LlmGatewayUnavailableError(
                     f"LLM gateway returned status {response.status_code}"
                 )
             
             if response.status_code >= 400:
                 logger.error("LLM returned error %s: %s", response.status_code, response.text[:500])
+                if context is not None:
+                    context.record_llm_error(
+                        f"LLM request failed with status {response.status_code}",
+                        response.status_code,
+                    )
                 raise LlmGatewayUnavailableError(
                     f"LLM request failed with status {response.status_code}"
                 )
