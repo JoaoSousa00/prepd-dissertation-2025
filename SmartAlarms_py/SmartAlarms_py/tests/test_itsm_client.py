@@ -96,3 +96,29 @@ def test_fetch_base_incident_raises_for_rejected_credentials():
 
     with pytest.raises(IncidentSourceUnauthorizedError):
         adapter.fetch_base_incident("INC000000000005")
+
+
+def test_fetch_base_incident_injects_traceparent_header():
+    captured_headers: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_headers.update(dict(request.headers))
+        return httpx.Response(
+            200,
+            json={
+                "id": "INC000000000001",
+                "shortDescription": "Billing API latency spike",
+                "description": "Billing API requests exceeded the expected latency threshold.",
+            },
+        )
+
+    adapter = make_adapter(handler)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            "src.infrastructure.itsm_client.inject_trace_context",
+            lambda headers: headers.__setitem__("traceparent", "00-test"),
+        )
+        adapter.fetch_base_incident("INC000000000001")
+
+    assert captured_headers["traceparent"] == "00-test"

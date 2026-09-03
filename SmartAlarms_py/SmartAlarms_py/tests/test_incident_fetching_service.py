@@ -13,8 +13,10 @@ class FakeIncidentSource:
         self._incidents = incidents or {}
         self._failing_ids = set(failing_ids or [])
         self._unauthorized_ids = set(unauthorized_ids or [])
+        self.calls = []
 
     def fetch_base_incident(self, incident_id):
+        self.calls.append(incident_id)
         if incident_id in self._unauthorized_ids:
             raise IncidentSourceUnauthorizedError("missing credentials")
         if incident_id in self._failing_ids:
@@ -126,3 +128,23 @@ def test_fetch_base_incidents_propagates_unauthorized_error():
 
     with pytest.raises(IncidentSourceUnauthorizedError):
         service.fetch_base_incidents(["INC000000000001"])
+
+
+def test_fetch_base_incidents_deduplicates_incident_ids():
+    source = FakeIncidentSource(
+        incidents={
+            "INC000000000001": BaseIncident(
+                id="INC000000000001",
+                short_description="Billing API latency spike",
+                description="Billing API requests exceeded the expected latency threshold.",
+            )
+        }
+    )
+    service = IncidentFetchingService(source)
+
+    incidents = service.fetch_base_incidents(
+        ["INC000000000001", "INC000000000001", "INC000000000001"]
+    )
+
+    assert len(incidents) == 1
+    assert source.calls == ["INC000000000001"]

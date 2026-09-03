@@ -28,7 +28,14 @@ class IncidentDetailsService:
 
     def _fetch_incident_details(self, incident_ids: Iterable[str], emit_summary: bool = False) -> List[IncidentDetails]:
         context = get_current_request_context()
-        ordered_ids = [value.strip() for value in incident_ids if value and value.strip()]
+        seen_ids: set[str] = set()
+        ordered_ids: list[str] = []
+        for value in incident_ids:
+            normalized = value.strip() if value else ""
+            if not normalized or normalized in seen_ids:
+                continue
+            seen_ids.add(normalized)
+            ordered_ids.append(normalized)
         if context is not None and ordered_ids:
             context.main_incident = context.main_incident or ordered_ids[0]
 

@@ -13,6 +13,7 @@ from src.domain.incident import (
     IncidentSourceUnavailableError,
 )
 from src.shared.observability import get_current_request_context
+from src.shared.tracing import inject_trace_context, set_span_status_error, set_span_status_ok, start_span
 
 logger = logging.getLogger(__name__)
 
@@ -57,24 +58,55 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
         self._validate_credentials()
         context = get_current_request_context()
         started_at = time.perf_counter()
-        try:
-            response = self._client.get(
-                f"/incident/{incident_id}",
-                headers=self._headers(),
-            )
-        except httpx.HTTPError as exc:
-            if context is not None:
-                context.record_itsm_error(f"ITSM incident source is unavailable: {exc}", 500)
-                context.log_event(
-                    "ERROR",
-                    "itsm",
-                    500,
-                    f"ITSM incident source is unavailable: {exc}",
-                    latency_ms=(time.perf_counter() - started_at) * 1000,
+        headers = self._headers()
+        inject_trace_context(headers)
+        with start_span(
+            "itsm.fetch_incident",
+            request_id=context.request_id if context is not None else None,
+            component="itsm",
+            attributes={
+                "operation": "fetch_incident",
+                "endpoint": f"/incident/{incident_id}",
+                "resource_id": incident_id,
+            },
+        ) as span:
+            try:
+                response = self._client.get(
+                    f"/incident/{incident_id}",
+                    headers=headers,
                 )
-            raise IncidentSourceUnavailableError("ITSM incident source is unavailable") from exc
+            except httpx.HTTPError as exc:
+                latency_ms = (time.perf_counter() - started_at) * 1000
+                set_span_status_error(
+                    span,
+                    error_code="itsm_http_error",
+                    error_message=str(exc),
+                    latency_ms=latency_ms,
+                )
+                if context is not None:
+                    context.record_itsm_error(f"ITSM incident source is unavailable: {exc}", 500)
+                    context.log_event(
+                        "ERROR",
+                        "itsm",
+                        500,
+                        f"ITSM incident source is unavailable: {exc}",
+                        latency_ms=latency_ms,
+                    )
+                raise IncidentSourceUnavailableError("ITSM incident source is unavailable") from exc
 
-        latency_ms = (time.perf_counter() - started_at) * 1000
+            latency_ms = (time.perf_counter() - started_at) * 1000
+            if response.status_code >= 400:
+                set_span_status_error(
+                    span,
+                    error_code=f"http_{response.status_code}",
+                    error_message=f"ITSM returned HTTP {response.status_code}",
+                    latency_ms=latency_ms,
+                )
+            else:
+                set_span_status_ok(span, latency_ms)
+            if span is not None:
+                span.set_attribute("status_code", response.status_code)
+
         logger.debug("ITSM %s → HTTP %s", incident_id, response.status_code)
         if context is not None:
             context.record_itsm_status(response.status_code)

@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -58,6 +59,10 @@ class TestGaiaLlmGatewayAdapterDisabled:
 
 class TestGaiaLlmGatewayAdapterAuthentication:
     """Tests for OAuth authentication."""
+
+    def setup_method(self):
+        GaiaLlmGatewayAdapter._shared_token_cache = None
+        GaiaLlmGatewayAdapter._shared_token_expiry = 0
     
     def test_get_access_token_success(self, llm_settings):
         token_response = httpx.Response(
@@ -93,9 +98,8 @@ class TestGaiaLlmGatewayAdapterAuthentication:
                 "scope": "machine2machine",
             }
             assert kwargs["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
-            assert kwargs["headers"] == {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
+            if "traceparent" in kwargs["headers"]:
+                assert kwargs["headers"]["traceparent"].startswith("00-")
     
     def test_get_access_token_caches_token(self, llm_settings):
         token_response = httpx.Response(
@@ -165,6 +169,33 @@ class TestGaiaLlmGatewayAdapterAuthentication:
             
             with pytest.raises(LlmGatewayConfigurationError):
                 adapter._get_access_token()
+
+    def test_get_access_token_uses_shared_cache_across_instances(self, llm_settings):
+        GaiaLlmGatewayAdapter._shared_token_cache = None
+        GaiaLlmGatewayAdapter._shared_token_expiry = 0
+        token_response = httpx.Response(
+            status_code=200,
+            json={
+                "access_token": "shared-token-123",
+                "expires_in": 3600,
+                "token_type": "Bearer",
+            },
+        )
+        adapter_a = GaiaLlmGatewayAdapter(settings=llm_settings)
+        adapter_b = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        with patch("httpx.Client") as mock_client_class:
+            mock_instance = MagicMock()
+            mock_instance.post.return_value = token_response
+            mock_client_class.return_value.__enter__.return_value = mock_instance
+            mock_client_class.return_value.__exit__.return_value = None
+
+            token_a = adapter_a._get_access_token()
+            token_b = adapter_b._get_access_token()
+
+            assert token_a == "shared-token-123"
+            assert token_b == "shared-token-123"
+            assert mock_instance.post.call_count == 1
 
 
 class TestGaiaLlmGatewayAdapterPromptBuilding:
@@ -596,9 +627,10 @@ class TestGaiaLlmGatewayAdapterRetries:
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_client_class.return_value.__exit__.return_value = None
             
-            result = adapter._call_llm(prompt="test", token="token", max_tokens=100)
+            result, retry_count = adapter._call_llm(prompt="test", token="token", max_tokens=100)
             
             assert result == {"choices": [{"message": {"content": "ok"}}]}
+            assert retry_count == 1
             assert mock_client_class.call_count == 2
             for call in mock_client_class.call_args_list:
                 assert call.kwargs == {
@@ -667,6 +699,132 @@ class TestGaiaLlmGatewayAdapterRetries:
                     "verify": "/path/to/cert",
                 }
             assert mock_instance.post.call_count == 2
+
+    def test_call_llm_injects_traceparent_header(self, llm_settings):
+        captured_headers: dict[str, str] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_headers.update(dict(request.headers))
+            return httpx.Response(
+                status_code=200,
+                json={"choices": [{"message": {"content": "ok"}}]},
+            )
+
+        adapter = GaiaLlmGatewayAdapter(
+            settings=llm_settings,
+            transport=httpx.MockTransport(handler),
+        )
+
+        with patch("src.infrastructure.llm_gateway.inject_trace_context") as inject:
+            inject.side_effect = lambda headers: headers.__setitem__("traceparent", "00-test")
+            _, _ = adapter._call_llm(prompt="test", token="token", max_tokens=100)
+
+        assert captured_headers["traceparent"] == "00-test"
+
+
+class TestGaiaLlmGatewayAdapterTracing:
+    def test_enrich_incident_creates_llm_complete_span(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+        span_names: list[str] = []
+
+        class DummySpan:
+            def set_attribute(self, *_args, **_kwargs):
+                return None
+
+            def set_status(self, *_args, **_kwargs):
+                return None
+
+            def record_exception(self, *_args, **_kwargs):
+                return None
+
+        @contextmanager
+        def fake_start_span(span_name, **_kwargs):
+            span_names.append(span_name)
+            yield DummySpan()
+
+        with patch("src.infrastructure.llm_gateway.start_span", side_effect=fake_start_span):
+            with patch.object(adapter, "_get_access_token", return_value="token"):
+                with patch.object(
+                    adapter,
+                    "_call_llm",
+                    return_value=(
+                        {
+                            "choices": [
+                                {
+                                    "message": {
+                                        "content": json.dumps({"summary": "ok"}),
+                                    }
+                                }
+                            ],
+                            "usage": {
+                                "prompt_tokens": 10,
+                                "completion_tokens": 5,
+                                "total_tokens": 15,
+                                "cost": 0.001,
+                            },
+                        },
+                        0,
+                    ),
+                ):
+                    adapter.enrich_incident("INC001", "short", "desc")
+
+        assert "llm.complete" in span_names
+
+    def test_enrich_incident_sets_langfuse_generation_attributes(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+        captured_attributes: dict[str, object] = {}
+
+        class DummySpan:
+            def set_attribute(self, key, value):
+                captured_attributes[key] = value
+
+            def set_status(self, *_args, **_kwargs):
+                return None
+
+            def record_exception(self, *_args, **_kwargs):
+                return None
+
+        @contextmanager
+        def fake_start_span(span_name, **_kwargs):
+            captured_attributes.update(_kwargs.get("attributes", {}))
+            if span_name == "llm.complete":
+                yield DummySpan()
+                return
+            yield DummySpan()
+
+        with patch("src.infrastructure.llm_gateway.start_span", side_effect=fake_start_span):
+            with patch.object(adapter, "_get_access_token", return_value="token"):
+                with patch.object(
+                    adapter,
+                    "_call_llm",
+                    return_value=(
+                        {
+                            "choices": [
+                                {
+                                    "message": {
+                                        "content": json.dumps({"summary": "Latency incident summary"}),
+                                    }
+                                }
+                            ],
+                            "usage": {
+                                "prompt_tokens": 12,
+                                "completion_tokens": 7,
+                                "total_tokens": 19,
+                                "cost": 0.0021,
+                            },
+                        },
+                        1,
+                    ),
+                ):
+                    adapter.enrich_incident("INC001", "short", "desc")
+
+        assert captured_attributes["langfuse.observation.type"] == "generation"
+        assert "langfuse.observation.input" in captured_attributes
+        assert "langfuse.observation.output" in captured_attributes
+        assert captured_attributes["gen_ai.usage.input_tokens"] == 12
+        assert captured_attributes["gen_ai.usage.output_tokens"] == 7
+        assert captured_attributes["gen_ai.usage.total_tokens"] == 19
+        assert captured_attributes["gen_ai.usage.cost"] == 0.0021
 
 
 class TestCertResolution:

@@ -18,6 +18,7 @@ from src.domain.llm import (
 )
 from src.infrastructure.llm_config import LlmGatewaySettings, load_llm_gateway_settings
 from src.shared.observability import get_current_request_context
+from src.shared.tracing import inject_trace_context, set_span_status_error, set_span_status_ok, start_span
 
 logger = logging.getLogger(__name__)
 DEFAULT_PROMPT_PATH = (
@@ -121,6 +122,9 @@ class GaiaLlmGatewayAdapter(LlmGateway):
     Handles OAuth authentication, retries, timeouts, and CA certificate verification.
     """
     
+    _shared_token_cache: Optional[str] = None
+    _shared_token_expiry: float = 0
+
     def __init__(
         self,
         settings: Optional[LlmGatewaySettings] = None,
@@ -154,65 +158,184 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 context.record_llm_error("LLM gateway is disabled", 503)
             raise LlmGatewayDisabledError("LLM gateway is disabled")
         
-        try:
-            token = self._get_access_token()
-        except (LlmGatewayUnavailableError, LlmGatewayConfigurationError):
-            raise
-        
-        prompt = self._build_prompt(incident_id, short_description, description)
-        
-        try:
-            response = self._call_llm(
-                prompt=prompt,
-                token=token,
-                max_tokens=max_tokens or self._settings.default_max_tokens,
-            )
-        except LlmGatewayUnavailableError:
-            raise
-        
-        return self._parse_llm_response(response)
+        with start_span(
+            "llm.complete",
+            request_id=context.request_id if context is not None else None,
+            component="llm",
+            attributes={
+                "operation": "complete",
+                "provider": "gaia",
+                "model": self._settings.model,
+                "retry_count": 0,
+                "langfuse.observation.type": "generation",
+                "gen_ai.operation.name": "chat",
+                "gen_ai.system": "gaia",
+                "gen_ai.request.model": self._settings.model,
+            },
+        ) as llm_span:
+            started_at = time.perf_counter()
+            try:
+                token = self._get_access_token()
+                prompt = self._build_prompt(incident_id, short_description, description)
+                requested_max_tokens = max_tokens or self._settings.default_max_tokens
+                response, retry_count = self._call_llm(
+                    prompt=prompt,
+                    token=token,
+                    max_tokens=requested_max_tokens,
+                )
+                enrichment = self._parse_llm_response(response)
+                if llm_span is not None:
+                    llm_content = self._extract_message_content(
+                        (response.get("choices") or [{}])[0].get("message", {}).get("content")
+                    )
+                    llm_span.set_attribute("langfuse.observation.model.name", self._settings.model)
+                    llm_span.set_attribute(
+                        "langfuse.observation.model.parameters",
+                        json.dumps({"max_tokens": requested_max_tokens}, ensure_ascii=True),
+                    )
+                    llm_span.set_attribute(
+                        "langfuse.observation.input",
+                        json.dumps(
+                            {
+                                "incident_id": incident_id,
+                                "short_description": short_description,
+                                "description": description,
+                                "prompt": prompt,
+                            },
+                            ensure_ascii=True,
+                        ),
+                    )
+                    llm_span.set_attribute("gen_ai.prompt", prompt)
+                    llm_span.set_attribute("provider", "gaia")
+                    llm_span.set_attribute("model", self._settings.model)
+                    llm_span.set_attribute("llm.model_name", self._settings.model)
+                    llm_span.set_attribute("retry_count", retry_count)
+                    llm_span.set_attribute("gen_ai.request.max_tokens", requested_max_tokens)
+                    llm_span.set_attribute("gen_ai.response.model", self._settings.model)
+                    if enrichment.usage is not None:
+                        usage_details: dict[str, int | float] = {}
+                        if enrichment.usage.tokens_in is not None:
+                            llm_span.set_attribute("tokens_in", enrichment.usage.tokens_in)
+                            llm_span.set_attribute("gen_ai.usage.input_tokens", enrichment.usage.tokens_in)
+                            llm_span.set_attribute("llm.token_count.prompt", enrichment.usage.tokens_in)
+                            usage_details["input_tokens"] = enrichment.usage.tokens_in
+                        if enrichment.usage.tokens_out is not None:
+                            llm_span.set_attribute("tokens_out", enrichment.usage.tokens_out)
+                            llm_span.set_attribute("gen_ai.usage.output_tokens", enrichment.usage.tokens_out)
+                            llm_span.set_attribute("llm.token_count.completion", enrichment.usage.tokens_out)
+                            usage_details["output_tokens"] = enrichment.usage.tokens_out
+                        if enrichment.usage.tokens_total is not None:
+                            llm_span.set_attribute("gen_ai.usage.total_tokens", enrichment.usage.tokens_total)
+                            llm_span.set_attribute("llm.token_count.total", enrichment.usage.tokens_total)
+                            usage_details["total_tokens"] = enrichment.usage.tokens_total
+                        if usage_details:
+                            llm_span.set_attribute(
+                                "langfuse.observation.usage_details",
+                                json.dumps(usage_details, ensure_ascii=True),
+                            )
+                        if enrichment.usage.estimated_cost is not None:
+                            llm_span.set_attribute("cost_usd", enrichment.usage.estimated_cost)
+                            llm_span.set_attribute("gen_ai.usage.cost", enrichment.usage.estimated_cost)
+                            llm_span.set_attribute(
+                                "langfuse.observation.cost_details",
+                                json.dumps({"total": enrichment.usage.estimated_cost}, ensure_ascii=True),
+                            )
+                    if llm_content.strip():
+                        llm_span.set_attribute(
+                            "langfuse.observation.output",
+                            llm_content,
+                        )
+                        llm_span.set_attribute("gen_ai.completion", llm_content)
+                set_span_status_ok(llm_span, (time.perf_counter() - started_at) * 1000)
+                return enrichment
+            except (LlmGatewayUnavailableError, LlmGatewayConfigurationError) as exc:
+                set_span_status_error(
+                    llm_span,
+                    error_code="llm_failure",
+                    error_message=str(exc),
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
+                raise
     
     def _get_access_token(self) -> str:
         """Get OAuth access token from GAIA auth endpoint."""
         context = get_current_request_context()
         started_at = time.perf_counter()
+        if self._token_cache and time.time() < self._token_expiry:
+            return self._token_cache
+
+        if self.__class__._shared_token_cache and time.time() < self.__class__._shared_token_expiry:
+            self._token_cache = self.__class__._shared_token_cache
+            self._token_expiry = self.__class__._shared_token_expiry
+            return self._token_cache
+
         # Return cached token if still valid
         if self._token_cache and time.time() < self._token_expiry:
             return self._token_cache
-        
-        try:
-            with httpx.Client(
-                timeout=self._settings.auth_timeout_seconds,
-                verify=self._verify,
-            ) as client:
-                response = client.post(
-                    self._settings.auth_endpoint,
-                    data={
-                        "client_id": self._settings.api_key,
-                        "client_secret": self._settings.client_secret,
-                        "grant_type": "client_credentials",
-                        "scope": "machine2machine",
-                    },
-                    headers={
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                )
-        except httpx.HTTPError as exc:
-            if context is not None:
-                context.record_llm_error(f"Failed to authenticate with LLM gateway: {exc}", 500)
-                context.log_event(
-                    "ERROR",
-                    "llm",
-                    500,
-                    f"Failed to authenticate with LLM gateway: {exc}",
-                    latency_ms=(time.perf_counter() - started_at) * 1000,
-                )
-            logger.error("Failed to connect to LLM auth endpoint: %s", exc)
-            raise LlmGatewayUnavailableError(
-                f"Failed to authenticate with LLM gateway: {exc}"
-            ) from exc
 
-        latency_ms = (time.perf_counter() - started_at) * 1000
+        with start_span(
+            "llm.fetch_token",
+            request_id=context.request_id if context is not None else None,
+            component="llm",
+            attributes={
+                "operation": "fetch_token",
+                "endpoint": self._settings.auth_endpoint,
+            },
+        ) as auth_span:
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
+            inject_trace_context(headers)
+            try:
+                with httpx.Client(
+                    timeout=self._settings.auth_timeout_seconds,
+                    verify=self._verify,
+                ) as client:
+                    response = client.post(
+                        self._settings.auth_endpoint,
+                        data={
+                            "client_id": self._settings.api_key,
+                            "client_secret": self._settings.client_secret,
+                            "grant_type": "client_credentials",
+                            "scope": "machine2machine",
+                        },
+                        headers=headers,
+                    )
+            except httpx.HTTPError as exc:
+                latency_ms = (time.perf_counter() - started_at) * 1000
+                set_span_status_error(
+                    auth_span,
+                    error_code="llm_auth_http_error",
+                    error_message=str(exc),
+                    latency_ms=latency_ms,
+                )
+                if context is not None:
+                    context.record_llm_error(f"Failed to authenticate with LLM gateway: {exc}", 500)
+                    context.log_event(
+                        "ERROR",
+                        "llm",
+                        500,
+                        f"Failed to authenticate with LLM gateway: {exc}",
+                        latency_ms=latency_ms,
+                    )
+                logger.error("Failed to connect to LLM auth endpoint: %s", exc)
+                raise LlmGatewayUnavailableError(
+                    f"Failed to authenticate with LLM gateway: {exc}"
+                ) from exc
+
+            latency_ms = (time.perf_counter() - started_at) * 1000
+            if response.status_code >= 400:
+                set_span_status_error(
+                    auth_span,
+                    error_code=f"http_{response.status_code}",
+                    error_message=f"LLM auth returned HTTP {response.status_code}",
+                    latency_ms=latency_ms,
+                )
+            else:
+                set_span_status_ok(auth_span, latency_ms)
+            if auth_span is not None:
+                auth_span.set_attribute("status_code", response.status_code)
+
         if context is not None:
             context.record_llm_status(response.status_code)
             context.log_event(
@@ -248,6 +371,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             
             self._token_cache = token
             self._token_expiry = time.time() + (expires_in * 0.9)  # Refresh at 90%
+            self.__class__._shared_token_cache = token
+            self.__class__._shared_token_expiry = self._token_expiry
             return token
         except (ValueError, KeyError) as exc:
             if context is not None:
@@ -257,11 +382,12 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 "Invalid authentication response from LLM gateway"
             ) from exc
     
-    def _call_llm(self, prompt: str, token: str, max_tokens: int) -> dict:
+    def _call_llm(self, prompt: str, token: str, max_tokens: int) -> tuple[dict, int]:
         """Call LLM gateway with retry logic."""
         context = get_current_request_context()
         endpoint = f"{self._settings.endpoint.rstrip('/')}/chat/completions"
-        headers = self._get_llm_headers(token)
+        base_headers = self._get_llm_headers(token)
+        base_headers["Authorization"] = f"Bearer {token}"
         request_body = {
             "model": self._settings.model,
             "messages": [
@@ -275,56 +401,89 @@ class GaiaLlmGatewayAdapter(LlmGateway):
 
         for attempt in range(self._settings.max_retries):
             started_at = time.perf_counter()
-            try:
-                with httpx.Client(
-                    timeout=self._settings.request_timeout_seconds,
-                    transport=self._transport,
-                    verify=self._verify,
-                ) as client:
-                    logger.debug(
-                        "Sending LLM request. url=%s headers=%s body=%s",
-                        endpoint,
-                        self._sanitize_headers(headers),
-                        self._safe_preview(request_body),
-                    )
-                    response = client.post(
-                        endpoint,
-                        headers=headers,
-                        json=request_body,
-                    )
-                    logger.debug(
-                        "Received LLM response. status=%s headers=%s body=%s",
-                        response.status_code,
-                        self._sanitize_headers(dict(response.headers)),
-                        self._safe_preview(response.text),
-                    )
-            except httpx.HTTPError as exc:
-                if context is not None:
-                    context.record_llm_error(f"LLM gateway unavailable after {attempt + 1} attempts: {exc}", 500)
-                    context.log_event(
-                        "ERROR",
-                        "llm",
-                        500,
-                        f"LLM gateway unavailable after {attempt + 1} attempts: {exc}",
+            headers = dict(base_headers)
+            inject_trace_context(headers)
+            span_request_id = context.request_id if context is not None else None
+            with start_span(
+                "llm.request_attempt",
+                request_id=span_request_id,
+                component="llm",
+                attributes={
+                    "operation": "request_attempt",
+                    "endpoint": endpoint,
+                    "retry_count": attempt,
+                    "provider": "gaia",
+                    "model": self._settings.model,
+                },
+            ) as attempt_span:
+                try:
+                    with httpx.Client(
+                        timeout=self._settings.request_timeout_seconds,
+                        transport=self._transport,
+                        verify=self._verify,
+                    ) as client:
+                        logger.debug(
+                            "Sending LLM request. url=%s headers=%s body=%s",
+                            endpoint,
+                            self._sanitize_headers(headers),
+                            self._safe_preview(request_body),
+                        )
+                        response = client.post(
+                            endpoint,
+                            headers=headers,
+                            json=request_body,
+                        )
+                        logger.debug(
+                            "Received LLM response. status=%s headers=%s body=%s",
+                            response.status_code,
+                            self._sanitize_headers(dict(response.headers)),
+                            self._safe_preview(response.text),
+                        )
+                except httpx.HTTPError as exc:
+                    set_span_status_error(
+                        attempt_span,
+                        error_code="llm_request_http_error",
+                        error_message=str(exc),
                         latency_ms=(time.perf_counter() - started_at) * 1000,
                     )
-                if attempt < self._settings.max_retries - 1:
-                    delay = self._settings.retry_base_delay_seconds * (2 ** attempt)
-                    logger.warning(
-                        "LLM request failed (attempt %d/%d), retrying in %.1fs: %s",
-                        attempt + 1,
-                        self._settings.max_retries,
-                        delay,
-                        exc,
+                    if context is not None:
+                        context.record_llm_error(f"LLM gateway unavailable after {attempt + 1} attempts: {exc}", 500)
+                        context.log_event(
+                            "ERROR",
+                            "llm",
+                            500,
+                            f"LLM gateway unavailable after {attempt + 1} attempts: {exc}",
+                            latency_ms=(time.perf_counter() - started_at) * 1000,
+                        )
+                    if attempt < self._settings.max_retries - 1:
+                        delay = self._settings.retry_base_delay_seconds * (2 ** attempt)
+                        logger.warning(
+                            "LLM request failed (attempt %d/%d), retrying in %.1fs: %s",
+                            attempt + 1,
+                            self._settings.max_retries,
+                            delay,
+                            exc,
+                        )
+                        time.sleep(delay)
+                        continue
+                    logger.error("LLM request failed after %d attempts: %s", attempt + 1, exc)
+                    raise LlmGatewayUnavailableError(
+                        f"LLM gateway unavailable after {attempt + 1} attempts"
+                    ) from exc
+
+                latency_ms = (time.perf_counter() - started_at) * 1000
+                if response.status_code >= 400:
+                    set_span_status_error(
+                        attempt_span,
+                        error_code=f"http_{response.status_code}",
+                        error_message=f"LLM returned HTTP {response.status_code}",
+                        latency_ms=latency_ms,
                     )
-                    time.sleep(delay)
-                    continue
-                logger.error("LLM request failed after %d attempts: %s", attempt + 1, exc)
-                raise LlmGatewayUnavailableError(
-                    f"LLM gateway unavailable after {attempt + 1} attempts"
-                ) from exc
-            
-            latency_ms = (time.perf_counter() - started_at) * 1000
+                else:
+                    set_span_status_ok(attempt_span, latency_ms)
+                if attempt_span is not None:
+                    attempt_span.set_attribute("status_code", response.status_code)
+
             if context is not None:
                 context.record_llm_status(response.status_code)
                 context.log_event(
@@ -372,7 +531,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     f"LLM request failed with status {response.status_code}"
                 )
             
-            return response.json()
+            return response.json(), attempt
         
         raise LlmGatewayUnavailableError("Failed to get response from LLM gateway")
     

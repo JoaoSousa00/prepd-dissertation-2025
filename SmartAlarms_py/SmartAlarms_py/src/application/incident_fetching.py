@@ -18,14 +18,15 @@ class IncidentFetchingService:
     def fetch_base_incidents(self, incident_ids: Iterable[str]) -> List[BaseIncident]:
         incidents: List[BaseIncident] = []
         context = get_current_request_context()
+        seen_ids: set[str] = set()
+        normalized_ids = [value.strip() for value in incident_ids if value and value.strip()]
         if context is not None:
-            ordered_ids = [value.strip() for value in incident_ids if value and value.strip()]
-            if ordered_ids:
-                context.main_incident = context.main_incident or ordered_ids[0]
-        for incident_id in incident_ids:
-            normalized_id = incident_id.strip()
-            if not normalized_id:
+            if normalized_ids:
+                context.main_incident = context.main_incident or normalized_ids[0]
+        for normalized_id in normalized_ids:
+            if normalized_id in seen_ids:
                 continue
+            seen_ids.add(normalized_id)
             try:
                 incident = self._incident_source.fetch_base_incident(normalized_id)
             except IncidentSourceUnavailableError as exc:
