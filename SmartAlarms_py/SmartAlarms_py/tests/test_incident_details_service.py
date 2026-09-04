@@ -20,15 +20,17 @@ class FakeIncidentSource:
 
 
 class SuccessfulLlmGateway:
-    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
         return IncidentEnrichment(
             summary=LlmSummary(text=f"Summary for {incident_id}"),
             related_incidents=["INC0002", "INC0002", "INC0003"],
             mitigation_suggestions=[
                 MitigationSuggestion(
-                    suggestion="Restart service",
+                    confidence="evidence-based",
+                    investigation="Check service health.",
+                    mitigation="Restart service.",
+                    resolution_note="Service restarted and healthy.",
                     related_incidents=["INC0002"],
-                    related_log_ids=["log-1"],
                 )
             ],
             usage=LlmUsage(
@@ -42,8 +44,17 @@ class SuccessfulLlmGateway:
 
 
 class FailingLlmGateway:
-    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
         raise LlmGatewayUnavailableError("gateway unavailable")
+
+
+class CapturingLlmGateway:
+    def __init__(self):
+        self.kwargs = None
+
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
+        self.kwargs = kwargs
+        return IncidentEnrichment(summary=LlmSummary(text=f"Summary for {incident_id}"))
 
 
 def test_fetch_incident_details_without_llm_returns_base_incidents():
@@ -92,7 +103,10 @@ def test_fetch_incident_details_with_llm_adds_enrichment_fields():
     assert details[0].summary == "Summary for INC0001"
     assert details[0].related_incidents == ["INC0002", "INC0003"]
     assert len(details[0].resolution_suggestions) == 1
-    assert details[0].resolution_suggestions[0].suggestion == "Restart service"
+    assert details[0].resolution_suggestions[0].confidence == "evidence-based"
+    assert details[0].resolution_suggestions[0].investigation == "Check service health."
+    assert details[0].resolution_suggestions[0].mitigation == "Restart service."
+    assert details[0].resolution_suggestions[0].resolution_note == "Service restarted and healthy."
     assert details[0].llm_usage is not None
     assert details[0].llm_usage.tokens_total == 125
     assert details[0].request_latency_ms is not None
@@ -149,3 +163,55 @@ def test_fetch_incident_details_does_not_double_count_suggestions():
 
     assert len(details) == 2
     assert payload["itsm_summary"]["suggestions_number"] == 2
+
+
+def test_fetch_incident_details_passes_sanitized_main_incident_context_to_llm():
+    gateway = CapturingLlmGateway()
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(
+            FakeIncidentSource(
+                incidents={
+                    "INC0001": BaseIncident(
+                        id="INC0001",
+                        short_description="API latency spike",
+                        description="Requests slowed down during load peak.",
+                        raw={
+                            "number": "INC0001",
+                            "short_description": "API latency spike",
+                            "description": "Requests slowed down during load peak.",
+                            "state": "New",
+                            "priority": "3 - Moderate",
+                            "impact": "2 - Medium",
+                            "urgency": "2 - Medium",
+                            "assignment_group": {"name": "Ops"},
+                            "caller_id": {"name": "Hidden Caller"},
+                            "assigned_to": {"name": "Hidden Assignee"},
+                            "resolved_by": {"name": "Hidden Resolver"},
+                            "attachments": [{"name": "secret.txt"}],
+                            "comments": ["comment-1"],
+                            "work_notes": ["work-note-1"],
+                            "ci_item": [{"name": "Service"}],
+                        },
+                    )
+                }
+            )
+        ),
+        llm_gateway=gateway,
+    )
+
+    service.fetch_incident_details(["INC0001"])
+
+    context = gateway.kwargs["main_incident_context"]
+    assert "number: INC0001" in context
+    assert "short_description: API latency spike" in context
+    assert "description: Requests slowed down during load peak." in context
+    assert "state: New" in context
+    assert "priority: 3 - Moderate" in context
+    assert "impact: 2 - Medium" in context
+    assert "urgency: 2 - Medium" in context
+    assert "assignment_group" in context
+    assert "ci_item" in context
+    assert "caller_id" not in context
+    assert "assigned_to" not in context
+    assert "resolved_by" not in context
+    assert "attachments" not in context

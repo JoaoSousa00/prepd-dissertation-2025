@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Optional
@@ -148,6 +149,9 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         short_description: Optional[str],
         description: Optional[str],
         max_tokens: Optional[int] = None,
+        main_incident_context: Optional[str] = None,
+        related_incident_context: Optional[str] = None,
+        same_title_incident_context: Optional[str] = None,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content."""
         context = get_current_request_context()
@@ -157,7 +161,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             if context is not None:
                 context.record_llm_error("LLM gateway is disabled", 503)
             raise LlmGatewayDisabledError("LLM gateway is disabled")
-        
+
         with start_span(
             "llm.complete",
             request_id=context.request_id if context is not None else None,
@@ -176,7 +180,14 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             started_at = time.perf_counter()
             try:
                 token = self._get_access_token()
-                prompt = self._build_prompt(incident_id, short_description, description)
+                prompt = self._build_prompt(
+                    incident_id,
+                    short_description,
+                    description,
+                    main_incident_context,
+                    related_incident_context,
+                    same_title_incident_context,
+                )
                 requested_max_tokens = max_tokens or self._settings.default_max_tokens
                 response, retry_count = self._call_llm(
                     prompt=prompt,
@@ -200,6 +211,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                                 "incident_id": incident_id,
                                 "short_description": short_description,
                                 "description": description,
+                                "main_incident_context": main_incident_context,
                                 "prompt": prompt,
                             },
                             ensure_ascii=True,
@@ -555,12 +567,18 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         incident_id: str,
         short_description: Optional[str],
         description: Optional[str],
+        main_incident_context: Optional[str] = None,
+        related_incident_context: Optional[str] = None,
+        same_title_incident_context: Optional[str] = None,
     ) -> str:
         """Build prompt for LLM enrichment."""
         return self._prompt_template.format(
             incident_id=incident_id,
             short_description=short_description or "N/A",
             description=description or "N/A",
+            main_incident_context=main_incident_context or "No additional main-incident context was provided.",
+            related_incident_context=related_incident_context or "No explicitly referenced related incidents were found.",
+            same_title_incident_context=same_title_incident_context or "No same-title historical incidents were found.",
         )
 
     @staticmethod
@@ -622,20 +640,35 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 summary = LlmSummary(text=data["summary"])
 
             related_incidents = [
-                related_id
-                for related_id in data.get("related_incidents", [])
-                if isinstance(related_id, str) and related_id.strip()
+                related_id for related_id in self._as_incident_id_list(data.get("related_incidents"))
             ]
 
             # Extract mitigation suggestions
             suggestions = []
             if "mitigation_suggestions" in data:
                 for sugg_data in data.get("mitigation_suggestions", []):
+                    if not isinstance(sugg_data, dict):
+                        continue
+                    confidence = self._as_optional_string(
+                        sugg_data.get("confidence", sugg_data.get("Confidence"))
+                    )
+                    investigation = self._as_optional_string(
+                        sugg_data.get("investigation", sugg_data.get("Investigation"))
+                    )
+                    mitigation = self._as_optional_string(
+                        sugg_data.get("mitigation", sugg_data.get("Mitigation"))
+                    )
+                    resolution_note = self._as_optional_string(
+                        sugg_data.get("resolution_note", sugg_data.get("Resolution_note"))
+                    )
+                    related_items = self._as_string_list(sugg_data.get("related_incidents"))
                     suggestions.append(
                         MitigationSuggestion(
-                            suggestion=sugg_data.get("suggestion", ""),
-                            related_incidents=sugg_data.get("related_incidents", []),
-                            related_log_ids=sugg_data.get("related_log_ids", []),
+                            confidence=confidence,
+                            investigation=investigation,
+                            mitigation=mitigation,
+                            resolution_note=resolution_note,
+                            related_incidents=self._as_incident_id_list(related_items),
                         )
                     )
             
@@ -673,6 +706,43 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                         chunks.append(value)
             return "\n".join(chunks)
         return ""
+
+    @staticmethod
+    def _as_optional_string(value: object) -> Optional[str]:
+        if isinstance(value, str):
+            cleaned = value.strip()
+            return cleaned if cleaned else None
+        return None
+
+    @staticmethod
+    def _as_string_list(value: object) -> list[str]:
+        if isinstance(value, list):
+            return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        return []
+
+    @staticmethod
+    def _as_incident_id_list(value: object) -> list[str]:
+        candidates: list[str] = []
+        if isinstance(value, str):
+            candidates = [value]
+        elif isinstance(value, list):
+            candidates = [item for item in value if isinstance(item, str)]
+        else:
+            return []
+
+        incident_ids: list[str] = []
+        for candidate in candidates:
+            incident_ids.extend(re.findall(r"\bINC\d+\b", candidate, flags=re.IGNORECASE))
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for incident_id in incident_ids:
+            upper = incident_id.upper()
+            if upper in seen:
+                continue
+            seen.add(upper)
+            normalized.append(upper)
+        return normalized
 
     @staticmethod
     def _safe_preview(payload: object, max_chars: int = 1200) -> str:

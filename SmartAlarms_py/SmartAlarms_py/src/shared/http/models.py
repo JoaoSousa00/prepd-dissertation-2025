@@ -26,19 +26,33 @@ class ResolutionSuggestion(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "suggestion": "Restart the ECS tasks for the affected service",
+                "confidence": "evidence-based",
+                "investigation": "Check pod restart loops and queue depth spikes in the worker service.",
+                "mitigation": "Restart impacted worker pods and validate queue drain.",
+                "resolutionNote": "Restarted worker deployment after queue spike and validated normal throughput.",
                 "relatedIncidents": ["INC000000000001", "INC000000000002"],
-                "relatedLogIds": ["transactionId1", "transactionId2"],
             }
         }
     )
     
-    suggestion: str = Field(..., description="The action that is suggested")
+    confidence: Optional[str] = Field(
+        None,
+        description="Suggestion confidence label: evidence-based or reasoned fallback",
+    )
+    investigation: Optional[str] = Field(
+        None,
+        description="Investigation step for this suggestion",
+    )
+    mitigation: Optional[str] = Field(
+        None,
+        description="Mitigation step for this suggestion",
+    )
+    resolutionNote: Optional[str] = Field(
+        None,
+        description="Suggested resolution note text for incident closure",
+    )
     relatedIncidents: List[str] = Field(
         default_factory=list, description="The list of incidents that led to this suggestion"
-    )
-    relatedLogIds: Optional[List[str]] = Field(
-        None, description="The list of log events that led to this suggestion"
     )
 
 
@@ -52,7 +66,6 @@ class IncidentData(BaseModel):
                 "summary": "The billing API is experiencing elevated CPU due to request spikes on /endpoint.",
                 "relatedIncidents": ["INC000000000001", "INC000000000002"],
                 "resolutionSuggestions": [],
-                "relatedLogIds": ["transactionId1", "transactionId2"],
             }
         }
     )
@@ -73,9 +86,6 @@ class IncidentData(BaseModel):
     resolutionSuggestions: Optional[List[ResolutionSuggestion]] = Field(
         None, description="The list of ordered suggestions to mitigate the incident"
     )
-    relatedLogIds: Optional[List[str]] = Field(
-        None, description="The list of log events that may have a connection with the incident"
-    )
     llmUsage: Optional[LlmUsageData] = Field(
         None, description="LLM usage and estimated cost metadata"
     )
@@ -94,7 +104,6 @@ class DetailsResponse(BaseModel):
                         "shortDescription": "An increase of cpu was observed due to a high number of requests to the path /endpoint",
                         "description": "The tasks from ECS of the service billing-api were increasing CPU usage due to high requests.",
                         "resolutionSuggestions": [],
-                        "relatedLogIds": ["transactionId1", "transactionId2"],
                     }
                 ]
             }

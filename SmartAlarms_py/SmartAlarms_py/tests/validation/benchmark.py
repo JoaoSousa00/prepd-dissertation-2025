@@ -163,10 +163,10 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
     llm_usage = item.get("llmUsage") or {}
     resolve_suggestions = item.get("resolutionSuggestions", []) or item.get("resolution_suggestions", [])
     generated_mitigation_suggestions = [
-        entry.get("suggestion", "")
+        _compose_suggestion_text(entry)
         for entry in resolve_suggestions
         if isinstance(entry, Mapping)
-        and entry.get("suggestion")
+        and _compose_suggestion_text(entry)
     ]
     generated_related_incidents = list(item.get("relatedIncidents", [])) or list(
         {
@@ -193,6 +193,28 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
         status=item.get("status", "success"),
         error_notes=item.get("errorNotes", item.get("error_notes", "")),
     )
+
+
+def _compose_suggestion_text(entry: Mapping[str, Any]) -> str:
+    combined = entry.get("suggestion")
+    if isinstance(combined, str) and combined.strip():
+        return combined.strip()
+
+    confidence = entry.get("confidence")
+    investigation = entry.get("investigation")
+    mitigation = entry.get("mitigation")
+    resolution_note = entry.get("resolutionNote", entry.get("resolution_note"))
+
+    parts: list[str] = []
+    if isinstance(confidence, str) and confidence.strip():
+        parts.append(f"Confidence: {confidence.strip()}")
+    if isinstance(investigation, str) and investigation.strip():
+        parts.append(f"Investigation: {investigation.strip()}")
+    if isinstance(mitigation, str) and mitigation.strip():
+        parts.append(f"Mitigation: {mitigation.strip()}")
+    if isinstance(resolution_note, str) and resolution_note.strip():
+        parts.append(f"Resolution note: {resolution_note.strip()}")
+    return ". ".join(parts)
 
 
 def evaluate_benchmark_run(

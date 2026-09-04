@@ -93,13 +93,28 @@
     "schemas": {
       "ResolutionSuggestion": {
         "type": "object",
-        "description": "Information about a resolution suggestion and where it came from",
+        "description": "Structured mitigation suggestion with confidence, actions, resolution note, and source evidence",
         "additionalProperties": false,
         "properties": {
-          "suggestion": {
+          "confidence": {
             "type": "string",
-            "description": "The action that is suggested",
-            "example": "Restart the ECS tasks for the affected service"
+            "description": "Suggestion confidence label: evidence-based or reasoned fallback",
+            "example": "evidence-based"
+          },
+          "investigation": {
+            "type": "string",
+            "description": "Investigation step for this suggestion",
+            "example": "Check worker queue depth and backlog growth for the impacted service."
+          },
+          "mitigation": {
+            "type": "string",
+            "description": "Mitigation step for this suggestion",
+            "example": "Restart impacted worker pods and confirm queue drain."
+          },
+          "resolutionNote": {
+            "type": "string",
+            "description": "Suggested resolution note text for incident closure",
+            "example": "Restarted impacted worker pods, queue depth normalized, and throughput recovered."
           },
           "relatedIncidents": {
             "type": "array",
@@ -108,14 +123,6 @@
               "type": "string"
             },
             "example": ["INC000000000001", "INC000000000002"]
-          },
-          "relatedLogIds": {
-            "type": "array",
-            "description": "The list of log events that led to this suggestion",
-            "items": {
-              "type": "string"
-            },
-            "example": ["transactionId1", "transactionId2"]
           }
         }
       },
@@ -204,14 +211,6 @@
             "items": {
               "$ref": "#/components/schemas/ResolutionSuggestion"
             }
-          },
-          "relatedLogIds": {
-            "type": "array",
-            "description": "The list of log events that may have a connection with the incident",
-            "items": {
-              "type": "string"
-            },
-            "example": ["transactionId1", "transactionId2"]
           },
           "llmUsage": {
             "$ref": "#/components/schemas/LlmUsageData"

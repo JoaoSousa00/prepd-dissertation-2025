@@ -37,3 +37,23 @@ class IncidentFetchingService:
                 if context is not None:
                     context.record_fetched_incident(incident.id)
         return incidents
+
+    def fetch_same_title_incidents(self, short_description: str, limit: int | None = None) -> List[BaseIncident]:
+        fetcher = getattr(self._incident_source, "fetch_same_title_incidents", None)
+        if fetcher is None:
+            return []
+        try:
+            return fetcher(short_description, limit)
+        except IncidentSourceUnavailableError as exc:
+            logger.warning("Skipping same-title lookup for %s — source unavailable: %s", short_description, exc)
+            return []
+
+    def fetch_related_incident_details(self, incident_ids: Iterable[str]) -> List[BaseIncident]:
+        fetcher = getattr(self._incident_source, "fetch_related_incident_details", None)
+        if fetcher is None:
+            return []
+        try:
+            return fetcher(incident_ids)
+        except IncidentSourceUnavailableError as exc:
+            logger.warning("Skipping related incident lookup — source unavailable: %s", exc)
+            return []

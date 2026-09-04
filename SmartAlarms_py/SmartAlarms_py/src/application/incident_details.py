@@ -1,9 +1,12 @@
 import logging
+import os
+import re
+import json
 import time
 from typing import Iterable, List, Optional
 
 from src.application.incident_fetching import IncidentFetchingService
-from src.domain.incident import IncidentDetails, ResolutionSuggestion
+from src.domain.incident import BaseIncident, IncidentDetails, ResolutionSuggestion
 from src.domain.llm import LlmGateway, LlmGatewayError
 from src.shared.observability import bind_request_context, get_current_request_context, log_request_summary
 
@@ -50,13 +53,25 @@ class IncidentDetailsService:
                 description=incident.description,
             )
 
+            related_context = self._build_context_snapshot(incident)
+            main_incident_context = self._build_main_incident_context(incident)
             if self._llm_gateway is not None:
                 try:
-                    enrichment = self._llm_gateway.enrich_incident(
-                        incident_id=incident.id,
-                        short_description=incident.short_description,
-                        description=incident.description,
-                    )
+                    try:
+                        enrichment = self._llm_gateway.enrich_incident(
+                            incident_id=incident.id,
+                            short_description=incident.short_description,
+                            description=incident.description,
+                            main_incident_context=main_incident_context,
+                            related_incident_context=related_context["related_incident_context"],
+                            same_title_incident_context=related_context["same_title_incident_context"],
+                        )
+                    except TypeError:
+                        enrichment = self._llm_gateway.enrich_incident(
+                            incident_id=incident.id,
+                            short_description=incident.short_description,
+                            description=incident.description,
+                        )
                 except LlmGatewayError as exc:
                     logger.warning(
                         "Skipping LLM enrichment for incident %s: %s",
@@ -70,9 +85,11 @@ class IncidentDetailsService:
                     detail.related_incidents = list(dict.fromkeys(enrichment.related_incidents))
                     detail.resolution_suggestions = [
                         ResolutionSuggestion(
-                            suggestion=suggestion.suggestion,
+                            confidence=suggestion.confidence,
+                            investigation=suggestion.investigation,
+                            mitigation=suggestion.mitigation,
+                            resolution_note=suggestion.resolution_note,
                             related_incidents=suggestion.related_incidents,
-                            related_log_ids=suggestion.related_log_ids,
                         )
                         for suggestion in enrichment.mitigation_suggestions
                     ]
@@ -104,3 +121,121 @@ class IncidentDetailsService:
         if emit_summary:
             log_request_summary()
         return details
+
+    def _build_context_snapshot(self, incident: BaseIncident) -> dict[str, str]:
+        related_numbers = self._discover_related_numbers(incident)
+        same_title_incidents = []
+        if incident.short_description:
+            same_title_limit = max(1, int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "10")))
+            same_title_incidents = self._incident_fetching_service.fetch_same_title_incidents(
+                incident.short_description,
+                limit=same_title_limit,
+            )
+        deduped_same_title = []
+        seen_numbers: set[str] = set()
+        for candidate in same_title_incidents:
+            if candidate.id in seen_numbers:
+                continue
+            seen_numbers.add(candidate.id)
+            deduped_same_title.append(candidate)
+        deduped_related = []
+        seen_related: set[str] = set()
+        for incident_id in related_numbers:
+            if incident_id.upper() in seen_related or incident_id.upper() == incident.id.upper():
+                continue
+            seen_related.add(incident_id.upper())
+            deduped_related.append(incident_id)
+        if deduped_related:
+            fetched_related = self._incident_fetching_service.fetch_related_incident_details(deduped_related)
+            related_summary = self._summarize_incidents(fetched_related or [])
+        else:
+            related_summary = "No related incidents were explicitly referenced in the main incident."
+        same_title_summary = self._summarize_incidents(deduped_same_title)
+        return {
+            "related_incident_context": related_summary,
+            "same_title_incident_context": same_title_summary,
+        }
+
+    @staticmethod
+    def _build_main_incident_context(incident: BaseIncident) -> str:
+        excluded_keys = {"caller_id", "assigned_to", "resolved_by", "attachments", "attachment"}
+        payload: dict[str, object] = {}
+        if isinstance(incident.raw, dict) and incident.raw:
+            payload.update(incident.raw)
+        payload.setdefault("number", incident.number or incident.id)
+        payload.setdefault("short_description", incident.short_description)
+        payload.setdefault("description", incident.description)
+        payload.setdefault("state", incident.state)
+        payload.setdefault("close_notes", incident.close_notes)
+        payload.setdefault("closed_at", incident.closed_at)
+        payload.setdefault("close_code", incident.close_code)
+        payload.setdefault("hold_reason", incident.hold_reason)
+        payload.setdefault("comments", incident.comments)
+        payload.setdefault("work_notes", incident.work_notes)
+
+        lines = ["Main incident fields:"]
+        for key, value in payload.items():
+            if key in excluded_keys or value in (None, "", [], {}):
+                continue
+            lines.append(f"- {key}: {IncidentDetailsService._format_context_value(value)}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _discover_related_numbers(incident: BaseIncident) -> list[str]:
+        payload = incident.raw or {}
+        text_values: list[str] = []
+        if isinstance(payload, dict):
+            for key in ("parent_incident", "description", "close_notes", "comments", "work_notes", "hold_reason"):
+                value = payload.get(key)
+                if value is None:
+                    continue
+                if isinstance(value, list):
+                    text_values.extend(str(part) for part in value)
+                elif isinstance(value, dict):
+                    text_values.append(str(value.get("number") or value.get("value") or value.get("sys_id") or value))
+                else:
+                    text_values.append(str(value))
+        matches = []
+        for text in text_values:
+            matches.extend(re.findall(r"INC[0-9]+", text, flags=re.IGNORECASE))
+        normalized = [match.upper() for match in matches]
+        if incident.id:
+            normalized = [value for value in normalized if value.upper() != incident.id.upper()]
+        return list(dict.fromkeys(normalized))
+
+    @staticmethod
+    def _summarize_incidents(incidents: List[BaseIncident]) -> str:
+        if not incidents:
+            return "No historical incidents were available for this context."
+        include_comments = os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS", "true").strip().lower() in {"1", "true", "yes", "on"}
+        include_work_notes = os.getenv("RELATED_INCIDENTS_INCLUDE_WORK_NOTES", "true").strip().lower() in {"1", "true", "yes", "on"}
+        lines = []
+        for incident in incidents:
+            summary = [
+                f"Incident {incident.id}",
+                f"short_description={incident.short_description or 'N/A'}",
+            ]
+            if incident.state:
+                summary.append(f"state={incident.state}")
+            if incident.closed_at:
+                summary.append(f"closed_at={incident.closed_at}")
+            if incident.close_notes:
+                summary.append(f"close_notes={incident.close_notes}")
+            if incident.description:
+                summary.append(f"description={incident.description}")
+            if incident.hold_reason:
+                summary.append(f"hold_reason={incident.hold_reason}")
+            if incident.close_code:
+                summary.append(f"close_code={incident.close_code}")
+            if include_comments and incident.comments:
+                summary.append(f"comments={'; '.join(incident.comments[:2])}")
+            if include_work_notes and incident.work_notes:
+                summary.append(f"work_notes={'; '.join(incident.work_notes[:2])}")
+            lines.append(" | ".join(summary))
+        return "\n".join(lines)
+
+    @staticmethod
+    def _format_context_value(value: object) -> str:
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=True)
+        return str(value)

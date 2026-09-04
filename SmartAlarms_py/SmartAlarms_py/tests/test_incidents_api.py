@@ -97,15 +97,17 @@ def unauthorized_client():
 
 
 class FakeLlmGateway:
-    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
         return IncidentEnrichment(
             summary=LlmSummary(text=f"Summary for {incident_id}"),
             related_incidents=["INC000000000111", "INC000000000222"],
             mitigation_suggestions=[
                 MitigationSuggestion(
-                    suggestion="Restart impacted worker pods",
+                    confidence="evidence-based",
+                    investigation="Check worker queue depth.",
+                    mitigation="Restart impacted worker pods.",
+                    resolution_note="Restarted impacted worker pods and queue normalized.",
                     related_incidents=["INC000000000111"],
-                    related_log_ids=["txn-1"],
                 )
             ],
             usage=LlmUsage(
@@ -119,7 +121,7 @@ class FakeLlmGateway:
 
 
 class FailingLlmGateway:
-    def enrich_incident(self, incident_id, short_description, description, max_tokens=None):
+    def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
         raise LlmGatewayUnavailableError("gateway unavailable")
 
 
@@ -245,7 +247,10 @@ class TestIncidentDetailsLlmEnrichment:
         assert incident["relatedIncidents"] == ["INC000000000111", "INC000000000222"]
         assert incident["resolutionSuggestions"] == [
             {
-                "suggestion": "Restart impacted worker pods",
+                "confidence": "evidence-based",
+                "investigation": "Check worker queue depth.",
+                "mitigation": "Restart impacted worker pods.",
+                "resolutionNote": "Restarted impacted worker pods and queue normalized.",
                 "relatedIncidents": ["INC000000000111"],
             }
         ]

@@ -103,7 +103,10 @@ async def get_incident_details(
                 relatedIncidents=incident.related_incidents or None,
                 resolutionSuggestions=[
                     ResolutionSuggestion(
-                        suggestion=suggestion.suggestion,
+                        confidence=suggestion.confidence,
+                        investigation=suggestion.investigation,
+                        mitigation=suggestion.mitigation,
+                        resolutionNote=suggestion.resolution_note,
                         relatedIncidents=suggestion.related_incidents,
                     )
                     for suggestion in incident.resolution_suggestions

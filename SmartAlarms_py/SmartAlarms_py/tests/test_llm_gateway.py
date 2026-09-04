@@ -208,12 +208,20 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
             incident_id="INC001",
             short_description="API latency",
             description="API responses are slow",
+            main_incident_context="Main incident fields:\n- number: INC001\n- state: New",
+            related_incident_context="Incident INC002 | state=Closed",
+            same_title_incident_context="Incident INC003 | state=Closed",
         )
         
         assert "INC001" in prompt
         assert "API latency" in prompt
         assert "API responses are slow" in prompt
-        assert "JSON" in prompt
+        assert "Main incident fields:" in prompt
+        assert "number: INC001" in prompt
+        assert "Incident INC002" in prompt
+        assert "Incident INC003" in prompt
+        assert "Return at least 3 mitigation suggestions whenever possible." in prompt
+        assert "Sources: current_incident_analysis" in prompt
     
     def test_build_prompt_with_missing_descriptions(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
@@ -226,18 +234,19 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
         
         assert "INC001" in prompt
         assert "N/A" in prompt
+        assert "No additional main-incident context was provided." in prompt
 
     def test_build_prompt_uses_template_file(self, llm_settings, tmp_path):
         prompt_file = tmp_path / "incident_enrichment_prompt.txt"
         prompt_file.write_text(
-            "ID={incident_id}|SHORT={short_description}|DESC={description}",
+            "ID={incident_id}|SHORT={short_description}|DESC={description}|MAIN={main_incident_context}",
             encoding="utf-8",
         )
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings, prompt_path=prompt_file)
 
-        prompt = adapter._build_prompt("INC123", "Short text", "Detailed text")
+        prompt = adapter._build_prompt("INC123", "Short text", "Detailed text", "Main context")
 
-        assert prompt == "ID=INC123|SHORT=Short text|DESC=Detailed text"
+        assert prompt == "ID=INC123|SHORT=Short text|DESC=Detailed text|MAIN=Main context"
 
 
 class TestGaiaLlmGatewayAdapterHeaders:
@@ -282,9 +291,11 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
                             "related_incidents": ["INC002", "INC003"],
                             "mitigation_suggestions": [
                                 {
-                                    "suggestion": "Scale up the API servers",
+                                    "Confidence": "evidence-based",
+                                    "Investigation": "Check API pod saturation and latency percentiles.",
+                                    "Mitigation": "Scale API replicas and clear stuck connections.",
+                                    "Resolution_note": "Scaled replicas and stabilized API latency.",
                                     "related_incidents": ["INC002"],
-                                    "related_log_ids": ["log1", "log2"],
                                 }
                             ],
                         })
@@ -299,7 +310,85 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         assert enrichment.summary.text == "The API is experiencing latency issues."
         assert enrichment.related_incidents == ["INC002", "INC003"]
         assert len(enrichment.mitigation_suggestions) == 1
-        assert enrichment.mitigation_suggestions[0].suggestion == "Scale up the API servers"
+        suggestion = enrichment.mitigation_suggestions[0]
+        assert suggestion.confidence == "evidence-based"
+        assert suggestion.investigation == "Check API pod saturation and latency percentiles."
+        assert suggestion.mitigation == "Scale API replicas and clear stuck connections."
+        assert suggestion.resolution_note == "Scaled replicas and stabilized API latency."
+        assert suggestion.related_incidents == ["INC002"]
+
+    def test_parse_llm_response_handles_structured_suggestion_without_combined_text(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({
+                            "summary": "Latency increased.",
+                            "related_incidents": ["INC002"],
+                            "mitigation_suggestions": [
+                                {
+                                    "Confidence": "reasoned fallback",
+                                    "Investigation": "Check upstream error rates.",
+                                    "Mitigation": "Temporarily increase worker replicas.",
+                                    "Resolution_note": "Increased replicas and monitored stabilization.",
+                                    "related_incidents": ["INC002"],
+                                }
+                            ],
+                        })
+                    }
+                }
+            ]
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert len(enrichment.mitigation_suggestions) == 1
+        suggestion = enrichment.mitigation_suggestions[0]
+        assert suggestion.confidence == "reasoned fallback"
+        assert suggestion.investigation == "Check upstream error rates."
+        assert suggestion.mitigation == "Temporarily increase worker replicas."
+        assert suggestion.resolution_note == "Increased replicas and monitored stabilization."
+        assert suggestion.related_incidents == ["INC002"]
+
+    def test_parse_llm_response_filters_non_inc_related_incident_values(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({
+                            "summary": "Latency increased.",
+                            "related_incidents": [
+                                "Sources: current_incident_analysis",
+                                "inc001",
+                                "INC002",
+                            ],
+                            "mitigation_suggestions": [
+                                {
+                                    "Confidence": "reasoned fallback",
+                                    "Investigation": "Check upstream error rates.",
+                                    "Mitigation": "Temporarily increase worker replicas.",
+                                    "Resolution_note": "Increased replicas and monitored stabilization.",
+                                    "related_incidents": [
+                                        "Sources: current_incident_analysis",
+                                        "INC002",
+                                        "src=inc003 and note",
+                                    ],
+                                }
+                            ],
+                        })
+                    }
+                }
+            ]
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.related_incidents == ["INC001", "INC002"]
+        assert enrichment.mitigation_suggestions[0].related_incidents == ["INC002", "INC003"]
 
     def test_parse_llm_response_extracts_usage_metadata(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)

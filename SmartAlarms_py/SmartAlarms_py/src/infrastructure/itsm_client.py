@@ -1,8 +1,10 @@
 import logging
 import os
+import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import httpx
 
@@ -29,6 +31,15 @@ class ItsmClientSettings:
     authorization: str = ""
     api_key: str = ""
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
+    related_incidents_max_same_title: int = 10
+    include_related_incident_comments: bool = True
+    include_related_incident_work_notes: bool = True
+
+
+def _parse_bool(value: Optional[str], default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def load_itsm_client_settings() -> ItsmClientSettings:
@@ -38,6 +49,18 @@ def load_itsm_client_settings() -> ItsmClientSettings:
         authorization=os.getenv("ITSM_AUTHORIZATION", ""),
         api_key=os.getenv("ITSM_API_KEY", ""),
         timeout_seconds=float(os.getenv("ITSM_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS))),
+        related_incidents_max_same_title=max(
+            1,
+            int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "10")),
+        ),
+        include_related_incident_comments=_parse_bool(
+            os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS"),
+            True,
+        ),
+        include_related_incident_work_notes=_parse_bool(
+            os.getenv("RELATED_INCIDENTS_INCLUDE_WORK_NOTES"),
+            True,
+        ),
     )
 
 
@@ -164,7 +187,157 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
             id=record_id,
             short_description=short_description,
             description=description,
+            number=str(record.get("number") or record_id),
+            state=record.get("state"),
+            close_notes=record.get("close_notes") or record.get("closeNotes"),
+            closed_at=record.get("closed_at") or record.get("closedAt"),
+            close_code=record.get("close_code") or record.get("closeCode"),
+            hold_reason=record.get("hold_reason") or record.get("holdReason"),
+            comments=self._as_string_list(record.get("comments")),
+            work_notes=self._as_string_list(record.get("work_notes") or record.get("workNotes")),
+            raw=record,
         )
+
+    def fetch_same_title_incidents(self, short_description: str, limit: Optional[int] = None) -> list[BaseIncident]:
+        if not short_description or not short_description.strip():
+            return []
+        self._validate_credentials()
+        max_results = max(1, limit or self._settings.related_incidents_max_same_title)
+        encoded = short_description.strip()
+        query = f"short_description={encoded}"
+        response = self._client.get(
+            "/incident",
+            params={"query": query, "limit": max_results},
+            headers=self._headers(),
+        )
+        if response.status_code in {401, 403}:
+            raise IncidentSourceUnauthorizedError("ITSM credentials are missing or were rejected")
+        if response.status_code >= 400:
+            logger.warning("Same-title ITSM lookup failed: %s", response.text[:500])
+            return []
+        payload = response.json()
+        records = self._extract_records(payload)
+        incidents = []
+        for record in records:
+            record_id = str(record.get("number") or record.get("id") or "")
+            if not record_id:
+                continue
+            incidents.append(
+                BaseIncident(
+                    id=record_id,
+                    short_description=record.get("shortDescription") or record.get("short_description"),
+                    description=record.get("description"),
+                    number=record.get("number") or record_id,
+                    state=record.get("state"),
+                    close_notes=record.get("close_notes") or record.get("closeNotes"),
+                    closed_at=record.get("closed_at") or record.get("closedAt"),
+                    close_code=record.get("close_code") or record.get("closeCode"),
+                    hold_reason=record.get("hold_reason") or record.get("holdReason"),
+                    comments=self._as_string_list(record.get("comments")),
+                    work_notes=self._as_string_list(record.get("work_notes") or record.get("workNotes")),
+                    raw=record,
+                )
+            )
+        return incidents
+
+    def find_related_incidents(self, incident: BaseIncident, include_main_id: bool = False) -> list[str]:
+        if incident.raw is None:
+            return []
+        return self._extract_related_incident_numbers(incident.raw, incident.id if not include_main_id else None)
+
+    def fetch_related_incident_details(self, incident_ids: Iterable[str]) -> list[BaseIncident]:
+        concrete_ids = [candidate.strip() for candidate in incident_ids if candidate and candidate.strip()]
+        if not concrete_ids:
+            return []
+        unique_ids = list(dict.fromkeys((candidate.upper() for candidate in concrete_ids)))
+        headers = self._headers()
+        results: list[BaseIncident] = []
+
+        def _fetch_one(incident_id: str) -> Optional[BaseIncident]:
+            response = self._client.get(f"/incident/{incident_id}", headers=headers)
+            if response.status_code == 404:
+                return None
+            if response.status_code in {401, 403}:
+                raise IncidentSourceUnauthorizedError("ITSM credentials are missing or were rejected")
+            if response.status_code >= 400:
+                logger.warning("ITSM fetch for %s failed: %s", incident_id, response.text[:500])
+                return None
+            payload = response.json()
+            record = self._extract_record(payload)
+            if record is None:
+                return None
+            return BaseIncident(
+                id=str(record.get("id") or record.get("number") or incident_id),
+                short_description=record.get("shortDescription") or record.get("short_description"),
+                description=record.get("description"),
+                number=str(record.get("number") or record.get("id") or incident_id),
+                state=record.get("state"),
+                close_notes=record.get("close_notes") or record.get("closeNotes"),
+                closed_at=record.get("closed_at") or record.get("closedAt"),
+                close_code=record.get("close_code") or record.get("closeCode"),
+                hold_reason=record.get("hold_reason") or record.get("holdReason"),
+                comments=self._as_string_list(record.get("comments")),
+                work_notes=self._as_string_list(record.get("work_notes") or record.get("workNotes")),
+                raw=record,
+            )
+
+        with ThreadPoolExecutor(max_workers=min(8, len(unique_ids))) as executor:
+            futures = [executor.submit(_fetch_one, incident_id) for incident_id in unique_ids]
+            for future in futures:
+                incident = future.result()
+                if incident is not None:
+                    results.append(incident)
+        return results
+
+    @staticmethod
+    def _extract_related_incident_numbers(payload: dict[str, Any], excluded_id: Optional[str] = None) -> list[str]:
+        values: list[str] = []
+        if not isinstance(payload, dict):
+            return values
+        for key in ("parent_incident", "description", "close_notes", "comments", "work_notes", "hold_reason"):
+            item = payload.get(key)
+            if item is None:
+                continue
+            if isinstance(item, list):
+                combined = "\n".join(str(part) for part in item)
+            elif isinstance(item, dict):
+                combined = str(item.get("number") or item.get("sys_id") or item.get("value") or item)
+            else:
+                combined = str(item)
+            values.append(combined)
+        if isinstance(payload.get("parent"), list):
+            for item in payload["parent"]:
+                if isinstance(item, dict):
+                    values.append(str(item.get("number") or item.get("value") or item.get("sys_id") or ""))
+        matches = []
+        for text in values:
+            matches.extend(re.findall(r"INC[0-9]+", text, flags=re.IGNORECASE))
+        normalized = [match.upper() for match in matches]
+        if excluded_id:
+            normalized = [value for value in normalized if value.upper() != excluded_id.upper()]
+        return list(dict.fromkeys(normalized))
+
+    @staticmethod
+    def _as_string_list(value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item) for item in value if item is not None]
+        if isinstance(value, str):
+            return [value]
+        return [str(value)]
+
+    @staticmethod
+    def _extract_records(payload: Any) -> list[dict[str, Any]]:
+        if isinstance(payload, dict):
+            result = payload.get("result")
+            if isinstance(result, list):
+                return [item for item in result if isinstance(item, dict)]
+            if isinstance(result, dict):
+                return [result]
+        elif isinstance(payload, list):
+            return [item for item in payload if isinstance(item, dict)]
+        return []
 
     def _validate_credentials(self) -> None:
         if not self._settings.authorization or not self._settings.api_key:
