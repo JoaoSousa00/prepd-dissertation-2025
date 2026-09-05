@@ -122,3 +122,32 @@ def test_fetch_base_incident_injects_traceparent_header():
         adapter.fetch_base_incident("INC000000000001")
 
     assert captured_headers["traceparent"] == "00-test"
+
+
+def test_fetch_same_title_incidents_uses_default_fetch_limit_and_maps_resolved_at():
+    captured_query_params = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_query_params["query"] = request.url.params.get("query")
+        captured_query_params["limit"] = request.url.params.get("limit")
+        return httpx.Response(
+            200,
+            json={
+                "result": [
+                    {
+                        "number": "INC000000000010",
+                        "short_description": "Billing API latency spike",
+                        "description": "Historical incident record.",
+                        "resolved_at": "2026-09-05T10:20:00Z",
+                    }
+                ]
+            },
+        )
+
+    adapter = make_adapter(handler)
+    incidents = adapter.fetch_same_title_incidents("Billing API latency spike")
+
+    assert captured_query_params["query"] == "short_description=Billing API latency spike"
+    assert captured_query_params["limit"] == "100"
+    assert len(incidents) == 1
+    assert incidents[0].resolved_at == "2026-09-05T10:20:00Z"

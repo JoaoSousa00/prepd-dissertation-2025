@@ -44,8 +44,10 @@ class RequestLogContext:
     itsm_errors: list[str] = field(default_factory=list)
     llm_status_codes: list[int] = field(default_factory=list)
     llm_errors: list[str] = field(default_factory=list)
-    fetched_incidents: list[str] = field(default_factory=list)
+    fetched_related_incidents: list[str] = field(default_factory=list)
     fetched_incidents_by_title: list[str] = field(default_factory=list)
+    total_incidents_title: int = 0
+    total_incidents_fallback: int = 0
     main_incident: Optional[str] = None
     summary_completed: bool = False
     suggestions_number: int = 0
@@ -96,13 +98,19 @@ class RequestLogContext:
         if status_code is not None:
             self.record_llm_status(status_code)
 
-    def record_fetched_incident(self, incident_id: Optional[str]) -> None:
-        if incident_id and incident_id.strip() and incident_id.strip() not in self.fetched_incidents:
-            self.fetched_incidents.append(incident_id.strip())
+    def record_fetched_related_incident(self, incident_id: Optional[str]) -> None:
+        if incident_id and incident_id.strip() and incident_id.strip() not in self.fetched_related_incidents:
+            self.fetched_related_incidents.append(incident_id.strip())
 
     def record_title_related_incident(self, incident_id: Optional[str]) -> None:
         if incident_id and incident_id.strip() and incident_id.strip() not in self.fetched_incidents_by_title:
             self.fetched_incidents_by_title.append(incident_id.strip())
+
+    def record_total_incidents_title(self, count: int) -> None:
+        self.total_incidents_title = max(0, int(count))
+
+    def record_total_incidents_fallback(self, count: int) -> None:
+        self.total_incidents_fallback = max(0, int(count))
 
     def record_llm_usage(self, tokens_in: Optional[int], tokens_out: Optional[int], cost_usd: Optional[float]) -> None:
         if tokens_in is not None:
@@ -119,9 +127,11 @@ class RequestLogContext:
                 "status": str(self.itsm_status) if self.itsm_status is not None else "",
                 "error": self.itsm_error,
                 "main_incident": self.main_incident or "",
-                "fetched_incidents": list(self.fetched_incidents),
-                "fetched_incidents_by_title": list(self.fetched_incidents_by_title),
                 "summary": bool(self.summary_completed),
+                "fetched_related_incidents": list(self.fetched_related_incidents),
+                "total_incidents_title": int(self.total_incidents_title),
+                "fetched_incidents_by_title": list(self.fetched_incidents_by_title),
+                "total_incidents_fallback": int(self.total_incidents_fallback),
                 "suggestions_number": int(self.suggestions_number),
             },
             "llm_summary": {

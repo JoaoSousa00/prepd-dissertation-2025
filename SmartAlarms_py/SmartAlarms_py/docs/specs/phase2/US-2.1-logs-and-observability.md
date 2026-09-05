@@ -70,7 +70,7 @@ produced the final operational summary:
     "status": "200",
     "error": "error message",
     "main_incident": "INC001",
-    "fetched_incidents": [
+    "fetched_related_incidents": [
       "INC002",
       "INC003"
     ],
@@ -78,6 +78,8 @@ produced the final operational summary:
       "INC003",
       "INC004"
     ],
+    "total_incidents_title": 12,
+    "total_incidents_fallback": 0,
     "summary": true,
     "suggestions_number": 7
   },
@@ -104,10 +106,14 @@ Notes:
   human-readable exception or reason. If more than one ITSM error occurs, the messages must be concatenated in a single
   string, preserving the order in which the failures were observed.
 - `main_incident` identifies the primary incident being investigated.
-- `fetched_incidents` contains the list of related incident IDs returned from the ITSM correlation/fetch stage for the
-  main incident.
+- `fetched_related_incidents` contains only related incident IDs returned from the ITSM related-incident fetch stage for
+  the main incident, and must never include the main incident itself.
 - `fetched_incidents_by_title` contains the list of incident IDs obtained from the title-based LLM correlation step for
   the `main_incident`.
+- `total_incidents_title` is the number of incidents returned by the same-title ITSM request before downstream recency
+  filtering, excluding the main incident when it appears in that request result.
+- `total_incidents_fallback` is the number of incidents returned by the fallback ITSM request before downstream recency
+  filtering, excluding the main incident when it appears in that request result.
 - `summary` indicates whether the final summary generation was completed.
 - `suggestions_number` records the number of mitigation suggestions produced.
 - `llm_summary.status` is the HTTP status code returned by the external LLM service for the summarization/enrichment

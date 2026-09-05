@@ -11,6 +11,7 @@ class BaseIncident:
     description: Optional[str] = None
     number: Optional[str] = None
     state: Optional[str] = None
+    resolved_at: Optional[str] = None
     close_notes: Optional[str] = None
     closed_at: Optional[str] = None
     close_code: Optional[str] = None

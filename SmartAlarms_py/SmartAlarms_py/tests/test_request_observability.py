@@ -22,10 +22,12 @@ def test_request_log_summary_formats_required_payload(caplog):
         context.record_llm_error("LLM retry failed", 503)
         context.record_llm_usage(tokens_in=333, tokens_out=3000, cost_usd=0.0333213)
         context.main_incident = "INC001"
-        context.record_fetched_incident("INC002")
-        context.record_fetched_incident("INC003")
+        context.record_fetched_related_incident("INC002")
+        context.record_fetched_related_incident("INC003")
         context.record_title_related_incident("INC003")
         context.record_title_related_incident("INC004")
+        context.record_total_incidents_title(12)
+        context.record_total_incidents_fallback(0)
         context.suggestions_number = 7
         context.latency_ms = 40000.23
         context.summary_completed = True
@@ -39,8 +41,10 @@ def test_request_log_summary_formats_required_payload(caplog):
     assert payload["itsm_summary"]["status"] == "500"
     assert payload["itsm_summary"]["error"] == "First ITSM error | Second ITSM error"
     assert payload["itsm_summary"]["main_incident"] == "INC001"
-    assert payload["itsm_summary"]["fetched_incidents"] == ["INC002", "INC003"]
+    assert payload["itsm_summary"]["fetched_related_incidents"] == ["INC002", "INC003"]
     assert payload["itsm_summary"]["fetched_incidents_by_title"] == ["INC003", "INC004"]
+    assert payload["itsm_summary"]["total_incidents_title"] == 12
+    assert payload["itsm_summary"]["total_incidents_fallback"] == 0
     assert payload["itsm_summary"]["summary"] is True
     assert payload["itsm_summary"]["suggestions_number"] == 7
     assert payload["llm_summary"]["status"] == "503"

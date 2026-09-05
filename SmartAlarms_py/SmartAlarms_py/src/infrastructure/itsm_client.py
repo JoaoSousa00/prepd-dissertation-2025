@@ -31,7 +31,8 @@ class ItsmClientSettings:
     authorization: str = ""
     api_key: str = ""
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
-    related_incidents_max_same_title: int = 10
+    related_incidents_max_same_title: int = 100
+    related_incidents_recent_same_title_limit: int = 10
     include_related_incident_comments: bool = True
     include_related_incident_work_notes: bool = True
 
@@ -51,7 +52,11 @@ def load_itsm_client_settings() -> ItsmClientSettings:
         timeout_seconds=float(os.getenv("ITSM_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS))),
         related_incidents_max_same_title=max(
             1,
-            int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "10")),
+            int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "100")),
+        ),
+        related_incidents_recent_same_title_limit=max(
+            1,
+            int(os.getenv("RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT", "10")),
         ),
         include_related_incident_comments=_parse_bool(
             os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS"),
@@ -180,15 +185,13 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
         short_description = record.get("shortDescription") or record.get("short_description")
         description = record.get("description")
 
-        if context is not None:
-            context.record_fetched_incident(record_id)
-
         return BaseIncident(
             id=record_id,
             short_description=short_description,
             description=description,
             number=str(record.get("number") or record_id),
             state=record.get("state"),
+            resolved_at=record.get("resolved_at") or record.get("resolvedAt"),
             close_notes=record.get("close_notes") or record.get("closeNotes"),
             closed_at=record.get("closed_at") or record.get("closedAt"),
             close_code=record.get("close_code") or record.get("closeCode"),
@@ -229,6 +232,7 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
                     description=record.get("description"),
                     number=record.get("number") or record_id,
                     state=record.get("state"),
+                    resolved_at=record.get("resolved_at") or record.get("resolvedAt"),
                     close_notes=record.get("close_notes") or record.get("closeNotes"),
                     closed_at=record.get("closed_at") or record.get("closedAt"),
                     close_code=record.get("close_code") or record.get("closeCode"),
@@ -272,6 +276,7 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
                 description=record.get("description"),
                 number=str(record.get("number") or record.get("id") or incident_id),
                 state=record.get("state"),
+                resolved_at=record.get("resolved_at") or record.get("resolvedAt"),
                 close_notes=record.get("close_notes") or record.get("closeNotes"),
                 closed_at=record.get("closed_at") or record.get("closedAt"),
                 close_code=record.get("close_code") or record.get("closeCode"),

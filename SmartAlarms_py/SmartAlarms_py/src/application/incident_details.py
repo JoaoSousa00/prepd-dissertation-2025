@@ -3,6 +3,7 @@ import os
 import re
 import json
 import time
+from datetime import UTC, datetime
 from typing import Iterable, List, Optional
 
 from src.application.incident_fetching import IncidentFetchingService
@@ -11,6 +12,8 @@ from src.domain.llm import LlmGateway, LlmGatewayError
 from src.shared.observability import bind_request_context, get_current_request_context, log_request_summary
 
 logger = logging.getLogger(__name__)
+DEFAULT_RELATED_INCIDENTS_MAX_SAME_TITLE = 100
+DEFAULT_RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT = 10
 
 
 class IncidentDetailsService:
@@ -115,8 +118,6 @@ class IncidentDetailsService:
                 else sum(item.request_latency_ms or 0 for item in details)
             )
             context.summary_completed = bool(details)
-            if not context.fetched_incidents and ordered_ids:
-                context.fetched_incidents.extend(ordered_ids)
 
         if emit_summary:
             log_request_summary()
@@ -125,19 +126,48 @@ class IncidentDetailsService:
     def _build_context_snapshot(self, incident: BaseIncident) -> dict[str, str]:
         related_numbers = self._discover_related_numbers(incident)
         same_title_incidents = []
+        same_title_recent_limit = max(
+            1,
+            int(
+                os.getenv(
+                    "RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT",
+                    str(DEFAULT_RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT),
+                )
+            ),
+        )
         if incident.short_description:
-            same_title_limit = max(1, int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "10")))
+            same_title_limit = max(
+                1,
+                int(os.getenv("RELATED_INCIDENTS_MAX_SAME_TITLE", str(DEFAULT_RELATED_INCIDENTS_MAX_SAME_TITLE))),
+            )
             same_title_incidents = self._incident_fetching_service.fetch_same_title_incidents(
                 incident.short_description,
                 limit=same_title_limit,
             )
+        main_incident_ids = {incident.id.upper()}
+        if incident.number:
+            main_incident_ids.add(incident.number.upper())
+        context = get_current_request_context()
+        if context is not None:
+            total_without_main = sum(
+                1
+                for candidate in same_title_incidents
+                if (candidate.number or candidate.id).upper() not in main_incident_ids
+            )
+            context.record_total_incidents_title(total_without_main)
         deduped_same_title = []
         seen_numbers: set[str] = set()
         for candidate in same_title_incidents:
-            if candidate.id in seen_numbers:
+            candidate_number = (candidate.number or candidate.id).upper()
+            if candidate_number in main_incident_ids or candidate_number in seen_numbers:
                 continue
-            seen_numbers.add(candidate.id)
+            seen_numbers.add(candidate_number)
             deduped_same_title.append(candidate)
+        deduped_same_title = sorted(
+            deduped_same_title,
+            key=self._incident_resolved_at_sort_key,
+            reverse=True,
+        )[:same_title_recent_limit]
         deduped_related = []
         seen_related: set[str] = set()
         for incident_id in related_numbers:
@@ -166,6 +196,7 @@ class IncidentDetailsService:
         payload.setdefault("short_description", incident.short_description)
         payload.setdefault("description", incident.description)
         payload.setdefault("state", incident.state)
+        payload.setdefault("resolved_at", incident.resolved_at)
         payload.setdefault("close_notes", incident.close_notes)
         payload.setdefault("closed_at", incident.closed_at)
         payload.setdefault("close_code", incident.close_code)
@@ -217,6 +248,8 @@ class IncidentDetailsService:
             ]
             if incident.state:
                 summary.append(f"state={incident.state}")
+            if incident.resolved_at:
+                summary.append(f"resolved_at={incident.resolved_at}")
             if incident.closed_at:
                 summary.append(f"closed_at={incident.closed_at}")
             if incident.close_notes:
@@ -239,3 +272,19 @@ class IncidentDetailsService:
         if isinstance(value, (dict, list)):
             return json.dumps(value, ensure_ascii=True)
         return str(value)
+
+    @staticmethod
+    def _incident_resolved_at_sort_key(incident: BaseIncident) -> tuple[int, datetime]:
+        timestamp = incident.resolved_at or incident.closed_at
+        if not timestamp:
+            return (0, datetime.min.replace(tzinfo=UTC))
+        normalized_timestamp = timestamp.strip()
+        if normalized_timestamp.endswith("Z"):
+            normalized_timestamp = normalized_timestamp[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(normalized_timestamp)
+        except ValueError:
+            return (0, datetime.min.replace(tzinfo=UTC))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return (1, parsed.astimezone(UTC))

@@ -34,8 +34,6 @@ class IncidentFetchingService:
                 continue
             if incident is not None:
                 incidents.append(incident)
-                if context is not None:
-                    context.record_fetched_incident(incident.id)
         return incidents
 
     def fetch_same_title_incidents(self, short_description: str, limit: int | None = None) -> List[BaseIncident]:
@@ -53,7 +51,12 @@ class IncidentFetchingService:
         if fetcher is None:
             return []
         try:
-            return fetcher(incident_ids)
+            incidents = fetcher(incident_ids)
+            context = get_current_request_context()
+            if context is not None:
+                for incident in incidents:
+                    context.record_fetched_related_incident(incident.id)
+            return incidents
         except IncidentSourceUnavailableError as exc:
             logger.warning("Skipping related incident lookup — source unavailable: %s", exc)
             return []

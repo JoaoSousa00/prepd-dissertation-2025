@@ -38,7 +38,7 @@ LLM enrichment flow.
     - `hold_reason`
 - Normalize and deduplicate discovered related incident numbers before any downstream fetch
 - Fetch incidents whose `short_description` exactly matches the main incident `short_description`, using a configurable
-  maximum result count
+  fetch limit, then sort by `resolved_at` and keep only a configurable most-recent subset
 - Fetch full related-incident details for the discovered incident numbers in parallel
 - Map the same related-incident detail subset for both discovery paths:
     - incident number
@@ -83,7 +83,7 @@ LLM enrichment flow.
 |-------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | CA-1  | A main incident is fetched from ITSM                                                                                                          | The incident is mapped into the domain       | All non-sensitive main-incident fields are preserved in a normalized domain context and the exclusions from US-1.2 remain excluded                                                                                  |
 | CA-2  | The main incident contains incident references in `parent_incident`, `description`, `close_notes`, `comments`, `work_notes`, or `hold_reason` | Related incident discovery runs              | Incident numbers are extracted, normalized, the main incident number is excluded, and duplicates are removed before fetching                                                                                        |
-| CA-3  | The main incident has a non-empty `short_description`                                                                                         | Same-title history lookup runs               | The service queries ITSM for incidents with the same `short_description`, applies the configured maximum result count, and skips the main incident itself in the returned history set                               |
+| CA-3  | The main incident has a non-empty `short_description`                                                                                         | Same-title history lookup runs               | The service queries ITSM for incidents with the same `short_description` using the configured fetch limit, excludes the main incident, sorts by `resolved_at` descending, and keeps only the configured recent-limit subset |
 | CA-4  | One or more deduplicated related incident numbers were discovered from the main incident                                                      | Related incident details are fetched         | The service retrieves their detail records in parallel and maps the related-incident field subset defined by this specification                                                                                     |
 | CA-5  | The same incident is found by multiple discovery mechanisms                                                                                   | Domain correlation output is built           | That incident appears only once in the deduplicated related-incident context and retains provenance indicating all discovery sources that found it                                                                  |
 | CA-6  | Related incident source payloads contain `comments` or `work_notes` and the corresponding server-side inclusion flag is disabled              | Related incidents are mapped for LLM context | The disabled fields are omitted from the related-incident LLM context while the rest of the related-incident record remains available                                                                               |
@@ -110,8 +110,9 @@ LLM enrichment flow.
     - Map all non-sensitive main-incident fields into a normalized domain context object.
     - Discover candidate related incident numbers from the configured structured and free-text fields.
     - Deduplicate candidate incident numbers using normalized incident-number keys.
-    - Query ITSM for same-title incidents using the main incident `short_description` and the configured maximum result
-      count.
+    - Query ITSM for same-title incidents using the main incident `short_description` and the configured fetch limit.
+    - Exclude the main incident from same-title results when present.
+    - Sort same-title incidents by `resolved_at` in descending order and keep only the configured most-recent subset.
     - Fetch discovered related incidents in parallel.
     - Map both discovered-related and same-title incidents into a common related-incident domain model.
     - Merge both discovery streams into a deduplicated related-incident collection, preserving provenance such as
@@ -120,7 +121,7 @@ LLM enrichment flow.
         - expanded main incident context
         - deduplicated related incidents
         - discovery provenance metadata
-        - recency metadata for same-title historical incidents such as `closed_at`
+        - recency metadata for same-title historical incidents such as `resolved_at`
     - Render a prompt that clearly separates:
         - current incident context
         - explicitly referenced related incidents
@@ -205,7 +206,8 @@ LLM enrichment flow.
 - Request construction for same-title lookup:
     - Method: `GET`
     - Query filter: exact `short_description=<main short_description>`
-    - Limit: environment-configured maximum
+    - Fetch limit: `RELATED_INCIDENTS_MAX_SAME_TITLE`
+    - Post-fetch recency filter: sort by `resolved_at` descending and keep top `RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT`
     - Authentication and host headers remain infrastructure concerns
 
 ## 7a) Environment Configuration
@@ -215,9 +217,10 @@ The related-incident enrichment behavior is controlled server-side to stay align
 
 ### Required Configuration
 
-| Variable                           | Purpose                                                        | Notes                      |
-|------------------------------------|----------------------------------------------------------------|----------------------------|
-| `RELATED_INCIDENTS_MAX_SAME_TITLE` | Maximum number of incidents returned by same-title ITSM lookup | Must be a positive integer |
+| Variable                                  | Purpose                                                                 | Notes                                             |
+|-------------------------------------------|-------------------------------------------------------------------------|---------------------------------------------------|
+| `RELATED_INCIDENTS_MAX_SAME_TITLE`        | Maximum number of incidents fetched from same-title ITSM lookup         | Must be a positive integer (recommended: `100`)   |
+| `RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT` | Maximum number of recent same-title incidents kept after recency sorting | Must be a positive integer (recommended: `10`) and should be <= fetch limit |
 
 ### Optional Configuration
 
@@ -239,8 +242,8 @@ historical context. They are server-side configuration flags only and must not b
 - Reuse the already fetched main incident payload; do not refetch it for LLM preparation.
 - Exclude summary-irrelevant administrative fields from prompt instructions for the summary objective even if they
   remain available elsewhere in the main incident context.
-- Favor recent closed same-title incidents with actionable `close_notes` instead of sending an unprioritized historical
-  mass to the model.
+- Favor recent closed same-title incidents with actionable `close_notes` by sorting with `resolved_at` and applying a
+  strict recent-limit subset before prompt rendering.
 
 ## 9) Observability
 
@@ -252,9 +255,11 @@ historical context. They are server-side configuration flags only and must not b
     - LLM context preparation
 - Record lightweight internal attributes when observability is enabled:
     - main incident number
-    - discovered related incident count
-    - same-title incident count
+    - discovered related incident count (excluding the main incident)
+    - same-title fetched count (`total_incidents_title`) before recency filtering and excluding the main incident
+    - same-title recent-kept count
     - deduplicated related incident count
+    - fallback fetched count (`total_incidents_fallback`) before recency filtering and excluding the main incident
     - flags indicating whether comments/work notes were included for related incidents
 
 ## 10) Risks and Mitigations
@@ -262,7 +267,7 @@ historical context. They are server-side configuration flags only and must not b
 | Risk                                                                   | Impact                                         | Mitigation                                                                                                |
 |------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
 | Free-text fields contain noisy or malformed incident references        | Unnecessary fetches or bad correlation context | Normalize identifiers strictly, exclude the main incident number, and deduplicate before fetching         |
-| Same-title searches return too many historical incidents               | Increased latency and prompt size              | Bound results with `RELATED_INCIDENTS_MAX_SAME_TITLE`                                                     |
+| Same-title searches return too many historical incidents               | Increased latency and prompt size              | Bound fetches with `RELATED_INCIDENTS_MAX_SAME_TITLE`, then recency-truncate with `RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT` |
 | Related incident comments and work notes add too much noise            | Higher token cost and lower answer quality     | Control inclusion with server-side configuration and keep them optional in the context builder            |
 | Enriched context accidentally reintroduces excluded fields from US-1.2 | Security and data-minimization regression      | Keep US-1.2 exclusions explicit at every mapping boundary for both main and related incidents             |
 | Sequential related-incident fetching increases latency                 | Slower incident analysis requests              | Fetch discovered related incidents in parallel                                                            |
@@ -279,6 +284,7 @@ historical context. They are server-side configuration flags only and must not b
   `work_notes`, `hold_reason`).
 - Deduplication and canonical normalization of incident numbers.
 - Same-title lookup request construction with configured limit.
+- Same-title recency filtering sorts by `resolved_at` descending and keeps the configured recent-limit subset.
 - Related-incident mapping for the required field subset.
 - Merge behavior that keeps one incident record with multiple provenance sources.
 - Related-incident context building when comments or work notes are disabled by configuration.
@@ -315,7 +321,7 @@ historical context. They are server-side configuration flags only and must not b
 
 - The specification defines how the main incident context is expanded without violating US-1.2 exclusions.
 - The specification defines how related incidents are discovered, fetched, deduplicated, and merged.
-- Same-title lookup is explicitly bounded by server-side configuration.
+- Same-title lookup is explicitly bounded by server-side configuration and recency-filtered before prompt usage.
 - The specification defines how the richer incident context is prepared for the existing LLM enrichment flow.
 - The specification defines the prompt expectations and output structure clearly enough for implementation without
   adding new product assumptions.
