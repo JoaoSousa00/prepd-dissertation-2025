@@ -37,7 +37,7 @@ Avoid:
 
 Prefer:
 * Clear and direct code;
-* Simple separation between domain, infrastructure, and presentation;
+* Simple separation between domain, infrastructure, presentation, and shared;
 * Small, testable components;
 * Decoupled and localized integrations.
 
@@ -64,6 +64,9 @@ src/
  │    └── api/
  │
  └── shared/
+      ├── observability.py
+      ├── tracing.py
+      └── http/
 ```
 
 ---
@@ -88,6 +91,7 @@ Presentation (API) ──→ Domain ──→ Infrastructure
 2. **Domain → Infrastructure (via interfaces only)**: Domain code defines abstract interfaces (contracts) that infrastructure must implement. Domain is unaware of concrete implementations.
 3. **Domain ← Infrastructure (never)**: Domain code is completely independent. It knows nothing of external APIs, databases, HTTP, or frameworks.
 4. **Inversion of Control**: Dependencies are injected into domain. Tests can swap real adapters for mocks without changing domain code.
+5. **State boundaries**: request/app state must not hold business state; state usage is limited to observability concerns (logging/tracing context) and runtime wiring.
 
 ---
 
@@ -149,6 +153,21 @@ Examples:
 * Authentication/authorization enforcement
 
 Should not contain business logic. Orchestration lives in domain.
+
+---
+
+## Shared
+
+Contains cross-cutting utilities used by multiple layers without owning business rules.
+
+Examples:
+
+* Observability helpers (`observability.py`) for log context collection and summary emission;
+* Tracing helpers (`tracing.py`) for OTel/Langfuse span lifecycle;
+* Transport-neutral HTTP/shared models in `shared/http/`.
+
+`shared` must not contain incident correlation, mitigation, or enrichment decisions.  
+Logging/tracing state is allowed here; business state is not.
 
 ---
 

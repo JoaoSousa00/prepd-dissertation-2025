@@ -3,8 +3,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import JSONResponse
-from src.application.incident_details import IncidentDetailsService
-from src.application.incident_fetching import IncidentFetchingService
+from src.domain.incident_details import IncidentDetailsService
+from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import IncidentSourceUnauthorizedError
 from src.infrastructure.itsm_client import ItsmIncidentSourceAdapter
 from src.infrastructure.llm_gateway import GaiaLlmGatewayAdapter

@@ -13,7 +13,7 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - Analyze incident context and produce actionable diagnosis and mitigation suggestions.
 - Provide an API endpoint that enriches and analyzes incidents by ID.
 - Keep source-selection policy server-side in the initial version (no per-request source toggles).
-- Keep architecture aligned with layered design (`domain`, `infrastructure`, `presentation`).
+- Keep architecture aligned with layered design (`domain`, `infrastructure`, `presentation`, `shared`).
 - Measure token usage, latency, and source usage for experiments and evaluation.
 
 ## 3) Out of Scope (Current)
@@ -51,6 +51,7 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 - **FR-3.4 Confluence integration adapter:** fetch operational knowledge/guidelines when enabled.
 - **FR-3.5 LLM gateway:** provider abstraction for analysis/summarization tasks.
 - **FR-3.6 Isolation by layer:** all external API calls remain in `infrastructure` adapters only.
+- **FR-3.7 Shared state boundary:** state in shared components is reserved for observability and tracing context only, never for business/domain state.
 
 ## 6) Pipeline Constraints (Efficiency)
 

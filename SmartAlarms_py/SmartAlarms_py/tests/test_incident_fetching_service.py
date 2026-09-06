@@ -1,6 +1,6 @@
 import pytest
 
-from src.application.incident_fetching import IncidentFetchingService
+from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import (
     BaseIncident,
     IncidentSourceUnauthorizedError,

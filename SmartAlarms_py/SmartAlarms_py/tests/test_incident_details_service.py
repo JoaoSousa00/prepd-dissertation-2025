@@ -1,5 +1,5 @@
-from src.application.incident_details import IncidentDetailsService
-from src.application.incident_fetching import IncidentFetchingService
+from src.domain.incident_details import IncidentDetailsService
+from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident
 from src.domain.llm import (
     IncidentEnrichment,
@@ -266,6 +266,50 @@ def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_
     same_title_context = gateway.kwargs["same_title_incident_context"]
     assert "Incident INC0001" not in same_title_context
     assert "Incident INC1002" in same_title_context
+
+
+def test_fetch_incident_details_excludes_comments_and_work_notes_from_prompt_context_when_disabled(monkeypatch):
+    gateway = CapturingLlmGateway()
+    source = FakeIncidentSource(
+        incidents={
+            "INC0001": BaseIncident(
+                id="INC0001",
+                number="INC0001",
+                short_description="API latency spike",
+                description="Requests slowed down during load peak.",
+                raw={
+                    "number": "INC0001",
+                    "short_description": "API latency spike",
+                    "description": "Requests slowed down during load peak.",
+                    "comments": ["main-comment-1"],
+                    "work_notes": ["main-work-note-1"],
+                },
+            )
+        },
+        same_title_incidents=[
+            BaseIncident(
+                id="INC1001",
+                number="INC1001",
+                short_description="API latency spike",
+                resolved_at="2026-09-05T10:00:00Z",
+                comments=["related-comment-1"],
+                work_notes=["related-work-note-1"],
+            )
+        ],
+    )
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(source),
+        llm_gateway=gateway,
+    )
+
+    monkeypatch.setenv("RELATED_INCIDENTS_INCLUDE_COMMENTS", "false")
+    monkeypatch.setenv("RELATED_INCIDENTS_INCLUDE_WORK_NOTES", "false")
+    service.fetch_incident_details(["INC0001"])
+
+    assert "comments:" not in gateway.kwargs["main_incident_context"]
+    assert "work_notes:" not in gateway.kwargs["main_incident_context"]
+    assert "comments=" not in gateway.kwargs["same_title_incident_context"]
+    assert "work_notes=" not in gateway.kwargs["same_title_incident_context"]
 
 
 def test_fetch_incident_details_excludes_explicit_related_from_same_title_before_recency_limit(monkeypatch):

@@ -2,8 +2,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from src.application.incident_details import IncidentDetailsService
-from src.application.incident_fetching import IncidentFetchingService
+from src.domain.incident_details import IncidentDetailsService
+from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.llm import (
     IncidentEnrichment,
     LlmGatewayUnavailableError,

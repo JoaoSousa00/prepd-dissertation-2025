@@ -20,6 +20,8 @@ Use this file as a coordination guide for an SDD workflow with three roles: **Sp
 - Keep `src/` organized according to `architechture.md`: `domain/`, `infrastructure/`, `presentation/`, `shared/`;
 - Keep incident correlation, mitigation suggestions, and summarization logic in `domain/`, never spread across controllers or scripts;
 - Keep all calls to ServiceNow, Kibana/Elastic, CloudWatch, LLM, and MCP **exclusively** in `infrastructure/` adapters;
+- Keep `shared/` for cross-cutting concerns only (especially observability/logging/tracing support), not business logic;
+- Keep state in `shared/` limited to logging/tracing context; do not store business/domain state there;
 - Domain code must never know external APIs, databases, or frameworks;
 - Keep interfaces and contracts clear between layers, without unnecessary layers.
 

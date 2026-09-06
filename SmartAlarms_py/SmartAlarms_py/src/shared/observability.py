@@ -142,7 +142,7 @@ class RequestLogContext:
                 "fallback_triggered": bool(self.fallback_triggered),
                 "total_incidents_fallback": int(self.total_incidents_fallback),
                 "fallback_kept_incidents": int(self.fallback_kept_incidents),
-                "suggestions_number": int(self.suggestions_number),            },
+                "suggestions_number": int(self.suggestions_number), },
             "llm_summary": {
                 "status": str(self.llm_status) if self.llm_status is not None else "",
                 "error": self.llm_error,
@@ -154,13 +154,13 @@ class RequestLogContext:
         }
 
     def log_event(
-        self,
-        level: str,
-        component: str,
-        status: Optional[int | str],
-        error: Optional[str] = None,
-        workflow: str = "incident_summary",
-        latency_ms: Optional[float] = None,
+            self,
+            level: str,
+            component: str,
+            status: Optional[int | str],
+            error: Optional[str] = None,
+            workflow: str = "incident_summary",
+            latency_ms: Optional[float] = None,
     ) -> None:
         payload = {
             "request_id": self.request_id,

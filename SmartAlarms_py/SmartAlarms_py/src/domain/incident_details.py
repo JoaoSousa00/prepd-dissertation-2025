@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime
 from typing import Iterable, List, Optional
 
-from src.application.incident_fetching import IncidentFetchingService
+from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident, IncidentDetails, ResolutionSuggestion
 from src.domain.llm import LlmGateway, LlmGatewayError
 from src.shared.observability import bind_request_context, get_current_request_context, log_request_summary
@@ -14,6 +14,7 @@ from src.shared.observability import bind_request_context, get_current_request_c
 logger = logging.getLogger(__name__)
 DEFAULT_RELATED_INCIDENTS_MAX_SAME_TITLE = 100
 DEFAULT_RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT = 10
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 
 class IncidentDetailsService:
@@ -285,6 +286,8 @@ class IncidentDetailsService:
 
     @staticmethod
     def _build_main_incident_context(incident: BaseIncident) -> str:
+        include_comments = IncidentDetailsService._include_related_incident_comments()
+        include_work_notes = IncidentDetailsService._include_related_incident_work_notes()
         excluded_keys = {
             "caller_id",
             "assigned_to",
@@ -295,6 +298,10 @@ class IncidentDetailsService:
             "closed_at",
             "close_code",
         }
+        if not include_comments:
+            excluded_keys.add("comments")
+        if not include_work_notes:
+            excluded_keys.add("work_notes")
         payload: dict[str, object] = {}
         if isinstance(incident.raw, dict) and incident.raw:
             payload.update(incident.raw)
@@ -344,8 +351,8 @@ class IncidentDetailsService:
     def _summarize_incidents(incidents: List[BaseIncident]) -> str:
         if not incidents:
             return "No historical incidents were available for this context."
-        include_comments = os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS", "true").strip().lower() in {"1", "true", "yes", "on"}
-        include_work_notes = os.getenv("RELATED_INCIDENTS_INCLUDE_WORK_NOTES", "true").strip().lower() in {"1", "true", "yes", "on"}
+        include_comments = IncidentDetailsService._include_related_incident_comments()
+        include_work_notes = IncidentDetailsService._include_related_incident_work_notes()
         lines = []
         for incident in incidents:
             summary = [
@@ -378,6 +385,14 @@ class IncidentDetailsService:
         if isinstance(value, (dict, list)):
             return json.dumps(value, ensure_ascii=True)
         return str(value)
+
+    @staticmethod
+    def _include_related_incident_comments() -> bool:
+        return os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS", "true").strip().lower() in _TRUTHY_VALUES
+
+    @staticmethod
+    def _include_related_incident_work_notes() -> bool:
+        return os.getenv("RELATED_INCIDENTS_INCLUDE_WORK_NOTES", "true").strip().lower() in _TRUTHY_VALUES
 
     @staticmethod
     def _incident_resolved_at_sort_key(incident: BaseIncident) -> tuple[int, datetime]:
