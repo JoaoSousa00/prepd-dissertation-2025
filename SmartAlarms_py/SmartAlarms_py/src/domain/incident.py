@@ -37,6 +37,13 @@ class IncidentSourceAdapter(Protocol):
     def fetch_same_title_incidents(self, short_description: str, limit: Optional[int] = None) -> List[BaseIncident]:
         """Fetch same-title incident history."""
 
+    def fetch_recent_assignment_group_incidents(
+        self,
+        assignment_group: str,
+        limit: Optional[int] = None,
+    ) -> List[BaseIncident]:
+        """Fetch recent incidents from the same assignment group."""
+
     def fetch_related_incident_details(self, incident_ids: List[str]) -> List[BaseIncident]:
         """Fetch multiple incident records by number."""
 

@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_PROMPT_PATH = (
     Path(__file__).resolve().parent / "prompt" / "incident_enrichment_prompt.txt"
 )
+DEFAULT_FALLBACK_PROMPT_PATH = (
+    Path(__file__).resolve().parent / "prompt" / "incident_enrichment_fallback_prompt.txt"
+)
 DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS = 30.0
 
 MODEL_PRICING = {
@@ -131,11 +134,14 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         settings: Optional[LlmGatewaySettings] = None,
         transport: Optional[httpx.BaseTransport] = None,
         prompt_path: Optional[Path] = None,
+        fallback_prompt_path: Optional[Path] = None,
     ):
         self._settings = settings or load_llm_gateway_settings()
         self._transport = transport
         self._prompt_path = prompt_path or DEFAULT_PROMPT_PATH
+        self._fallback_prompt_path = fallback_prompt_path or DEFAULT_FALLBACK_PROMPT_PATH
         self._prompt_template = self._load_prompt_template(self._prompt_path)
+        self._fallback_prompt_template = self._load_prompt_template(self._fallback_prompt_path)
         self._verify = _resolve_cert(
             self._settings.ca_cert_path,
             self._settings.ca_cert_url,
@@ -152,6 +158,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
+        use_fallback_prompt: bool = False,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content."""
         context = get_current_request_context()
@@ -187,6 +194,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     main_incident_context,
                     related_incident_context,
                     same_title_incident_context,
+                    use_fallback_prompt=use_fallback_prompt,
                 )
                 requested_max_tokens = max_tokens or self._settings.default_max_tokens
                 response, retry_count = self._call_llm(
@@ -570,9 +578,11 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
+        use_fallback_prompt: bool = False,
     ) -> str:
-        """Build prompt for LLM enrichment."""
-        return self._prompt_template.format(
+        """Build a prompt for LLM enrichment."""
+        template = self._fallback_prompt_template if use_fallback_prompt else self._prompt_template
+        return template.format(
             incident_id=incident_id,
             short_description=short_description or "N/A",
             description=description or "N/A",

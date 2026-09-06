@@ -33,6 +33,8 @@ class ItsmClientSettings:
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     related_incidents_max_same_title: int = 100
     related_incidents_recent_same_title_limit: int = 10
+    related_incidents_fallback_fetch_limit: int = 100
+    related_incidents_fallback_recent_limit: int = 10
     include_related_incident_comments: bool = True
     include_related_incident_work_notes: bool = True
 
@@ -57,6 +59,14 @@ def load_itsm_client_settings() -> ItsmClientSettings:
         related_incidents_recent_same_title_limit=max(
             1,
             int(os.getenv("RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT", "10")),
+        ),
+        related_incidents_fallback_fetch_limit=max(
+            1,
+            int(os.getenv("RELATED_INCIDENTS_FALLBACK_FETCH_LIMIT", "100")),
+        ),
+        related_incidents_fallback_recent_limit=max(
+            1,
+            int(os.getenv("RELATED_INCIDENTS_FALLBACK_RECENT_LIMIT", "10")),
         ),
         include_related_incident_comments=_parse_bool(
             os.getenv("RELATED_INCIDENTS_INCLUDE_COMMENTS"),
@@ -219,30 +229,61 @@ class ItsmIncidentSourceAdapter(IncidentSourceAdapter):
             logger.warning("Same-title ITSM lookup failed: %s", response.text[:500])
             return []
         payload = response.json()
-        records = self._extract_records(payload)
-        incidents = []
-        for record in records:
-            record_id = str(record.get("number") or record.get("id") or "")
-            if not record_id:
-                continue
-            incidents.append(
-                BaseIncident(
-                    id=record_id,
-                    short_description=record.get("shortDescription") or record.get("short_description"),
-                    description=record.get("description"),
-                    number=record.get("number") or record_id,
-                    state=record.get("state"),
-                    resolved_at=record.get("resolved_at") or record.get("resolvedAt"),
-                    close_notes=record.get("close_notes") or record.get("closeNotes"),
-                    closed_at=record.get("closed_at") or record.get("closedAt"),
-                    close_code=record.get("close_code") or record.get("closeCode"),
-                    hold_reason=record.get("hold_reason") or record.get("holdReason"),
-                    comments=self._as_string_list(record.get("comments")),
-                    work_notes=self._as_string_list(record.get("work_notes") or record.get("workNotes")),
-                    raw=record,
-                )
-            )
+        incidents: list[BaseIncident] = []
+        for record in self._extract_records(payload):
+            parsed = self._parse_incident_record(record)
+            if parsed is not None:
+                incidents.append(parsed)
         return incidents
+
+    def fetch_recent_assignment_group_incidents(
+        self,
+        assignment_group: str,
+        limit: Optional[int] = None,
+    ) -> list[BaseIncident]:
+        group_name = (assignment_group or "").strip()
+        if not group_name:
+            return []
+        self._validate_credentials()
+        max_results = max(1, limit or self._settings.related_incidents_fallback_fetch_limit)
+        query = f"assignment_group={group_name}"
+        response = self._client.get(
+            "/incident",
+            params={"query": query, "limit": max_results},
+            headers=self._headers(),
+        )
+        if response.status_code in {401, 403}:
+            raise IncidentSourceUnauthorizedError("ITSM credentials are missing or were rejected")
+        if response.status_code >= 400:
+            logger.warning("Assignment-group fallback ITSM lookup failed: %s", response.text[:500])
+            return []
+        payload = response.json()
+        incidents: list[BaseIncident] = []
+        for record in self._extract_records(payload):
+            parsed = self._parse_incident_record(record)
+            if parsed is not None:
+                incidents.append(parsed)
+        return incidents
+
+    def _parse_incident_record(self, record: dict[str, Any]) -> Optional[BaseIncident]:
+        record_id = str(record.get("number") or record.get("id") or "")
+        if not record_id:
+            return None
+        return BaseIncident(
+            id=record_id,
+            short_description=record.get("shortDescription") or record.get("short_description"),
+            description=record.get("description"),
+            number=record.get("number") or record_id,
+            state=record.get("state"),
+            resolved_at=record.get("resolved_at") or record.get("resolvedAt"),
+            close_notes=record.get("close_notes") or record.get("closeNotes"),
+            closed_at=record.get("closed_at") or record.get("closedAt"),
+            close_code=record.get("close_code") or record.get("closeCode"),
+            hold_reason=record.get("hold_reason") or record.get("holdReason"),
+            comments=self._as_string_list(record.get("comments")),
+            work_notes=self._as_string_list(record.get("work_notes") or record.get("workNotes")),
+            raw=record,
+        )
 
     def find_related_incidents(self, incident: BaseIncident, include_main_id: bool = False) -> list[str]:
         if incident.raw is None:

@@ -1,0 +1,50 @@
+You are analyzing one active incident and recent team context from the same platform.
+
+Main incident:
+- Incident ID: {incident_id}
+- Short Description: {short_description}
+- Description: {description}
+- Full sanitized incident context:
+{main_incident_context}
+
+Explicitly referenced related incidents from the main incident:
+{related_incident_context}
+
+Recent team incidents from the same assignment group (not a same-title match, and not proven to be related to this incident):
+{same_title_incident_context}
+
+These incidents are recent and may help explain the operational pattern behind this issue, but they are not necessarily the same incident title or the same root cause. Use them as contextual signals only, not as confirmed related-incident evidence.
+
+Instructions:
+1. Produce a concise, formal, human-readable summary in 1-2 sentences.
+2. Focus on the operational issue, expected impact, and what is useful for the support or development team to understand quickly.
+3. Do not include low-value administrative metadata such as state, priority, impact, urgency, or assignment team in the summary.
+4. Ground any mitigation or investigation suggestion in the historical evidence provided above.
+5. Every suggestion must contain exactly these three parts in order:
+    a) Investigation suggestion
+    b) Mitigation suggestion
+    c) Suggested resolution note for the developer to adapt when closing the incident
+6. Return at least 3 mitigation suggestions whenever possible.
+7. If historical related incidents are not sufficient to produce 3 fully evidence-backed suggestions, complete the remaining suggestions with meaningful best-practice reasoning based on the current incident details.
+8. For each suggestion, explicitly label confidence as either "evidence-based" (supported by historical incidents) or "reasoned fallback" (derived from current-incident analysis due to insufficient history).
+9. Every suggestion must explicitly state the source incident number(s) that support it. For reasoned fallback suggestions with no supporting historical incident, use "Sources: current_incident_analysis".
+10. If the historical incidents suggest redirecting or reassigning to another team, you may include that as a valid suggestion only when clearly supported by the provided evidence and still cite the source incident numbers.
+11. Prioritize the most recent relevant closed incidents with meaningful resolution notes when deriving mitigation and investigation guidance.
+12. Never invent incident references or include the original incident ID ({incident_id}) in any related_incidents list.
+13. Return valid JSON with the following shape:
+    {{
+      "summary": "...",
+      "related_incidents": ["INC000123", "INC000456"],
+      "mitigation_suggestions": [
+        {{
+          "Confidence": "evidence-based|reasoned fallback",
+          "Investigation": "...",
+          "Mitigation": "...",
+          "Resolution_note": "...",
+          "related_incidents": ["INC000123"],
+          "related_log_ids": []
+        }}
+      ]
+    }}
+
+Important: "related_incidents" should only contain external incident IDs that are relevant historical evidence, not the current incident itself.

@@ -248,6 +248,31 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
 
         assert prompt == "ID=INC123|SHORT=Short text|DESC=Detailed text|MAIN=Main context"
 
+    def test_build_prompt_uses_fallback_template_when_requested(self, llm_settings, tmp_path):
+        prompt_file = tmp_path / "incident_enrichment_prompt.txt"
+        prompt_file.write_text("STANDARD={same_title_incident_context}", encoding="utf-8")
+        fallback_file = tmp_path / "incident_enrichment_fallback_prompt.txt"
+        fallback_file.write_text(
+            "FALLBACK={same_title_incident_context}|ADVICE=recent team context only",
+            encoding="utf-8",
+        )
+        adapter = GaiaLlmGatewayAdapter(
+            settings=llm_settings,
+            prompt_path=prompt_file,
+            fallback_prompt_path=fallback_file,
+        )
+
+        prompt = adapter._build_prompt(
+            "INC123",
+            "Short text",
+            "Detailed text",
+            same_title_incident_context="INC999 recent team context",
+            use_fallback_prompt=True,
+        )
+
+        assert "FALLBACK=INC999 recent team context|ADVICE=recent team context only" == prompt
+        assert "STANDARD=" not in prompt
+
 
 class TestGaiaLlmGatewayAdapterHeaders:
     def test_llm_headers_match_gaia_gateway_shape(self, llm_settings):

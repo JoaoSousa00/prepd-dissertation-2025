@@ -151,3 +151,33 @@ def test_fetch_same_title_incidents_uses_default_fetch_limit_and_maps_resolved_a
     assert captured_query_params["limit"] == "100"
     assert len(incidents) == 1
     assert incidents[0].resolved_at == "2026-09-05T10:20:00Z"
+
+
+def test_fetch_recent_assignment_group_incidents_uses_assignment_group_query():
+    captured_query_params = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_query_params["query"] = request.url.params.get("query")
+        captured_query_params["limit"] = request.url.params.get("limit")
+        return httpx.Response(
+            200,
+            json={
+                "result": [
+                    {
+                        "number": "INC000000000020",
+                        "short_description": "API feed delay",
+                        "assignment_group": {"name": "FT_LOS-CTW-Force-Devopsteam"},
+                        "resolved_at": "2026-09-05T15:00:00Z",
+                    }
+                ]
+            },
+        )
+
+    adapter = make_adapter(handler)
+    incidents = adapter.fetch_recent_assignment_group_incidents("FT_LOS-CTW-Force-Devopsteam", limit=25)
+
+    assert captured_query_params["query"] == "assignment_group=FT_LOS-CTW-Force-Devopsteam"
+    assert captured_query_params["limit"] == "25"
+    assert len(incidents) == 1
+    assert incidents[0].number == "INC000000000020"
+    assert incidents[0].resolved_at == "2026-09-05T15:00:00Z"

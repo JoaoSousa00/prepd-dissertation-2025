@@ -46,6 +46,16 @@ class IncidentFetchingService:
             logger.warning("Skipping same-title lookup for %s — source unavailable: %s", short_description, exc)
             return []
 
+    def fetch_recent_assignment_group_incidents(self, assignment_group: str, limit: int | None = None) -> List[BaseIncident]:
+        fetcher = getattr(self._incident_source, "fetch_recent_assignment_group_incidents", None)
+        if fetcher is None:
+            return []
+        try:
+            return fetcher(assignment_group, limit)
+        except IncidentSourceUnavailableError as exc:
+            logger.warning("Skipping fallback assignment-group lookup for %s — source unavailable: %s", assignment_group, exc)
+            return []
+
     def fetch_related_incident_details(self, incident_ids: Iterable[str]) -> List[BaseIncident]:
         fetcher = getattr(self._incident_source, "fetch_related_incident_details", None)
         if fetcher is None:

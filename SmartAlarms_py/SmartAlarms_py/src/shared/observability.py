@@ -48,6 +48,8 @@ class RequestLogContext:
     fetched_incidents_by_title: list[str] = field(default_factory=list)
     total_incidents_title: int = 0
     total_incidents_fallback: int = 0
+    fallback_triggered: bool = False
+    fallback_kept_incidents: int = 0
     main_incident: Optional[str] = None
     summary_completed: bool = False
     suggestions_number: int = 0
@@ -112,6 +114,12 @@ class RequestLogContext:
     def record_total_incidents_fallback(self, count: int) -> None:
         self.total_incidents_fallback = max(0, int(count))
 
+    def record_fallback_triggered(self, triggered: bool) -> None:
+        self.fallback_triggered = bool(triggered)
+
+    def record_fallback_kept_incidents(self, count: int) -> None:
+        self.fallback_kept_incidents = max(0, int(count))
+
     def record_llm_usage(self, tokens_in: Optional[int], tokens_out: Optional[int], cost_usd: Optional[float]) -> None:
         if tokens_in is not None:
             self.llm_tokens_in += int(tokens_in)
@@ -131,9 +139,10 @@ class RequestLogContext:
                 "fetched_related_incidents": list(self.fetched_related_incidents),
                 "total_incidents_title": int(self.total_incidents_title),
                 "fetched_incidents_by_title": list(self.fetched_incidents_by_title),
+                "fallback_triggered": bool(self.fallback_triggered),
                 "total_incidents_fallback": int(self.total_incidents_fallback),
-                "suggestions_number": int(self.suggestions_number),
-            },
+                "fallback_kept_incidents": int(self.fallback_kept_incidents),
+                "suggestions_number": int(self.suggestions_number),            },
             "llm_summary": {
                 "status": str(self.llm_status) if self.llm_status is not None else "",
                 "error": self.llm_error,

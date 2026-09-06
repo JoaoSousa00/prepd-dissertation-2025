@@ -68,6 +68,7 @@ class IncidentDetailsService:
                             main_incident_context=main_incident_context,
                             related_incident_context=related_context["related_incident_context"],
                             same_title_incident_context=related_context["same_title_incident_context"],
+                            use_fallback_prompt=bool(context and context.fallback_triggered),
                         )
                     except TypeError:
                         enrichment = self._llm_gateway.enrich_incident(
@@ -97,16 +98,12 @@ class IncidentDetailsService:
                         for suggestion in enrichment.mitigation_suggestions
                     ]
                     detail.llm_usage = enrichment.usage
-                    if context is not None:
-                        if enrichment.related_incidents:
-                            for related_id in detail.related_incidents:
-                                context.record_title_related_incident(related_id)
-                        if enrichment.usage is not None:
-                            context.record_llm_usage(
-                                tokens_in=enrichment.usage.tokens_in,
-                                tokens_out=enrichment.usage.tokens_out,
-                                cost_usd=enrichment.usage.estimated_cost,
-                            )
+                    if context is not None and enrichment.usage is not None:
+                        context.record_llm_usage(
+                            tokens_in=enrichment.usage.tokens_in,
+                            tokens_out=enrichment.usage.tokens_out,
+                            cost_usd=enrichment.usage.estimated_cost,
+                        )
             detail.request_latency_ms = (time.perf_counter() - started_at) * 1000
             details.append(detail)
 
@@ -125,7 +122,6 @@ class IncidentDetailsService:
 
     def _build_context_snapshot(self, incident: BaseIncident) -> dict[str, str]:
         related_numbers = self._discover_related_numbers(incident)
-        same_title_incidents = []
         same_title_recent_limit = max(
             1,
             int(
@@ -135,6 +131,16 @@ class IncidentDetailsService:
                 )
             ),
         )
+        fallback_recent_limit = max(
+            1,
+            int(
+                os.getenv(
+                    "RELATED_INCIDENTS_FALLBACK_RECENT_LIMIT",
+                    "10",
+                )
+            ),
+        )
+        same_title_incidents = []
         if incident.short_description:
             same_title_limit = max(
                 1,
@@ -144,9 +150,15 @@ class IncidentDetailsService:
                 incident.short_description,
                 limit=same_title_limit,
             )
+
         main_incident_ids = {incident.id.upper()}
         if incident.number:
             main_incident_ids.add(incident.number.upper())
+        related_ids = {
+            related_id.upper()
+            for related_id in related_numbers
+            if related_id and related_id.strip()
+        }
         context = get_current_request_context()
         if context is not None:
             total_without_main = sum(
@@ -155,19 +167,60 @@ class IncidentDetailsService:
                 if (candidate.number or candidate.id).upper() not in main_incident_ids
             )
             context.record_total_incidents_title(total_without_main)
-        deduped_same_title = []
-        seen_numbers: set[str] = set()
-        for candidate in same_title_incidents:
-            candidate_number = (candidate.number or candidate.id).upper()
-            if candidate_number in main_incident_ids or candidate_number in seen_numbers:
-                continue
-            seen_numbers.add(candidate_number)
-            deduped_same_title.append(candidate)
+            context.fallback_triggered = False
+            context.fallback_kept_incidents = 0
+            context.fetched_incidents_by_title = []
+
+        title_candidates = self._dedupe_context_incidents(
+            same_title_incidents,
+            main_incident_ids,
+            excluded_incident_ids=related_ids,
+        )
+        if context is not None and not context.fallback_triggered:
+            context.fetched_incidents_by_title = [
+                (candidate.number or candidate.id).upper()
+                for candidate in title_candidates
+                if (candidate.number or candidate.id).upper() not in main_incident_ids
+            ]
+
         deduped_same_title = sorted(
-            deduped_same_title,
+            title_candidates,
             key=self._incident_resolved_at_sort_key,
             reverse=True,
         )[:same_title_recent_limit]
+
+        if not deduped_same_title and incident.raw is not None:
+            assignment_group = self._extract_assignment_group(incident)
+            if assignment_group:
+                fallback_limit = max(
+                    1,
+                    int(os.getenv("RELATED_INCIDENTS_FALLBACK_FETCH_LIMIT", "100")),
+                )
+                fallback_incidents = self._incident_fetching_service.fetch_recent_assignment_group_incidents(
+                    assignment_group,
+                    limit=fallback_limit,
+                )
+                deduped_fallback = self._dedupe_context_incidents(fallback_incidents, main_incident_ids)
+                deduped_fallback = sorted(
+                    deduped_fallback,
+                    key=self._incident_resolved_at_sort_key,
+                    reverse=True,
+                )[:fallback_recent_limit]
+                if context is not None:
+                    context.fallback_triggered = True
+                    context.fallback_kept_incidents = len(deduped_fallback)
+                    context.fetched_incidents_by_title = []
+                    total_without_main = sum(
+                        1
+                        for candidate in fallback_incidents
+                        if (candidate.number or candidate.id).upper() not in main_incident_ids
+                    )
+                    context.record_total_incidents_fallback(total_without_main)
+                deduped_same_title = deduped_fallback
+
+        if context is not None and not context.fallback_triggered:
+            context.record_total_incidents_fallback(0)
+
         deduped_related = []
         seen_related: set[str] = set()
         for incident_id in related_numbers:
@@ -181,14 +234,67 @@ class IncidentDetailsService:
         else:
             related_summary = "No related incidents were explicitly referenced in the main incident."
         same_title_summary = self._summarize_incidents(deduped_same_title)
+        if context is not None and context.fallback_triggered and deduped_same_title:
+            same_title_summary = (
+                "Recent assignment-group incidents (not proven related incidents; recent team context only):\n"
+                + same_title_summary
+            )
         return {
             "related_incident_context": related_summary,
             "same_title_incident_context": same_title_summary,
         }
 
     @staticmethod
+    def _dedupe_context_incidents(
+        incidents: list[BaseIncident],
+        main_incident_ids: set[str],
+        excluded_incident_ids: Optional[set[str]] = None,
+    ) -> list[BaseIncident]:
+        deduped: list[BaseIncident] = []
+        seen_numbers: set[str] = set()
+        excluded_numbers = excluded_incident_ids or set()
+        for candidate in incidents:
+            candidate_number = (candidate.number or candidate.id).upper()
+            if (
+                candidate_number in main_incident_ids
+                or candidate_number in excluded_numbers
+                or candidate_number in seen_numbers
+            ):
+                continue
+            seen_numbers.add(candidate_number)
+            deduped.append(candidate)
+        return deduped
+
+    @staticmethod
+    def _extract_assignment_group(incident: BaseIncident) -> str:
+        payload = incident.raw or {}
+        if not isinstance(payload, dict):
+            return ""
+        for key in ("assignment_group", "assignmentGroup"):
+            value = payload.get(key)
+            if isinstance(value, dict):
+                for nested_key in ("name", "display_value", "value"):
+                    candidate = value.get(nested_key)
+                    if candidate:
+                        return str(candidate).strip()
+            elif isinstance(value, str):
+                candidate = value.strip()
+                if candidate:
+                    return candidate
+        return ""
+
+    @staticmethod
     def _build_main_incident_context(incident: BaseIncident) -> str:
-        excluded_keys = {"caller_id", "assigned_to", "resolved_by", "attachments", "attachment"}
+        excluded_keys = {
+            "caller_id",
+            "assigned_to",
+            "resolved_by",
+            "attachments",
+            "attachment",
+            "close_notes",
+            "closed_at",
+            "close_code",
+        }
         payload: dict[str, object] = {}
         if isinstance(incident.raw, dict) and incident.raw:
             payload.update(incident.raw)

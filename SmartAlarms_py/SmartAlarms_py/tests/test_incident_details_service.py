@@ -12,10 +12,13 @@ from src.shared.observability import RequestLogContext, bind_request_context, ge
 
 
 class FakeIncidentSource:
-    def __init__(self, incidents=None, same_title_incidents=None):
+    def __init__(self, incidents=None, same_title_incidents=None, fallback_incidents=None):
         self._incidents = incidents or {}
         self._same_title_incidents = same_title_incidents or []
+        self._fallback_incidents = fallback_incidents or []
         self.same_title_limits = []
+        self.fallback_limits = []
+        self.fallback_groups = []
 
     def fetch_base_incident(self, incident_id):
         return self._incidents.get(incident_id)
@@ -23,6 +26,11 @@ class FakeIncidentSource:
     def fetch_same_title_incidents(self, short_description, limit=None):
         self.same_title_limits.append(limit)
         return list(self._same_title_incidents)
+
+    def fetch_recent_assignment_group_incidents(self, assignment_group, limit=None):
+        self.fallback_groups.append(assignment_group)
+        self.fallback_limits.append(limit)
+        return list(self._fallback_incidents)
 
 
 class SuccessfulLlmGateway:
@@ -258,6 +266,83 @@ def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_
     same_title_context = gateway.kwargs["same_title_incident_context"]
     assert "Incident INC0001" not in same_title_context
     assert "Incident INC1002" in same_title_context
+
+
+def test_fetch_incident_details_excludes_explicit_related_from_same_title_before_recency_limit(monkeypatch):
+    gateway = CapturingLlmGateway()
+    source = FakeIncidentSource(
+        incidents={
+            "INC0001": BaseIncident(
+                id="INC0001",
+                number="INC0001",
+                short_description="API latency spike",
+                description="Issue references INC1002 as a known related incident.",
+                raw={
+                    "description": "Issue references INC1002 as a known related incident.",
+                },
+            )
+        },
+        same_title_incidents=[
+            BaseIncident(id="INC1002", number="INC1002", short_description="API latency spike", resolved_at="2026-09-05T12:00:00Z"),
+            BaseIncident(id="INC1001", number="INC1001", short_description="API latency spike", resolved_at="2026-09-05T11:00:00Z"),
+            BaseIncident(id="INC1003", number="INC1003", short_description="API latency spike", resolved_at="2026-09-05T10:00:00Z"),
+        ],
+    )
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(source),
+        llm_gateway=gateway,
+    )
+
+    monkeypatch.setenv("RELATED_INCIDENTS_RECENT_SAME_TITLE_LIMIT", "2")
+    service.fetch_incident_details(["INC0001"])
+
+    same_title_context = gateway.kwargs["same_title_incident_context"]
+    assert "Incident INC1002" not in same_title_context
     assert "Incident INC1001" in same_title_context
-    assert "Incident INC1003" not in same_title_context
-    assert same_title_context.index("Incident INC1002") < same_title_context.index("Incident INC1001")
+    assert "Incident INC1003" in same_title_context
+
+
+def test_fetch_incident_details_uses_assignment_group_fallback_when_same_title_is_empty(monkeypatch):
+    gateway = CapturingLlmGateway()
+    source = FakeIncidentSource(
+        incidents={
+            "INC0001": BaseIncident(
+                id="INC0001",
+                number="INC0001",
+                short_description="API latency spike",
+                description="Requests slowed down during load peak.",
+                raw={
+                    "number": "INC0001",
+                    "assignment_group": {"name": "FT_LOS-CTW-Force-Devopsteam"},
+                },
+            )
+        },
+        fallback_incidents=[
+            BaseIncident(id="INC0099", number="INC0099", short_description="Database errors", resolved_at="2026-09-05T12:00:00Z"),
+            BaseIncident(id="INC0001", number="INC0001", short_description="API latency spike", resolved_at="2026-09-05T11:00:00Z"),
+            BaseIncident(id="INC0100", number="INC0100", short_description="Queue backlog", resolved_at="2026-09-05T09:00:00Z"),
+        ],
+    )
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(source),
+        llm_gateway=gateway,
+    )
+
+    monkeypatch.setenv("RELATED_INCIDENTS_MAX_SAME_TITLE", "100")
+    monkeypatch.setenv("RELATED_INCIDENTS_FALLBACK_FETCH_LIMIT", "50")
+    monkeypatch.setenv("RELATED_INCIDENTS_FALLBACK_RECENT_LIMIT", "2")
+
+    with bind_request_context(RequestLogContext(request_id="req-fallback")):
+        service.fetch_incident_details(["INC0001"])
+        payload = get_current_request_context().build_summary_payload()
+
+    assert source.fallback_groups == ["FT_LOS-CTW-Force-Devopsteam"]
+    assert source.fallback_limits == [50]
+    assert payload["itsm_summary"]["fallback_triggered"] is True
+    assert payload["itsm_summary"]["total_incidents_fallback"] == 2
+    assert payload["itsm_summary"]["fallback_kept_incidents"] == 2
+    assert payload["itsm_summary"]["fetched_incidents_by_title"] == []
+    fallback_context = gateway.kwargs["same_title_incident_context"]
+    assert "not proven related incidents" in fallback_context
+    assert "Incident INC0099" in fallback_context
+    assert "Incident INC0001" not in fallback_context
