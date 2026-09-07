@@ -67,15 +67,138 @@
 		
 %----------------------------------------------------------------------------------------
 \section{Dataset}
-\todo[inline]{Rever nome do capitulo}
-\todo[inline]{Fica aqui?}
-
-	\todo{texto}
 	
+	Um \textit{dataset} é uma coleção estruturada de dados organizados e armazenados juntos para realizar alguma análise ou processamento. Os dados presentes num dataset são normalmente relacionados entre si. Neste caso, o dataset trata-se de um conjunto volumoso de incidentes no foro de várias equipas num projeto comum.
+	
+	A gestão do dataset é realizada por um serviço externo (\textit{ServiceNow}) ao qual o acesso é feito através de uma \gls{API}. De forma a manter o conjunto de dados o mais recente e mais atualizado possível, é utilizada a API em cada pedido realizado ao serviço em desenvolvimento.
+
+%----------------------------------------------------------------------------------------
+	\subsection{Estrutura}
+		Para a construção do conjunto de dados, foram considerados todos os campos do incidente principal (excluindo os dados presentes na tabela \ref{tab:campos-descartados}) e os campos relacionados mantiveram apenas os campos que contribuíam diretamente para a compreensão da falha e para a geração das recomendações (tabela \ref{tab:campos-utilizados}). Os restantes campos foram descartados porque não acrescentavam valor operativo relevante ou introduziam ruído excessivo ao processo de análise.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{|p{3cm}|p{10cm}|}
+				\hline
+				\textbf{Campo} & \textbf{Utilização no estudo} \\
+				\hline
+				\textit{incident ID} & Identifica unicamente cada incidente e permite fazer a correlação com registos relacionados. \\
+				\hline
+				\textit{short description} & Permite resumir o problema e identificar incidentes com títulos semelhantes. \\
+				\hline
+				\textit{description} & Fornece o contexto detalhado da falha, sintomas e impacto operacional. \\
+				\hline
+				\textit{state} & Ajuda a distinguir incidentes ativos de incidentes fechados, resolvidos ou cancelados. \\
+				\hline
+				\textit{assignment group} & Permite identificar a equipa responsável pelo incidente. \\
+				\hline
+				\textit{resolved\_at} & Utilizado para ordenar incidentes por relevância temporal e maior proximidade no tempo. \\
+				\hline
+				\textit{closed\_notes} & Campo com as notas de resolução do incidente. \\
+				\hline
+				\textit{comments} & Fornece evidências operacionais, passos de diagnóstico e resoluções anteriores. \\
+				\hline
+				\textit{hold\_reason} & Campo utilizado quando um incidente aguarda resposta do autor. \\
+				\hline
+			\end{tabular}
+			\caption[Campos Utilizados do Dataset]{Campos Utilizados do Dataset}
+			\label{tab:campos-utilizados}
+		\end{table}
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{|p{3cm}|p{10cm}|}
+				\hline
+				\textbf{Campo} & \textbf{Motivo de exclusão} \\
+				\hline
+				\textit{caller\_id} & Autor do incidente não é relevante para a análise técnica do registo e pode introduzir dados sensíveis. \\
+				\hline
+				\textit{assigned\_to} &  Analista do incidente não é relevante para a análise técnica do registo e pode introduzir dados sensíveis. \\
+				\hline
+				\textit{resolved\_by} & Analista que resolveu o incidente não é relevante para a análise técnica do registo e pode introduzir dados sensíveis. \\
+				\hline
+				\textit{attachments} & A sua utilização pode prejudicar a fiabilidade dos resultados visto que não existe controlo no tamanho dos anexos. \\
+				\hline
+			\end{tabular}
+			\caption[Campos Descartados do Dataset]{Campos Descartados do Dataset}
+			\label{tab:campos-descartados}
+		\end{table}
+	
+%----------------------------------------------------------------------------------------
 	\subsection{Origem dos Incidentes}
 	
+		Os incidentes podem surgir principalmente de duas formas: manualmente, quando são criados por equipas de suporte após ser detetado um problema, ou automaticamente, quando são gerados por sistemas de monitorização. Esta diferença é importante porque a forma como o incidente é criado pode influenciar a informação disponível no início da análise, a qualidade da sua descrição e o tempo necessário para começar a resolver o problema.
+		
+		Nos incidentes gerados automaticamente, a informação tende a ser mais técnica e estar relacionada com o funcionamento dos sistemas, como falhas de serviços, métricas fora do normal ou problemas com dependências. Por outro lado, os incidentes criados manualmente podem ter mais informação sobre o problema sentido pelo utilizador e o seu impacto, mas a descrição pode variar bastante e nem sempre conter todos os dados necessários para iniciar a análise.
+		
+		Por este motivo, perceber a origem do incidente é importante para a sua análise inicial, para identificar o problema, determinar a equipa responsável e perceber se é necessário obter informação adicional antes de avançar para a resolução.
+		
+		Na imagem \ref{fig:itsm_manual_1}, é possível ver que a maioria dos incidentes recebidos são de origem automática (Alert) e que existe uma quantidade limitada de incidentes manuais (Standard-UI, Portal e Email).
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=\textwidth,keepaspectratio]{img/itsm_manual_col}
+			\caption[Incidentes Manuais vs Automáticos]{Incidentes Manuais vs Automáticos}
+			\label{fig:itsm_manual_1}
+		\end{figure}
+		
+		É ainda possível, confirmar na imagem \ref{fig:itsm_manual_2} a quantidade e a percentagem exata de incidentes automáticos, 8306 incidentes que corresponde a 98.41\% do dataset, e de incidentes manuais, 134 incidentes que corresponde a 1.59\% do conjunto de dados.
+				
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=100mm,keepaspectratio]{img/itsm_manual_donut}
+			\caption[Percentagem de Incidentes Manuais vs Automáticos]{Percentagem de Incidentes Manuais vs Automáticos}
+			\label{fig:itsm_manual_2}
+		\end{figure}
+		
+		Podemos assim concluir, que a maioria de dados presentes no \textit{dataset} correspondem a incidentes automáticos que por sua vez têm menos complexidade lexical, uma vez que, para um mesmo problema são gerados com um titulo exatamente similar.
+	
+%----------------------------------------------------------------------------------------
 	\subsection{Destino dos Incidentes}
 
+		Após um incidente ser criado, pode continuar com a equipa que iniciou a análise ou ser encaminhado para outra equipa, dependendo do tipo de problema ou do serviço afetado. Em ambientes com várias equipas, é comum que a equipa que recebe inicialmente o incidente não tenha o conhecimento necessário para o resolver, sendo necessário direciona-lo para a equipa mais adequada. A atribuição inicial é muitas vezes feita com base no serviço ou na área de negócio afetada, o que nem sempre corresponde à origem técnica do problema.
+		
+		A encaminhamento de incidentes pode ter impacto direto no tempo necessário para a sua resolução. Quando um incidente é encaminhado para a equipa errada, pode haver perda de tempo, repetição de trabalho e atrasos na investigação, podendo levar a um maior impacto em incidentes críticos. Além disso, decidir para que equipa deve ser encaminhado pode exigir uma análise mais detalhada do incidente e a consulta de casos anteriores. Por isso, mecanismos que ajudem a classificar os incidentes, encontrar casos semelhantes e identificar a equipa mais adequada podem facilitar este processo e reduzir o tempo de resolução.
+		
+		A análise do ano corrente, presente na imagem \ref{fig:itsm_redirect_1}, demonstra que a maioria dos incidentes não são redirecionados, e que existe uma quantidade diminuta de incidentes reencaminhados uma ou mais vezes.
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=\textwidth,keepaspectratio]{img/itsm_redirect_col}
+			\caption[Incidentes Redirecionados]{Incidentes Redirecionados}
+			\label{fig:itsm_redirect_1}
+		\end{figure}
+		
+		É ainda possível, confirmar na imagem \ref{fig:itsm_redirect_2} a quantidade e a percentagem exata de incidentes não encaminhados, 7949 incidentes que corresponde a 94.08\% do dataset, de incidentes redirecionados apenas uma vez, 480 incidentes que corresponde a 5.68\% do conjunto de dados e os que são reencaminhados mais do que uma vez, 20 incidentes correspondentes à quantia restante.
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=100mm,keepaspectratio]{img/itsm_redirect_donut}
+			\caption[Percentagem de Incidentes Redirecionados]{Percentagem de Incidentes Redirecionados}
+			\label{fig:itsm_redirect_2}
+		\end{figure}
+		
+		Incidentes reencaminhados duas ou mais vezes, podem indicar maus processos de analise e reencaminhamento, o que pode, novamente, atrasar na resolução de problemas no serviço.
+		
+		No contexto do produto a ser analisado, a maioria de incidentes são redirecionados 0 vezes, o que indica que foram atribuidos corretamente, porém este numero pode ser enganador, visto que, normalmente, incidentes automáticos são corretamente encaminhados. Isto significa assim, que apesar do valor de incidentes reencaminhado parecer escasso, analisando apenas o conjunto de registos manuais, estes valores são completamente diferentes, como mostra a imagem \ref{fig:itsm_redirect_manual_1}. 
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=\textwidth,keepaspectratio]{img/itsm_redirect_manual_col}
+			\caption[Incidentes Manuais Redirecionados]{Incidentes Manuais Redirecionados}
+			\label{fig:itsm_redirect_manual_1}
+		\end{figure}
+		
+		Podemos então confirmar, na imagem \ref{fig:itsm_redirect_manual_2}, que a quantidade de incidentes manuais que são redirecionados é de 47.41\%, sendo assim uma amostra mais significativa.
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=100mm,keepaspectratio]{img/itsm_redirect_manual_donut}
+			\caption[Percentagem de Incidentes Manuais Redirecionados]{Percentagem de Incidentes Manuais Redirecionados}
+			\label{fig:itsm_redirect_manual_2}
+		\end{figure}
+		
+		Deduz-se portanto, que é importante realizar uma boa analise do incidente, com recurso a histórico e incidentes relacionados, com o objetivo de indicar ao utilizador se o mesmo deve mitigar o problema ou encaminha-lo para a equipa mais competente.
 
 %----------------------------------------------------------------------------------------
 \section{Engenharia de Requisitos}
@@ -91,4 +214,9 @@
 	\subsection{Requisitos Não Funcionais}
 
 		\todo{texto}
+
+%----------------------------------------------------------------------------------------
+\section{Conclusão}
+
+\todo{texto}
 	
