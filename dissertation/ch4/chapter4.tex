@@ -1,0 +1,94 @@
+% Chapter 4
+
+\chapter{Análise} % Main chapter title
+\label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
+
+	Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados e é retratado um dos fluxos principais da solução onde é possível verificar a interação entre os diversos sistemas. São, ainda, identificados os pressupostos e restrições inerentes à solução proposta neste documento. \todo{Rever}
+
+%----------------------------------------------------------------------------------------
+\section{Metodologia Proposta}
+
+	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
+	
+	Assim, pretendemos conceber uma solução que, através de \gls{LLM}\textit{s}, seja capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Com a correlação de incidentes funcional, pretendemos gerar para o utilizador sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
+
+%	- Relembrar brevemente o problema identificado na revisão de literatura	
+% 	- Explicar a abordagem geral (ex.: uso de LLMs + histórico de incidentes)
+%	- Clarificar o propósito da metodologia (apoiar interpretação, análise e mitigação)
+%	- Indicar que se trata de uma proposta conceptual, a validar numa fase futura
+
+%----------------------------------------------------------------------------------------
+\section{Desenho da Solução}
+
+	Como referido anteriormente, o objetivo da solução passa por desenvolver um serviço capaz de integrar com diversos serviços externos, tais como:
+	
+	\begin{itemize}
+		\item Serviço de incidentes: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
+		\item Motor \gls{LLM}: outro elemento que devemos considerar como base da solução, visto que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar.
+	\end{itemize}
+	
+	Assim, a solução proposta combina a informação obtida do serviço de incidentes com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação. Nos capítulos seguintes é apresentada a implementação desta solução e a forma como será avaliado o seu desempenho.
+
+%----------------------------------------------------------------------------------------
+\section{Pressupostos e Restrições}
+
+	Projetos de soluções na área de \gls{TI}, apresentam sempre riscos suscetíveis de acontecer durante a sua implementação ou até características que restringem o desenvolvimento da proposta. Por esse motivo, torna-se importante definir, logo de inicio, informações que possa limitar o progresso do projeto e criar planos alternativos que nos permitam, de forma mais controlada, lidar ou contornar estes problemas.
+
+%----------------------------------------------------------------------------------------
+	\subsection{Pressupostos} \todo{Eliminar?}
+	
+		Durante o planeamento do projeto, nem todas as informações podem ser assumidas como certas, sendo que muitos dos fatores não são controlados pelos membros das equipas de desenvolvimento. Os pressupostos são um conjunto de suposições que se assume que se vão realizar mas, que têm algum risco associado. Por norma, quando estas hipóteses são confirmadas, tornam-se restrições do projeto, porém, quando não é possível confirmar a sua premissa, acabam por se tornar em riscos do projeto. Dessa forma, devem ser criados planos alternativos para evitar que os riscos possam se tornar em barreiras ao desenvolvimento da solução. Os pressupostos e os planos de contingências foram identificados na Tabela \ref{tab:pressupostos}.
+		
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{m{70mm} m{70mm}}
+				\hline
+				\textbf{Pressuposto} & \textbf{Plano Alternativo(s)} \\
+				\hline
+				O conjunto de dados será entregue por uma das equipas da \gls{CTW} num formato passível de utilização &  Plano B - Obter um conjunto de dados sobre incidentes online de plataformas reconhecidas, como \textit{Microsoft} \\
+				\hline
+				O motor \gls{LLM} a utilizar será disponibilizado pela \gls{CTW} de forma a não comprometer dados & Plano B - Compilar localmente um \gls{LLM} \newline \newline
+				Plano C - Utilizar um \gls{LLM} disponível com um \textit{dataset} sem informação confidencial \\
+				\hline
+			\end{tabular}
+			\caption[Pressupostos do Projeto]{Pressupostos do Projeto}
+			\label{tab:pressupostos}
+		\end{table}
+	
+%----------------------------------------------------------------------------------------
+	\subsection{Restrições} \todo{Passar para conclusão?}
+	
+		As restrições do projeto são fatores que limitam as opções a tomar durante o desenvolvimento da solução. Estes fatores não são negociáveis e por isso a sua identificação precoce, é essencial para avaliar o futuro e a qualidade que proposta pode ter.
+	
+		As restrições identificadas são:
+		\begin{enumerate}
+			\item Os dados presentes no \textit{dataset} fornecido pela empresa terão de ser parcialmente/totalmente anonimizados.
+		\end{enumerate}
+		
+%----------------------------------------------------------------------------------------
+\section{Dataset}
+\todo[inline]{Rever nome do capitulo}
+\todo[inline]{Fica aqui?}
+
+	\todo{texto}
+	
+	\subsection{Origem dos Incidentes}
+	
+	\subsection{Destino dos Incidentes}
+
+
+%----------------------------------------------------------------------------------------
+\section{Engenharia de Requisitos}
+
+	\todo{texto}
+
+%----------------------------------------------------------------------------------------
+	\subsection{Requisitos Funcionais}
+	
+		\todo{texto}
+	
+%----------------------------------------------------------------------------------------
+	\subsection{Requisitos Não Funcionais}
+
+		\todo{texto}
+	

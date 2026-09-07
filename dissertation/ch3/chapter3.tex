@@ -3,9 +3,10 @@
 \chapter{Futuros Desenvolvimentos} % Main chapter title
 \label{chap:Chapter3} % For referencing the chapter elsewhere, use \ref{chap:Chapter3} 
 
-%----------------------------------------------------------------------------------------
-Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados e é retratado um dos fluxos principais da solução onde é possível verificar a interação entre os diversos sistemas. Por fim, são identificados os pressupostos e restrições inerentes à solução proposta neste documento.
+\todo[inline]{Este capitulo ainda é preciso???}
+Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados e é retratado um dos fluxos principais da solução onde é possível verificar a interação entre os diversos sistemas. Por fim, são identificados os pressupostos e restrições inerentes à solução proposta neste documento. \todo{Rever}
 
+%----------------------------------------------------------------------------------------
 \section{Metodologia Proposta}
 
 	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
@@ -26,8 +27,7 @@ Neste capítulo, são abordados os próximos passos para o desenvolvimento da so
 	
 	\begin{itemize}
 		\item \textbf{Serviço de incidentes}: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
-		\item \textbf{Motor \gls{LLM}}: outro elemento que devemos considerar como base da solução, visto que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar;
-		\item \textbf{Serviço de \textit{logs}}: como observado na revisão de literatura, informação adicional como registos de eventos dos serviços pode alavancar a performance do motor \gls{LLM}, não sendo uma componente obrigatória mas tornando-se numa ajuda para a análise dos \gls{OCEs}. 
+		\item \textbf{Motor \gls{LLM}}: outro elemento que devemos considerar como base da solução, visto que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar.
 	\end{itemize}
 	
 	Para além dos serviços funcionais descritos, a solução proposta deve ainda ser exposta através de uma interface de acesso controlada e escalável. Desta forma, propomos a utilização de um \textit{API Gateway} (Gateway de API) para agir como uma porta de entrada do serviço, controlando autorizações e acessos, e gerir o tráfego de pedidos feitos à \gls{API}. Em paralelo, apresentamos a necessidade de um \textit{Load Balancer} (balanceador de carga) que ajuda a distribuir tráfego entre múltiplas instâncias do serviço, assegurando maior disponibilidade e tolerância a falhas.
