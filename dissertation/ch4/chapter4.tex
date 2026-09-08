@@ -3,7 +3,7 @@
 \chapter{Análise} % Main chapter title
 \label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
 
-	Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados e é retratado um dos fluxos principais da solução onde é possível verificar a interação entre os diversos sistemas. São, ainda, identificados os pressupostos e restrições inerentes à solução proposta neste documento. \todo{Rever}
+	Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados. \hl{São, ainda, identificados os pressupostos e restrições inerentes à solução proposta neste documento.} Também é abordada a estrutura e origem dos dados pertencentes ao \textit{dataset} assim como a apresentação dos requisitos funcionais e não funcionais que integram a engenharia de requisitos.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia Proposta}
@@ -203,20 +203,86 @@
 %----------------------------------------------------------------------------------------
 \section{Engenharia de Requisitos}
 
-	\todo{texto}
+	A engenharia de requisitos é uma etapa importante no desenvolvimento de software, uma vez que permite identificar e definir as principais funcionalidades do serviço e as condições que deve cumprir. Nesta fase são recolhidas e organizadas as necessidades do sistema, servindo posteriormente como base para o seu desenvolvimento e avaliação. Os requisitos podem ser divididos principalmente em requisitos funcionais e não funcionais.
 
 %----------------------------------------------------------------------------------------
 	\subsection{Requisitos Funcionais}
 	
-		\todo{texto}
+		Os requisitos funcionais descrevem as funcionalidades que o sistema deve disponibilizar e as ações que deve ser capaz de realizar. No contexto deste projeto, os requisitos estão relacionados principalmente com a receção e análise de incidentes, a procura de incidentes semelhantes, a utilização dessa informação pelo \gls{LLM} e a geração e priorização de sugestões de mitigação, visíveis na tabela \ref{tab:requisitos_funcionais}.
+		
+		Para definir a prioridade dos requisitos, foi utilizado o método \textit{MoSCoW}, que permite dividir os requisitos em quatro níveis de prioridade:
+		
+		\begin{itemize}
+			\item \textit{Must have} - Essencial para o funcionamento da solução;
+			\item \textit{Should have} - Importante mas não impede o funcionamento da solução caso não seja implementado;
+			\item \textit{Could have} - Pode ser incluído caso existam recursos e tempo disponíveis;
+			\item \textit{Won't have} - Não está nos planos do projeto.
+		\end{itemize}
+		
+		Esta classificação permite definir quais as funcionalidades que devem ser desenvolvidas primeiro e ajuda a manter o foco nos objetivos principais da solução.
+	
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{p{2.1cm}p{9cm}p{1.8cm}}
+				\hline
+				\textbf{Identificador} & \textbf{Descrição} & \textbf{Prioridade} \\
+				\hline
+				\textit{RF-01} & O sistema deve permitir receber um incidente para análise através do serviço de incidentes & Must have \\
+				\hline
+				\textit{RF-02} & O sistema deve obter os dados relevantes do incidente, incluindo a descrição, serviço afetado, severidade e outros campos disponíveis & Must have \\
+				\hline
+				\textit{RF-03} & O sistema deve procurar no histórico por incidentes relacionados com o incidente recebido & Must have \\
+				\hline
+				\textit{RF-04} & O sistema deve utilizar os incidentes relacionados como contexto para a análise realizada pelo \gls{LLM} & Must have \\
+				\hline
+				\textit{RF-05} & O sistema deve gerar um resumo do incidente em linguagem natural & Must have \\
+				\hline
+				\textit{RF-06} & O sistema deve gerar sugestões de mitigação com base na informação disponível e nos incidentes relacionados & Must have \\
+				\hline
+				\textit{RF-07} & O sistema deve ordenar as sugestões de mitigação de acordo com a sua relevância & Must have \\
+				\hline
+				\textit{RF-08} & O sistema deve apresentar a informação utilizada para suportar as sugestões geradas, permitindo consultar os incidentes relacionados & Must have \\
+				\hline
+				\textit{RF-09} & O sistema deve permitir identificar a equipa mais adequada para tratar o incidente, quando essa informação fizer parte do objetivo da solução & Should have \\
+				\hline
+				\textit{RF-10} & O sistema deve permitir configurar a utilização, ou não, de comentários e notas de analise dos incidentes & Should have \\
+				\hline
+				\textit{RF-11} & O sistema deve permitir configurar o modelo utilizado pela \gls{LLM} & Could have \\
+				\hline
+			\end{tabular}
+			\caption[Requisitos Funcionais]{Requisitos Funcionais}
+			\label{tab:requisitos_funcionais}
+		\end{table}
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Requisitos Não Funcionais}
 
-		\todo{texto}
+		Os requisitos não funcionais definem características que o sistema deve cumprir, mas que não estão diretamente relacionadas com uma funcionalidade específica. São, normalmente, considerados aspetos como o desempenho, a segurança, a fiabilidade e manutenção da solução, tal como os definidos na tabela \ref{tab:requisitos_nao_funcionais}. Estes requisitos são importantes para garantir que o sistema não só funciona corretamente, mas que também pode ser utilizado de forma adequada num ambiente real.
+
+		\begin{table}[H]
+			\centering
+			\begin{tabular}{p{2.2cm}p{11cm}}
+				\hline
+				\textbf{Identificador} & \textbf{Descrição} \\
+				\hline
+				\textit{RNF-01} & O sistema deve ser capaz de continuar a processar pedidos desde que os serviços externos necessários estejam disponíveis \\
+				\hline
+				\textit{RNF-02} & O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar \\
+				\hline
+				\textit{RNF-03} & O sistema deve estar organizado de forma a permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço \\
+				\hline
+				\textit{RNF-04} & O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis \\
+				\hline
+				\textit{RNF-05} & O sistema deve permitir identificar os incidentes utilizados como contexto para cada análise \\
+				\hline
+				\textit{RNF-06} & As respostas geradas devem apresentar um nível de qualidade adequado para apoiar a análise e resolução de incidentes \\
+				\hline
+			\end{tabular}
+			\caption[Requisitos não Funcionais]{Requisitos não Funcionais}
+			\label{tab:requisitos_nao_funcionais}
+		\end{table}
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-\todo{texto}
-	
+	Neste capitulo pudemos observar a metodologia adotada e o planeamento da solução a ser desenvolvida, sendo apresentados as funcionalidades principais e as integrações externas. Foram ainda apresentadas, estatísticas sobre o conjunto de dados que permitiram perceber qual a maior área de impacto do serviço. Por fim, foram apresentados requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido.
