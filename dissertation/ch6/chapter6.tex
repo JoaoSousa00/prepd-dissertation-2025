@@ -7,28 +7,63 @@
 
 %----------------------------------------------------------------------------------------
 \section{Stack Tecnológica}
-	\todo{todo}
+
+	No inicio do projeto foi realizada uma análise sobre quais as melhores
+	ferramentas e plataformas para o desenvolvimento do mesmo. Este capitulo apresenta as escolhas realizadas explicando os motivos de cada seleção.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Python}
-	
+		A linguagem Python foi escolhida para o desenvolvimento da solução principalmente pela sua forte utilização na área da Inteligência Artificial e pela variedade de bibliotecas disponíveis. Como o projeto envolve a utilização de \gls{LLM}s, processamento de texto e implementação de uma arquitetura \gls{RAG}, Python permite integrar estas diferentes componentes de forma relativamente simples.
+		
+		Outro fator importante foi a facilidade de integração com serviços externos. A solução necessita de comunicar com o serviço de incidentes, com o motor \gls{LLM} e com os restantes componentes utilizados na recuperação de informação. Python disponibiliza várias bibliotecas para comunicação através de APIs e para trabalhar com diferentes formatos de dados, o que facilita esta integração.
+		
+		A linguagem também permite desenvolver e testar diferentes abordagens sem uma grande complexidade. Isto é particularmente importante neste projeto, uma vez que serão avaliadas diferentes configurações da solução, como a utilização de diferentes estratégias de recuperação e diferentes formas de fornecer contexto ao \gls{LLM}. A existência de bibliotecas para testes, processamento de dados e avaliação dos resultados facilita ainda o desenvolvimento da componente experimental do trabalho.
+		
+		Por fim, e ainda mais importante, Python apresenta uma sintaxe simples e uma comunidade bastante ativa, o que facilita a implementação das diferentes funcionalidades. Tendo em conta estas características e as necessidades da solução, considerou-se que Python seria uma escolha adequada para implementar o serviço e testar as diferentes abordagens propostas.
+		
 	%----------------------------------------------------------------------------------------
 	\subsection{RAG}
-		Estrutural e porque nao usamo FT
+		A utilização de \gls{RAG} foi escolhida para permitir que o \gls{LLM} tenha acesso ao histórico de incidentes no momento da análise, sem depender apenas do conhecimento que o modelo possui. Esta abordagem é particularmente adequada ao problema em estudo, uma vez que os incidentes estão constantemente a ser criados e atualizados. Desta forma, novos incidentes podem ser utilizados como contexto sem ser necessário voltar a treinar o modelo.
+		
+		Para a recuperação dos incidentes optou-se por uma abordagem baseada na informação já disponível no \textit{ServiceNow}, em vez da utilização de \textit{embeddings}. A \gls{API} do serviço externo permite obter a lista de incidentes da equipa e os respetivos dados, sendo possível aplicar filtros e, posteriormente, ordenar os resultados pelos incidentes mais recentes. Esta abordagem é suficiente para o contexto deste projeto, uma vez que grande parte dos incidentes analisados (98.41\%) é gerada automaticamente pelos sistemas de monitorização e segue padrões semelhantes. Nestes casos, a utilização de uma pesquisa semântica através de \textit{embeddings} não apresenta uma vantagem clara face à utilização dos dados estruturados já disponíveis.
+		
+		Esta opção permite também manter o processo de recuperação mais simples e fácil de controlar. Em vez de criar e manter uma base de dados de \textit{embeddings}, os incidentes são obtidos diretamente da fonte de informação existente e filtrados de acordo com as necessidades da análise. Os incidentes selecionados são depois utilizados como contexto para o \gls{LLM}, que fica responsável por analisar a informação e gerar a resposta.
+		
+		A escolha de \gls{RAG} em vez de \textit{fine-tuning} está também relacionada com a natureza dos dados. O \textit{fine-tuning} permite adaptar o comportamento do modelo a uma determinada tarefa, mas não é a melhor opção quando o objetivo principal é fornecer informação que está constantemente a mudar. No caso dos incidentes, novos comentários e as respetivas resoluções surgem regularmente, o que obrigaria a atualizar o treino do modelo para acompanhar a informação mais recente. Com \gls{RAG}, essa informação pode ser obtida diretamente da fonte de dados e utilizada pelo modelo durante cada análise, sem necessidade de novo treino.
+		
+		Assim, a abordagem escolhida procura aproveitar a informação histórica já disponível no \textit{ServiceNow}, mantendo o processo de recuperação simples e permitindo que o \gls{LLM} tenha acesso a informação atualizada. O \textit{fine-tuning} poderia ser utilizado como complemento no futuro, caso fosse necessário adaptar o comportamento ou o formato das respostas do modelo.
 	
 	%----------------------------------------------------------------------------------------
 	\subsection{Langfuse}
+		Para acompanhar a utilização dos \gls{LLM}s foi utilizado o Langfuse, permitindo obter uma maior visibilidade sobre as operações realizadas durante cada pedido. A ferramenta permite acompanhar as diferentes chamadas ao modelo e os respetivos custos, tornando possível perceber quanto é gasto em cada etapa do processo de análise de um incidente.
+		
+		Esta informação é importante para a avaliação da solução, uma vez que permite calcular o custo associado a cada pedido e identificar quais as operações que têm maior impacto no consumo. Desta forma, é possível não só acompanhar os custos da solução, mas também identificar oportunidades de otimização.
+		
+		A utilização do Langfuse permite ainda que esta análise possa ser expandida no futuro. Para além do custo por pedido, poderão ser analisadas outras dimensões, como os custos associados a diferentes utilizadores, sessões ou tipos de operação. Isto permite obter uma visão mais detalhada sobre a utilização do sistema e apoiar futuras decisões de otimização.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia de Implementação}
-	\todo{Falar SDD}
+	\todo{todo}
+	
+	\subsection{Spec Driven Development}
+	
+		
 	
 	\subsection{Limitações}
+		
+		
 	
 	\subsection{Agentic \gls{SDD}}
 	
+		
+	
 	\subsection{Specs}
 	% mais sub capitulos...
+		
+	
+	\subsection{Validação}
+	
+		
 
 %----------------------------------------------------------------------------------------
 \section{Estrutura}
