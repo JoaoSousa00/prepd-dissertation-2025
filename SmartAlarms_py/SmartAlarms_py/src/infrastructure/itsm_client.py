@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
-import httpx
+import httpx2 as httpx
 
 from src.domain.incident import (
     BaseIncident,

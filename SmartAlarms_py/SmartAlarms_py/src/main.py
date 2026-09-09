@@ -29,7 +29,7 @@ logging.basicConfig(
 
 # Suppress noisy HTTP library debug logs even when application DEBUG logging is enabled.
 logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx2").setLevel(logging.WARNING)
 
 
 @asynccontextmanager

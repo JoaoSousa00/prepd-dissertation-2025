@@ -1,27 +1,30 @@
 # SmartAlarms Requirements
 
 **Status:** Draft v1  
-**Last updated:** 2026-08-21  
-**Scope:** Academic incident analysis service for CI/IDE and API usage
+**Last updated:** 2026-09-09  
+**Scope:** Academic incident analysis service for incident analysis and mitigation support
 
 ## 1) Product Goal
 
-SmartAlarms provides incident analysis and mitigation support for developers in an academic context, helping teams understand incidents faster and resolve them more efficiently through a modular pipeline with controllable external integrations.
+SmartAlarms provides incident analysis and mitigation support in an academic context, helping teams understand incidents
+faster by retrieving related history, using that context in an LLM, and generating prioritized mitigation suggestions.
 
 ## 2) In Scope
 
-- Analyze incident context and produce actionable diagnosis and mitigation suggestions.
-- Provide an API endpoint that enriches and analyzes incidents by ID.
-- Keep source-selection policy server-side in the initial version (no per-request source toggles).
-- Keep architecture aligned with layered design (`domain`, `infrastructure`, `presentation`, `shared`).
-- Measure token usage, latency, and source usage for experiments and evaluation.
+- Receive incidents for analysis through the incident service.
+- Fetch relevant incident data, including description, affected service, severity, and other available fields.
+- Search incident history for related incidents.
+- Use related incidents as context for the LLM.
+- Generate a natural-language incident summary.
+- Generate and prioritize mitigation suggestions.
+- Expose the information used to support the generated suggestions.
 
 ## 3) Out of Scope (Current)
 
-- Persistent database for long-term state/cache.
-- Autonomous remediation execution in production systems.
-- Full enterprise SLA/SLO commitments.
-- Mandatory dependency on all external systems for every analysis request.
+- Automatic remediation execution.
+- Enterprise SLA/SLO commitments.
+- Mandatory use of every external source on every request.
+- Full semantic search / vector-based retrieval as a requirement.
 
 ## 4) Runtime and Hosting Assumptions
 
@@ -30,68 +33,63 @@ SmartAlarms provides incident analysis and mitigation support for developers in 
 
 ## 5) Functional Requirements
 
-### 4.1 Entry Points
-
-- **FR-1.1 API analysis trigger:** users can request incident enrichment and analysis via `GET /incident/details`.
-- **FR-1.2 IDE/automation compatibility:** endpoint and service design must support IDE-assisted and automation-driven workflows.
-
-### 4.2 Analysis via GET Details Endpoint
-
-- **FR-2.1 Request model:** endpoint accepts one or more `incidentIds` query parameters.
-- **FR-2.2 Response model:** endpoint returns incident details enriched with analysis outputs relevant to mitigation (for example mitigation suggestions and related log/event references).
-- **FR-2.3 Incident details availability:** analysis must be based on incident data fetched from the primary incident record (and optional related history when available).
-- **FR-2.4 Graceful degradation:** if an optional source is unavailable, pipeline continues with available sources and still returns a valid response for found incidents.
-- **FR-2.5 Source policy:** source enablement is controlled by server configuration/default behavior in this phase; client-side per-request toggles are deferred.
-
-### 4.3 Data & Services Layer
-
-- **FR-3.1 Cache:** in-memory cache only; configurable TTL for expensive artifacts (guideline summaries, normalized context).
-- **FR-3.2 ITSM integration adapter:** fetch incident data and optional historical context.
-- **FR-3.3 Logs integration adapter:** fetch relevant operational signals from configured log providers.
-- **FR-3.4 Confluence integration adapter:** fetch operational knowledge/guidelines when enabled.
-- **FR-3.5 LLM gateway:** provider abstraction for analysis/summarization tasks.
-- **FR-3.6 Isolation by layer:** all external API calls remain in `infrastructure` adapters only.
-- **FR-3.7 Shared state boundary:** state in shared components is reserved for observability and tracing context only, never for business/domain state.
+- **FR-01:** The system must allow an incident to be received for analysis through the incident service.
+- **FR-02:** The system must retrieve the relevant incident data, including the description, affected service, severity,
+  and other available fields.
+- **FR-03:** The system must search the history for incidents related to the received incident.
+- **FR-04:** The system must use the related incidents as context for the analysis performed by the \gls{LLM}.
+- **FR-05:** The system must generate a natural-language summary of the incident.
+- **FR-06:** The system must generate mitigation suggestions based on the available information and the related
+  incidents.
+- **FR-07:** The system must order the mitigation suggestions according to their relevance.
+- **FR-08:** The system must present the information used to support the generated suggestions, allowing the related
+  incidents to be consulted.
+- **FR-09:** The system must allow the most suitable team to be identified for handling the incident, when that
+  information is part of the solution's objective.
+- **FR-10:** The system must allow the use, or not, of incident comments and analysis notes to be configured.
+- **FR-11:** The system must allow the model used by the \gls{LLM} to be configured.
 
 ## 6) Pipeline Constraints (Efficiency)
 
 - Source filtering and normalization happen before expensive LLM calls.
 - Prompt construction must be incident-focused and bounded by configurable size limits.
-- Cache use must prioritize repeated guideline/context reuse.
-- Startup warmup is best-effort; system falls back to on-demand fetch and cache.
+- The system should prioritize reuse of repeated incident context where available.
 
 ## 7) Non-Functional Requirements
 
-- **NFR-1 Academic scale:** support classroom/lab workloads with concurrent users.
-- **NFR-2 Reliability:** partial-source failures do not block full response generation.
-- **NFR-3 Observability:** tracing + metrics + token/cost attribution per analysis.
-- **NFR-4 Security:** secrets through environment/secret manager; no hardcoded credentials.
-- **NFR-5 Extensibility:** new providers/sources can be added without rewriting core orchestration.
+- **NFR-01:** The system must be able to continue processing requests as long as the required external services are
+  available.
+- **NFR-02:** The system must not expose confidential incident information to users or services that are not authorized
+  to access it.
+- **NFR-03:** The system must be organized so that external services can be added, replaced, or removed without
+  impacting the rest of the service.
+- **NFR-04:** The system must limit the amount of information sent to the \gls{LLM} in order to keep the cost of each
+  analysis within acceptable values.
+- **NFR-05:** The system must allow the incidents used as context for each analysis to be identified.
+- **NFR-06:** The generated responses must provide a quality level suitable for supporting incident analysis and
+  resolution.
 
 ## 8) Observability & Cost Requirements
 
-- Track `tokens_in`, `tokens_out`, model name, latency, cache hit/miss per request.
-- Track source usage fields internally: `logs_used`, `confluence_used`, `itsm_history_used`.
+- Track `tokens_in`, `tokens_out`, model name, and latency per request.
+- Track which historical incidents were used as context.
 - Attribute requests by `user` (when available), `workflow`, and `credential_source`.
-- Export metrics to Prometheus-compatible format and traces to OTel/Langfuse-compatible backends.
 
 ## 9) Success Metrics
 
 - Reduced mean time to understand incidents in evaluation scenarios.
 - Higher relevance of mitigation suggestions in human assessment.
-- Lower token consumption when optional sources are disabled versus full-source baseline.
-- Stable p95 latency under expected academic concurrency.
+- Clear traceability of the incidents used as context.
+- Stable response quality when optional historical context is available or absent.
 
 ## 10) Assumptions
 
-- Incident identifiers (`incidentIds`) are sufficient to fetch minimum context for baseline analysis.
+- Incident identifiers are sufficient to fetch minimum context for baseline analysis.
 - External systems (ITSM/logs/Confluence) may be intermittently unavailable.
-- Analysis depth is controlled by server defaults/configuration in the initial version.
 - The system can run useful analysis even with only incident-local data.
 
 ## 11) Open Questions
 
-- Whether source toggles should be reintroduced later (and if so, via query parameters, headers, or a separate endpoint contract).
+- Whether source toggles should be reintroduced later.
 - Confidence scoring strategy and thresholds for low-confidence guidance.
-- Default toggle policy per workflow (API direct vs IDE-assisted).
 - Minimum dataset and benchmark protocol for academic evaluation.

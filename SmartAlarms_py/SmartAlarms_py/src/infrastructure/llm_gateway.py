@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import httpx
+import httpx2 as httpx
 
 from src.domain.llm import (
     IncidentEnrichment,

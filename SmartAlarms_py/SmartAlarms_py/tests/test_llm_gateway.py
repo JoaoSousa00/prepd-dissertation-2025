@@ -2,7 +2,7 @@ import json
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2 as httpx
 import pytest
 
 from src.domain.llm import (
@@ -76,7 +76,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
         
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = token_response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -113,7 +113,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
         
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = token_response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -128,7 +128,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
     def test_get_access_token_auth_endpoint_unavailable(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.side_effect = httpx.NetworkError("Connection failed")
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -142,7 +142,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
         
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = error_response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -161,7 +161,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
         
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = invalid_response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -184,7 +184,7 @@ class TestGaiaLlmGatewayAdapterAuthentication:
         adapter_a = GaiaLlmGatewayAdapter(settings=llm_settings)
         adapter_b = GaiaLlmGatewayAdapter(settings=llm_settings)
 
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = token_response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -735,7 +735,7 @@ class TestGaiaLlmGatewayAdapterRetries:
             httpx.Response(status_code=200, json={"choices": [{"message": {"content": "ok"}}]}),
         ]
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.side_effect = responses
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -764,7 +764,7 @@ class TestGaiaLlmGatewayAdapterRetries:
             json=response_payload,
         )
 
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.return_value = response
             mock_client_class.return_value.__enter__.return_value = mock_instance
@@ -793,7 +793,7 @@ class TestGaiaLlmGatewayAdapterRetries:
         
         adapter = GaiaLlmGatewayAdapter(settings=settings)
         
-        with patch("httpx.Client") as mock_client_class:
+        with patch("src.infrastructure.llm_gateway.httpx.Client") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.post.side_effect = [
                 httpx.Response(status_code=503),
