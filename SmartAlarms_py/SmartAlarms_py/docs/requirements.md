@@ -15,6 +15,11 @@ faster by retrieving related history, using that context in an LLM, and generati
 - Fetch relevant incident data, including description, affected service, severity, and other available fields.
 - Search incident history for related incidents.
 - Use related incidents as context for the LLM.
+- Use a preliminary LLM pass over the full incident payload to discover related incidents and a Confluence search term.
+- Search service documentation in Confluence only within the `CD Location Services` space and summarize matching pages
+  and subpages before the final enrichment call.
+- Return Confluence page references at the incident level and inside each suggestion so users can open the source pages
+  directly.
 - Generate a natural-language incident summary.
 - Generate and prioritize mitigation suggestions.
 - Expose the information used to support the generated suggestions.
@@ -48,6 +53,11 @@ faster by retrieving related history, using that context in an LLM, and generati
   information is part of the solution's objective.
 - **FR-10:** The system must allow the use, or not, of incident comments and analysis notes to be configured.
 - **FR-11:** The system must allow the model used by the \gls{LLM} to be configured.
+- **FR-12:** The system must use a preliminary LLM prompt to discover relevant related incidents and a Confluence
+  documentation search string from the incident context.
+- **FR-13:** The system must search Confluence documentation only within the `CD Location Services` space and summarize
+  the returned page content, including subpages, before passing it to the final enrichment LLM call.
+- **FR-14:** The system must return `relatedPages` for the incident and for each suggestion, with full Confluence URLs.
 
 ## 6) Pipeline Constraints (Efficiency)
 
@@ -73,6 +83,8 @@ faster by retrieving related history, using that context in an LLM, and generati
 
 - Track `tokens_in`, `tokens_out`, model name, and latency per request.
 - Track which historical incidents were used as context.
+- Track which Confluence pages and subpages were used as documentation context.
+- Track the page URLs exposed in incident and suggestion `relatedPages`.
 - Attribute requests by `user` (when available), `workflow`, and `credential_source`.
 
 ## 9) Success Metrics
