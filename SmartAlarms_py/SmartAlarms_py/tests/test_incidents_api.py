@@ -156,6 +156,7 @@ class TestIncidentDetailsEndpoint:
         assert incident["id"] == "INC000000000001"
         assert incident["shortDescription"] == "Billing API latency spike"
         assert incident["description"] == "Billing API requests exceeded the expected latency threshold."
+        assert incident["relatedPages"] == []
         assert incident["requestLatencyMs"] is not None
 
     def test_endpoint_returns_contract_aligned_response(self, client):
@@ -167,8 +168,10 @@ class TestIncidentDetailsEndpoint:
         payload = response.json()
         assert len(payload["incidents"]) == 2
         assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["relatedPages"] == []
         assert payload["incidents"][0]["requestLatencyMs"] is not None
         assert payload["incidents"][1]["id"] == "INC000000000002"
+        assert payload["incidents"][1]["relatedPages"] == []
         assert payload["incidents"][1]["requestLatencyMs"] is not None
 
     def test_endpoint_accepts_multiple_incident_ids(self, client):
@@ -188,6 +191,7 @@ class TestIncidentDetailsEndpoint:
         payload = response.json()
         assert len(payload["incidents"]) == 1
         assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["relatedPages"] == []
         assert payload["incidents"][0]["requestLatencyMs"] is not None
 
     def test_missing_credentials_return_401(self, unauthorized_client):
@@ -245,6 +249,7 @@ class TestIncidentDetailsLlmEnrichment:
         assert incident["description"] == "Billing API requests exceeded the expected latency threshold."
         assert incident["summary"] == "Summary for INC000000000001"
         assert incident["relatedIncidents"] == ["INC000000000111", "INC000000000222"]
+        assert incident["relatedPages"] == []
         assert incident["resolutionSuggestions"] == [
             {
                 "confidence": "evidence-based",
@@ -252,6 +257,7 @@ class TestIncidentDetailsLlmEnrichment:
                 "mitigation": "Restart impacted worker pods.",
                 "resolutionNote": "Restarted impacted worker pods and queue normalized.",
                 "relatedIncidents": ["INC000000000111"],
+                "relatedPages": [],
             }
         ]
         assert incident["llmUsage"] == {
@@ -272,6 +278,7 @@ class TestIncidentDetailsLlmEnrichment:
         payload = response.json()
         assert len(payload["incidents"]) == 1
         assert payload["incidents"][0]["id"] == "INC000000000001"
+        assert payload["incidents"][0]["relatedPages"] == []
         assert payload["incidents"][0]["requestLatencyMs"] is not None
 
 

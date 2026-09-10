@@ -91,6 +91,24 @@
   },
   "components": {
     "schemas": {
+      "RelatedPageData": {
+        "type": "object",
+        "description": "Confluence page reference with a user-openable URL",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Confluence page title",
+            "example": "Worker troubleshooting guide"
+          },
+          "url": {
+            "type": "string",
+            "description": "Full user-openable Confluence URL",
+            "example": "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=123456"
+          }
+        }
+      },
       "ResolutionSuggestion": {
         "type": "object",
         "description": "Structured mitigation suggestion with confidence, actions, resolution note, and source evidence",
@@ -123,6 +141,13 @@
               "type": "string"
             },
             "example": ["INC000000000001", "INC000000000002"]
+          },
+          "relatedPages": {
+            "type": "array",
+            "description": "Relevant Confluence pages for this suggestion, with full URLs",
+            "items": {
+              "$ref": "#/components/schemas/RelatedPageData"
+            }
           }
         }
       },
@@ -204,6 +229,13 @@
               "type": "string"
             },
             "example": ["INC000000000001", "INC000000000002"]
+          },
+          "relatedPages": {
+            "type": "array",
+            "description": "Relevant Confluence pages for the incident, including full URLs",
+            "items": {
+              "$ref": "#/components/schemas/RelatedPageData"
+            }
           },
           "resolutionSuggestions": {
             "type": "array",

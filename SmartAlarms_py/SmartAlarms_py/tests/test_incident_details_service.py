@@ -1,6 +1,7 @@
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident
+from src.domain.confluence import RelatedPage
 from src.domain.llm import (
     IncidentEnrichment,
     LlmGatewayUnavailableError,
@@ -124,6 +125,57 @@ def test_fetch_incident_details_with_llm_adds_enrichment_fields():
     assert details[0].llm_usage is not None
     assert details[0].llm_usage.tokens_total == 125
     assert details[0].request_latency_ms is not None
+
+
+def test_incident_related_pages_are_aggregated_from_suggestion_related_pages_only():
+    class RelatedPagesGateway:
+        def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
+            return IncidentEnrichment(
+                summary=LlmSummary(text=f"Summary for {incident_id}"),
+                related_pages=[
+                    RelatedPage(title="Top-level page", url="https://example.com/top-level"),
+                ],
+                mitigation_suggestions=[
+                    MitigationSuggestion(
+                        confidence="evidence-based",
+                        investigation="Check docs.",
+                        mitigation="Apply fix.",
+                        resolution_note="Applied.",
+                        related_pages=[
+                            RelatedPage(title="Runbook A", url="https://example.com/a"),
+                            RelatedPage(title="Runbook B", url="https://example.com/b"),
+                        ],
+                    ),
+                    MitigationSuggestion(
+                        confidence="reasoned fallback",
+                        investigation="Cross-check docs.",
+                        mitigation="Validate behavior.",
+                        resolution_note="Validated.",
+                        related_pages=[
+                            RelatedPage(title="Runbook A", url="https://example.com/a"),
+                        ],
+                    ),
+                ],
+            )
+
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(
+            FakeIncidentSource(
+                incidents={
+                    "INC0001": BaseIncident(
+                        id="INC0001",
+                        short_description="API latency spike",
+                        description="Requests slowed down during load peak.",
+                    )
+                }
+            )
+        ),
+        llm_gateway=RelatedPagesGateway(),
+    )
+
+    details = service.fetch_incident_details(["INC0001"])
+
+    assert [page.title for page in details[0].related_pages] == ["Runbook A", "Runbook B"]
 
 
 def test_fetch_incident_details_with_failing_llm_returns_base_data():

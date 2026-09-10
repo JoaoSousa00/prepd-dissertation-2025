@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import IncidentSourceUnauthorizedError
+from src.infrastructure.confluence_client import ConfluenceClient
 from src.infrastructure.itsm_client import ItsmIncidentSourceAdapter
 from src.infrastructure.llm_gateway import GaiaLlmGatewayAdapter
 from src.shared.http.models import (
@@ -13,6 +14,7 @@ from src.shared.http.models import (
     ErrorResponse,
     IncidentData,
     LlmUsageData,
+    RelatedPageData,
     ResolutionSuggestion,
 )
 from src.shared.observability import get_current_request_context
@@ -101,6 +103,7 @@ async def get_incident_details(
                 description=incident.description,
                 summary=incident.summary,
                 relatedIncidents=incident.related_incidents or None,
+                relatedPages=[RelatedPageData(title=page.title, url=page.url) for page in incident.related_pages],
                 resolutionSuggestions=[
                     ResolutionSuggestion(
                         confidence=suggestion.confidence,
@@ -108,6 +111,7 @@ async def get_incident_details(
                         mitigation=suggestion.mitigation,
                         resolutionNote=suggestion.resolution_note,
                         relatedIncidents=suggestion.related_incidents,
+                        relatedPages=[RelatedPageData(title=page.title, url=page.url) for page in suggestion.related_pages],
                     )
                     for suggestion in incident.resolution_suggestions
                 ]
@@ -138,6 +142,7 @@ def get_incident_details_service(request: Request) -> IncidentDetailsService:
         service = IncidentDetailsService(
             incident_fetching_service=incident_fetching_service,
             llm_gateway=llm_gateway,
+            confluence_source=ConfluenceClient(),
         )
         request.app.state.incident_details_service = service
     return service

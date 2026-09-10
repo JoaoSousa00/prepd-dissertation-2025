@@ -1,5 +1,11 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class RelatedPageData(BaseModel):
+    title: str = Field(..., description="Confluence page title")
+    url: str = Field(..., description="Full user-openable Confluence URL")
 
 
 class LlmUsageData(BaseModel):
@@ -31,10 +37,11 @@ class ResolutionSuggestion(BaseModel):
                 "mitigation": "Restart impacted worker pods and validate queue drain.",
                 "resolutionNote": "Restarted worker deployment after queue spike and validated normal throughput.",
                 "relatedIncidents": ["INC000000000001", "INC000000000002"],
+                "relatedPages": [{"title": "Worker health guide", "url": "https://atc..."}],
             }
         }
     )
-    
+
     confidence: Optional[str] = Field(
         None,
         description="Suggestion confidence label: evidence-based or reasoned fallback",
@@ -54,6 +61,10 @@ class ResolutionSuggestion(BaseModel):
     relatedIncidents: List[str] = Field(
         default_factory=list, description="The list of incidents that led to this suggestion"
     )
+    relatedPages: List[RelatedPageData] = Field(
+        default_factory=list,
+        description="Relevant Confluence documentation for this suggestion, including full URLs",
+    )
 
 
 class IncidentData(BaseModel):
@@ -65,11 +76,12 @@ class IncidentData(BaseModel):
                 "description": "The tasks from ECS of the service billing-api were increasing CPU usage due to high requests.",
                 "summary": "The billing API is experiencing elevated CPU due to request spikes on /endpoint.",
                 "relatedIncidents": ["INC000000000001", "INC000000000002"],
+                "relatedPages": [{"title": "API troubleshooting doc", "url": "https://atc..."}],
                 "resolutionSuggestions": [],
             }
         }
     )
-    
+
     id: str = Field(..., description="The unique incident identifier")
     shortDescription: Optional[str] = Field(
         None, description="A small description of what the incident is about"
@@ -82,6 +94,10 @@ class IncidentData(BaseModel):
     )
     relatedIncidents: Optional[List[str]] = Field(
         None, description="Related incident references when available"
+    )
+    relatedPages: List[RelatedPageData] = Field(
+        default_factory=list,
+        description="Relevant Confluence pages for the incident, including full URLs",
     )
     resolutionSuggestions: Optional[List[ResolutionSuggestion]] = Field(
         None, description="The list of ordered suggestions to mitigate the incident"
@@ -109,7 +125,7 @@ class DetailsResponse(BaseModel):
             }
         }
     )
-    
+
     incidents: List[IncidentData] = Field(
         default_factory=list, description="List with incident details"
     )
@@ -125,7 +141,7 @@ class ErrorResponse(BaseModel):
             }
         }
     )
-    
+
     message: str = Field(..., description="Error message")
     code: Optional[str] = Field(None, description="Error code")
     details: Optional[List[str]] = Field(None, description="Additional error details")

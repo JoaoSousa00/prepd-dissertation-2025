@@ -6,9 +6,10 @@ import time
 from datetime import UTC, datetime
 from typing import Iterable, List, Optional
 
+from src.domain.confluence import ConfluenceSourceAdapter, RelatedPage
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident, IncidentDetails, ResolutionSuggestion
-from src.domain.llm import LlmGateway, LlmGatewayError
+from src.domain.llm import DiscoveryResult, LlmGateway, LlmGatewayError
 from src.shared.observability import bind_request_context, get_current_request_context, log_request_summary
 
 logger = logging.getLogger(__name__)
@@ -22,9 +23,11 @@ class IncidentDetailsService:
         self,
         incident_fetching_service: IncidentFetchingService,
         llm_gateway: Optional[LlmGateway] = None,
+        confluence_source: Optional[ConfluenceSourceAdapter] = None,
     ):
         self._incident_fetching_service = incident_fetching_service
         self._llm_gateway = llm_gateway
+        self._confluence_source = confluence_source
 
     def fetch_incident_details(self, incident_ids: Iterable[str]) -> List[IncidentDetails]:
         context = get_current_request_context()
@@ -59,7 +62,32 @@ class IncidentDetailsService:
 
             related_context = self._build_context_snapshot(incident)
             main_incident_context = self._build_main_incident_context(incident)
+            discovery_result: Optional[DiscoveryResult] = None
+            confluence_documentation_context = None
+            confluence_related_pages_context = None
             if self._llm_gateway is not None:
+                discover_related_context = getattr(self._llm_gateway, "discover_related_context", None)
+                if callable(discover_related_context):
+                    try:
+                        discovery_result = discover_related_context(
+                            incident_id=incident.id,
+                            short_description=incident.short_description,
+                            description=incident.description,
+                            main_incident_context=main_incident_context,
+                        )
+                        if discovery_result.related_incidents:
+                            related_context["related_incident_context"] = (
+                                related_context["related_incident_context"]
+                                + "\nDiscovery LLM identified additional related incidents: "
+                                + ", ".join(discovery_result.related_incidents)
+                            )
+                        if self._confluence_source is not None and discovery_result.confluence_search_query:
+                            confluence_context = self._collect_confluence_context(discovery_result.confluence_search_query)
+                            confluence_documentation_context = confluence_context["documentation_context"]
+                            confluence_related_pages_context = confluence_context["related_pages_context"]
+                    except (LlmGatewayError, TypeError):
+                        discovery_result = None
+
                 try:
                     try:
                         enrichment = self._llm_gateway.enrich_incident(
@@ -69,6 +97,8 @@ class IncidentDetailsService:
                             main_incident_context=main_incident_context,
                             related_incident_context=related_context["related_incident_context"],
                             same_title_incident_context=related_context["same_title_incident_context"],
+                            confluence_documentation_context=confluence_documentation_context,
+                            confluence_related_pages_context=confluence_related_pages_context,
                             use_fallback_prompt=bool(context and context.fallback_triggered),
                         )
                     except TypeError:
@@ -88,6 +118,8 @@ class IncidentDetailsService:
                 else:
                     detail.summary = enrichment.summary.text if enrichment.summary else None
                     detail.related_incidents = list(dict.fromkeys(enrichment.related_incidents))
+                    if discovery_result is not None and discovery_result.related_incidents:
+                        detail.related_incidents = list(dict.fromkeys(detail.related_incidents + discovery_result.related_incidents))
                     detail.resolution_suggestions = [
                         ResolutionSuggestion(
                             confidence=suggestion.confidence,
@@ -95,9 +127,17 @@ class IncidentDetailsService:
                             mitigation=suggestion.mitigation,
                             resolution_note=suggestion.resolution_note,
                             related_incidents=suggestion.related_incidents,
+                            related_pages=suggestion.related_pages,
                         )
                         for suggestion in enrichment.mitigation_suggestions
                     ]
+                    detail.related_pages = self._dedupe_related_pages(
+                        [
+                            page
+                            for suggestion in detail.resolution_suggestions
+                            for page in suggestion.related_pages
+                        ]
+                    )
                     detail.llm_usage = enrichment.usage
                     if context is not None and enrichment.usage is not None:
                         context.record_llm_usage(
@@ -120,6 +160,65 @@ class IncidentDetailsService:
         if emit_summary:
             log_request_summary()
         return details
+
+    def _collect_confluence_context(self, search_query: str) -> dict[str, object]:
+        if self._confluence_source is None:
+            return {
+                "documentation_context": "No Confluence documentation context was available.",
+                "related_pages_context": "No relevant Confluence pages were found.",
+                "related_pages": [],
+            }
+        try:
+            matched_pages = self._confluence_source.search_pages(search_query, limit=25)
+            flattened: list[RelatedPage] = []
+            for page in matched_pages:
+                tree = self._confluence_source.fetch_page_tree(page.id)
+                if tree is None:
+                    continue
+                flattened.extend(self._flatten_confluence_tree(tree))
+            related_pages = self._dedupe_related_pages(flattened)
+            if not related_pages:
+                return {
+                    "documentation_context": "No Confluence documentation context was available for this incident.",
+                    "related_pages_context": "No relevant Confluence pages were found.",
+                    "related_pages": [],
+                }
+            documentation_context = "\n".join(
+                f"- {page.title}: {page.url}" for page in related_pages[:10]
+            )
+            return {
+                "documentation_context": documentation_context,
+                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in related_pages),
+                "related_pages": related_pages,
+            }
+        except Exception as exc:  # pragma: no cover - defensive fallback for missing external access
+            logger.warning("Confluence lookup failed for query %r: %s", search_query, exc)
+            return {
+                "documentation_context": "No Confluence documentation context was available because the lookup failed.",
+                "related_pages_context": "No relevant Confluence pages were found.",
+                "related_pages": [],
+            }
+
+    @staticmethod
+    def _flatten_confluence_tree(page: object) -> list[RelatedPage]:
+        if page is None:
+            return []
+        pages: list[RelatedPage] = [RelatedPage(title=getattr(page, "title", ""), url=getattr(page, "url", ""))]
+        for child in getattr(page, "children", []) or []:
+            pages.extend(IncidentDetailsService._flatten_confluence_tree(child))
+        return [p for p in pages if p.title and p.url]
+
+    @staticmethod
+    def _dedupe_related_pages(pages: list[RelatedPage]) -> list[RelatedPage]:
+        deduped: list[RelatedPage] = []
+        seen: set[tuple[str, str]] = set()
+        for page in pages:
+            key = (page.title, page.url)
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(page)
+        return deduped
 
     def _build_context_snapshot(self, incident: BaseIncident) -> dict[str, str]:
         related_numbers = self._discover_related_numbers(incident)

@@ -248,6 +248,21 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
 
         assert prompt == "ID=INC123|SHORT=Short text|DESC=Detailed text|MAIN=Main context"
 
+    def test_build_discovery_prompt_escapes_json_example_braces(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        prompt = adapter._build_discovery_prompt(
+            incident_id="INC123",
+            short_description="API latency",
+            description="Users report timeouts",
+            main_incident_context="Main incident context with stack traces",
+        )
+
+        assert "Incident ID: INC123" in prompt
+        assert '"related_incidents"' in prompt
+        assert '"service_name"' in prompt
+        assert "Main incident context with stack traces" in prompt
+
     def test_build_prompt_uses_fallback_template_when_requested(self, llm_settings, tmp_path):
         prompt_file = tmp_path / "incident_enrichment_prompt.txt"
         prompt_file.write_text("STANDARD={same_title_incident_context}", encoding="utf-8")
@@ -710,6 +725,91 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         assert enrichment.summary is None
         assert enrichment.related_incidents == []
         assert len(enrichment.mitigation_suggestions) == 0
+
+    def test_parse_llm_response_parses_related_pages(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "summary": "The service is unstable.",
+                        "related_incidents": ["INC002"],
+                        "related_pages": [{"title": "Regional outage guide", "url": "https://example.com/page-1"}],
+                        "mitigation_suggestions": [{
+                            "Confidence": "evidence-based",
+                            "Investigation": "Check the service dashboard.",
+                            "Mitigation": "Restart the worker pod.",
+                            "Resolution_note": "Restarted the pod and validated the queue.",
+                            "related_incidents": ["INC002"],
+                            "related_pages": [{"title": "Regional outage guide", "url": "https://example.com/page-1"}],
+                        }],
+                    })
+                }
+            }]
+        }
+
+        enrichment = adapter._parse_llm_response(response)
+
+        assert enrichment.related_pages[0].title == "Regional outage guide"
+        assert enrichment.mitigation_suggestions[0].related_pages[0].url == "https://example.com/page-1"
+
+    def test_parse_discovery_response_handles_confluence_search_query(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "related_incidents": ["INC004", "INC005", "INC004"],
+                        "confluence_search_query": "billing api timeout queue",
+                    })
+                }
+            }]
+        }
+
+        discovery = adapter._parse_discovery_response(response)
+
+        assert discovery.related_incidents == ["INC004", "INC005"]
+        assert discovery.confluence_search_query == "place search"
+
+    def test_parse_discovery_response_prioritizes_service_name(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "related_incidents": ["INC004"],
+                        "service_name": "places-public",
+                        "confluence_search_query": "long noisy text that should be ignored",
+                    })
+                }
+            }]
+        }
+
+        discovery = adapter._parse_discovery_response(response)
+
+        assert discovery.related_incidents == ["INC004"]
+        assert discovery.confluence_search_query == "place search"
+
+    def test_parse_discovery_response_extracts_service_like_token(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "related_incidents": [],
+                        "confluence_search_query": "LOS EMEA prod API Gateway 4XX places-public get v5 translations",
+                    })
+                }
+            }]
+        }
+
+        discovery = adapter._parse_discovery_response(response)
+
+        assert discovery.confluence_search_query == "place search"
 
 
 class TestGaiaLlmGatewayAdapterRetries:

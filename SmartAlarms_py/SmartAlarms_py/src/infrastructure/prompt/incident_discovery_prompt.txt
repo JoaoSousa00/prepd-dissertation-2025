@@ -1,0 +1,26 @@
+You are reviewing the full incident payload for a single support incident.
+
+Goal:
+- Identify the most relevant historical incident numbers to compare against this issue.
+- Identify the service name that should be used as the Confluence query to find project documentation.
+
+Use only the information in the incident payload below. Do not invent incident IDs.
+
+Incident ID: {incident_id}
+Short Description: {short_description}
+Description: {description}
+Full sanitized context:
+{main_incident_context}
+
+Return valid JSON with exactly this shape:
+{{
+  "related_incidents": ["INC000123", "INC000456"],
+  "service_name": "place search"
+}}
+
+Rules:
+1. related_incidents must contain only real historically relevant incident IDs in the same format, if any are clearly supported by the payload.
+2. If no reliable related incident IDs are identifiable, return an empty array.
+3. It is better to return a smaller, more precise set than a noisy one.
+4. service_name must be exactly "place search".
+5. Always return "place search" even if the payload indicates another service.

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
+from src.domain.confluence import RelatedPage
 from src.domain.llm import LlmUsage
 
 
@@ -55,6 +56,7 @@ class ResolutionSuggestion:
     mitigation: Optional[str] = None
     resolution_note: Optional[str] = None
     related_incidents: List[str] = field(default_factory=list)
+    related_pages: List[RelatedPage] = field(default_factory=list)
 
 
 @dataclass
@@ -64,6 +66,7 @@ class IncidentDetails:
     description: Optional[str] = None
     summary: Optional[str] = None
     related_incidents: List[str] = field(default_factory=list)
+    related_pages: List[RelatedPage] = field(default_factory=list)
     resolution_suggestions: List[ResolutionSuggestion] = field(default_factory=list)
     request_latency_ms: Optional[float] = None
     llm_usage: Optional[LlmUsage] = None

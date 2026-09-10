@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Protocol, runtime_checkable
+
+from src.domain.confluence import RelatedPage
 
 
 @dataclass(frozen=True)
@@ -16,10 +18,13 @@ class MitigationSuggestion:
     mitigation: Optional[str] = None
     resolution_note: Optional[str] = None
     related_incidents: List[str] = None
+    related_pages: List[RelatedPage] = field(default_factory=list)
 
     def __post_init__(self):
         if self.related_incidents is None:
             object.__setattr__(self, "related_incidents", [])
+        if self.related_pages is None:
+            object.__setattr__(self, "related_pages", [])
 
 
 @dataclass(frozen=True)
@@ -33,11 +38,19 @@ class LlmUsage:
 
 
 @dataclass(frozen=True)
+class DiscoveryResult:
+    """Structured result returned by the discovery LLM."""
+    related_incidents: List[str] = field(default_factory=list)
+    confluence_search_query: str = ""
+
+
+@dataclass(frozen=True)
 class IncidentEnrichment:
     """Result from LLM enrichment of an incident."""
     summary: Optional[LlmSummary] = None
     mitigation_suggestions: List[MitigationSuggestion] = None
     related_incidents: List[str] = None
+    related_pages: List[RelatedPage] = field(default_factory=list)
     usage: Optional[LlmUsage] = None
 
     def __post_init__(self):
@@ -46,6 +59,8 @@ class IncidentEnrichment:
             object.__setattr__(self, "mitigation_suggestions", [])
         if self.related_incidents is None:
             object.__setattr__(self, "related_incidents", [])
+        if self.related_pages is None:
+            object.__setattr__(self, "related_pages", [])
 
 
 class LlmGatewayError(RuntimeError):
@@ -71,6 +86,15 @@ class LlmGateway(Protocol):
     Implementations must provide LLM capabilities for enriching incident data.
     """
     
+    def discover_related_context(
+        self,
+        incident_id: str,
+        short_description: Optional[str],
+        description: Optional[str],
+        main_incident_context: Optional[str] = None,
+    ) -> DiscoveryResult:
+        """Return related incidents and a Confluence search query."""
+
     def enrich_incident(
         self,
         incident_id: str,
@@ -80,6 +104,8 @@ class LlmGateway(Protocol):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
+        confluence_documentation_context: Optional[str] = None,
+        confluence_related_pages_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content.

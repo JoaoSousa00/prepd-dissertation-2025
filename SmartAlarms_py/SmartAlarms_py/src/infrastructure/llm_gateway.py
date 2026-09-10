@@ -7,7 +7,9 @@ from typing import Optional
 
 import httpx2 as httpx
 
+from src.domain.confluence import RelatedPage
 from src.domain.llm import (
+    DiscoveryResult,
     IncidentEnrichment,
     LlmGateway,
     LlmGatewayConfigurationError,
@@ -27,6 +29,9 @@ DEFAULT_PROMPT_PATH = (
 )
 DEFAULT_FALLBACK_PROMPT_PATH = (
     Path(__file__).resolve().parent / "prompt" / "incident_enrichment_fallback_prompt.txt"
+)
+DEFAULT_DISCOVERY_PROMPT_PATH = (
+    Path(__file__).resolve().parent / "prompt" / "incident_discovery_prompt.txt"
 )
 DEFAULT_CA_DOWNLOAD_TIMEOUT_SECONDS = 30.0
 
@@ -135,13 +140,16 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         transport: Optional[httpx.BaseTransport] = None,
         prompt_path: Optional[Path] = None,
         fallback_prompt_path: Optional[Path] = None,
+        discovery_prompt_path: Optional[Path] = None,
     ):
         self._settings = settings or load_llm_gateway_settings()
         self._transport = transport
         self._prompt_path = prompt_path or DEFAULT_PROMPT_PATH
         self._fallback_prompt_path = fallback_prompt_path or DEFAULT_FALLBACK_PROMPT_PATH
+        self._discovery_prompt_path = discovery_prompt_path or DEFAULT_DISCOVERY_PROMPT_PATH
         self._prompt_template = self._load_prompt_template(self._prompt_path)
         self._fallback_prompt_template = self._load_prompt_template(self._fallback_prompt_path)
+        self._discovery_prompt_template = self._load_prompt_template(self._discovery_prompt_path)
         self._verify = _resolve_cert(
             self._settings.ca_cert_path,
             self._settings.ca_cert_url,
@@ -149,6 +157,65 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         self._token_cache: Optional[str] = None
         self._token_expiry: float = 0
     
+    def discover_related_context(
+        self,
+        incident_id: str,
+        short_description: Optional[str],
+        description: Optional[str],
+        main_incident_context: Optional[str] = None,
+    ) -> DiscoveryResult:
+        """Ask the LLM to identify related incidents and a Confluence search phrase."""
+        context = get_current_request_context()
+        if context is not None:
+            context.main_incident = context.main_incident or incident_id
+        if not self._settings.gateway_enabled:
+            if context is not None:
+                context.record_llm_error("LLM gateway is disabled", 503)
+            raise LlmGatewayDisabledError("LLM gateway is disabled")
+
+        with start_span(
+            "llm.discover_context",
+            request_id=context.request_id if context is not None else None,
+            component="llm",
+            attributes={
+                "operation": "discover_context",
+                "provider": "gaia",
+                "model": self._settings.model,
+                "langfuse.observation.type": "generation",
+            },
+        ) as span:
+            started_at = time.perf_counter()
+            try:
+                token = self._get_access_token()
+                prompt = self._build_discovery_prompt(
+                    incident_id,
+                    short_description,
+                    description,
+                    main_incident_context,
+                )
+                response, retry_count = self._call_llm(
+                    prompt=prompt,
+                    token=token,
+                    max_tokens=min(self._settings.default_max_tokens, 1500),
+                )
+                discovery = self._parse_discovery_response(response)
+                if span is not None:
+                    span.set_attribute("gen_ai.request.model", self._settings.model)
+                    span.set_attribute("gen_ai.prompt", prompt)
+                    span.set_attribute("retry_count", retry_count)
+                    span.set_attribute("related_incident_count", len(discovery.related_incidents))
+                    span.set_attribute("confluence_search_query", discovery.confluence_search_query)
+                set_span_status_ok(span, (time.perf_counter() - started_at) * 1000)
+                return discovery
+            except (LlmGatewayUnavailableError, LlmGatewayConfigurationError) as exc:
+                set_span_status_error(
+                    span,
+                    error_code="llm_discovery_failure",
+                    error_message=str(exc),
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
+                raise
+
     def enrich_incident(
         self,
         incident_id: str,
@@ -158,6 +225,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
+        confluence_documentation_context: Optional[str] = None,
+        confluence_related_pages_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content."""
@@ -194,6 +263,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     main_incident_context,
                     related_incident_context,
                     same_title_incident_context,
+                    confluence_documentation_context=confluence_documentation_context,
+                    confluence_related_pages_context=confluence_related_pages_context,
                     use_fallback_prompt=use_fallback_prompt,
                 )
                 requested_max_tokens = max_tokens or self._settings.default_max_tokens
@@ -578,6 +649,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
+        confluence_documentation_context: Optional[str] = None,
+        confluence_related_pages_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> str:
         """Build a prompt for LLM enrichment."""
@@ -589,6 +662,22 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             main_incident_context=main_incident_context or "No additional main-incident context was provided.",
             related_incident_context=related_incident_context or "No explicitly referenced related incidents were found.",
             same_title_incident_context=same_title_incident_context or "No same-title historical incidents were found.",
+            confluence_documentation_context=confluence_documentation_context or "No Confluence documentation context was available.",
+            confluence_related_pages_context=confluence_related_pages_context or "No relevant Confluence pages were found.",
+        )
+
+    def _build_discovery_prompt(
+        self,
+        incident_id: str,
+        short_description: Optional[str],
+        description: Optional[str],
+        main_incident_context: Optional[str] = None,
+    ) -> str:
+        return self._discovery_prompt_template.format(
+            incident_id=incident_id,
+            short_description=short_description or "N/A",
+            description=description or "N/A",
+            main_incident_context=main_incident_context or "No additional main-incident context was provided.",
         )
 
     @staticmethod
@@ -644,7 +733,6 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     usage=usage,
                 )
             
-            # Extract summary
             summary = None
             if "summary" in data:
                 summary = LlmSummary(text=data["summary"])
@@ -652,8 +740,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             related_incidents = [
                 related_id for related_id in self._as_incident_id_list(data.get("related_incidents"))
             ]
+            related_pages = self._parse_related_pages(data.get("related_pages", data.get("relatedPages")))
 
-            # Extract mitigation suggestions
             suggestions = []
             if "mitigation_suggestions" in data:
                 for sugg_data in data.get("mitigation_suggestions", []):
@@ -672,6 +760,9 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                         sugg_data.get("resolution_note", sugg_data.get("Resolution_note"))
                     )
                     related_items = self._as_string_list(sugg_data.get("related_incidents"))
+                    suggestion_pages = self._parse_related_pages(
+                        sugg_data.get("related_pages", sugg_data.get("relatedPages"))
+                    )
                     suggestions.append(
                         MitigationSuggestion(
                             confidence=confidence,
@@ -679,13 +770,15 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                             mitigation=mitigation,
                             resolution_note=resolution_note,
                             related_incidents=self._as_incident_id_list(related_items),
+                            related_pages=suggestion_pages,
                         )
                     )
-            
+
             return IncidentEnrichment(
                 summary=summary,
                 mitigation_suggestions=suggestions,
                 related_incidents=related_incidents,
+                related_pages=related_pages,
                 usage=usage,
             )
         except (KeyError, TypeError) as exc:
@@ -716,6 +809,64 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                         chunks.append(value)
             return "\n".join(chunks)
         return ""
+
+    def _parse_discovery_response(self, response: dict) -> DiscoveryResult:
+        content = self._extract_message_content((response.get("choices") or [{}])[0].get("message", {}).get("content"))
+        if not content.strip():
+            return DiscoveryResult()
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError:
+            logger.warning("Discovery response is not valid JSON: %s", content[:500])
+            return DiscoveryResult()
+
+        related_incidents = self._as_incident_id_list(
+            data.get("related_incidents", data.get("relatedIncidents"))
+        )
+        search_query = "place search"
+        return DiscoveryResult(
+            related_incidents=related_incidents,
+            confluence_search_query=search_query,
+        )
+
+    @staticmethod
+    def _normalize_service_query(value: str) -> str:
+        cleaned = value.strip().strip('"').strip("'")
+        if not cleaned:
+            return ""
+
+        # Prefer service-like identifiers such as places-public or billing_api.
+        service_like = re.findall(r"\b[a-z0-9]+(?:[-_][a-z0-9]+)+\b", cleaned, flags=re.IGNORECASE)
+        if service_like:
+            return service_like[0]
+
+        # Fallback to a short, signal-only query (max 3 tokens).
+        tokens = re.findall(r"[A-Za-z0-9]+", cleaned)
+        if not tokens:
+            return ""
+        return " ".join(tokens[:3])
+
+    @staticmethod
+    def _parse_related_pages(value: object) -> list[RelatedPage]:
+        if not isinstance(value, list):
+            return []
+        pages: list[RelatedPage] = []
+        seen: set[tuple[str, str]] = set()
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("title") or item.get("Title") or ""
+            url = item.get("url") or item.get("URL") or ""
+            cleaned_title = title.strip() if isinstance(title, str) else ""
+            cleaned_url = url.strip() if isinstance(url, str) else ""
+            if not cleaned_title or not cleaned_url:
+                continue
+            key = (cleaned_title, cleaned_url)
+            if key in seen:
+                continue
+            seen.add(key)
+            pages.append(RelatedPage(title=cleaned_title, url=cleaned_url))
+        return pages
 
     @staticmethod
     def _as_optional_string(value: object) -> Optional[str]:
