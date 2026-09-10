@@ -13,9 +13,9 @@
 	Como referido anteriormente, o objetivo da solução passa por integrar com diversos serviços externos, tais como:
 	
 	\begin{itemize}
-		\item Serviço de incidentes: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
-		\item Serviço de documentação: com informação retirada do incidente, fornece documentação do serviço afetado;
-		\item Motor \gls{LLM}: outro elemento que devemos considerar como base da solução, visto que é responsável por fazer a ligação entre o incidente principal, os incidentes relacionados e a documentação do serviço devolvendo um resumo em linguagem natural e as sugestões de mitigação priorizarizadas.
+		\item \textbf{Serviço de incidentes:} apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
+		\item \textbf{Serviço de documentação:} com informação retirada do incidente, fornece documentação do serviço afetado;
+		\item \textbf{Motor \gls{LLM}:} outro elemento que devemos considerar como base da solução, visto que é responsável por fazer a ligação entre o incidente principal, os incidentes relacionados e a documentação do serviço devolvendo um resumo em linguagem natural e as sugestões de mitigação priorizarizadas.
 	\end{itemize}
 	
 	Assim, a solução proposta combina a informação obtida do serviço de incidentes e documentação com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação.
@@ -173,10 +173,10 @@
 		Para definir a prioridade dos requisitos, foi utilizado o método \textit{MoSCoW}, que permite dividir os requisitos em quatro níveis de prioridade:
 		
 		\begin{itemize}
-			\item \textit{Must have} - Essencial para o funcionamento da solução;
-			\item \textit{Should have} - Importante mas não impede o funcionamento da solução caso não seja implementado;
-			\item \textit{Could have} - Pode ser incluído caso existam recursos e tempo disponíveis;
-			\item \textit{Won't have} - Não está nos planos imediatos do projeto, mas pode fazer parte dos planos futuros.
+			\item \textbf{\textit{Must have}} - Essencial para o funcionamento da solução;
+			\item \textbf{\textit{Should have}} - Importante mas não impede o funcionamento da solução caso não seja implementado;
+			\item \textbf{\textit{Could have}} - Pode ser incluído caso existam recursos e tempo disponíveis;
+			\item \textbf{\textit{Won't have}} - Não está nos planos imediatos do projeto, mas pode fazer parte dos planos futuros.
 		\end{itemize}
 		
 		Esta classificação permite definir quais as funcionalidades que devem ser desenvolvidas primeiro e ajuda a manter o foco nos objetivos principais da solução.
