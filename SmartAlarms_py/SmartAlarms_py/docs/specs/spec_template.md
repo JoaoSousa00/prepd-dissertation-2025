@@ -33,14 +33,14 @@ Use this template for each user story/specification in `docs/specs/phase*/`.
 
 ## 5) Acceptance Criteria
 
-| ID | Given | When | Then |
-|----|-------|------|------|
-| CA-1 |  |  |  |
-| CA-2 |  |  |  |
+| ID   | Given | When | Then |
+|------|-------|------|------|
+| CA-1 |       |      |      |
+| CA-2 |       |      |      |
 
 ## 6) Functional Design
 
-- Entry point(s): CI trigger, MCP tool, or both.
+- Entry point (s): CI trigger, MCP tool, or both.
 - Inputs and outputs (refer to `docs/contracts` when applicable).
 - Happy-path flow.
 - Error-path flow.
@@ -71,7 +71,7 @@ Use this template for each user story/specification in `docs/specs/phase*/`.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-|  |  |  |
+|      |        |            |
 
 ## 11) Test Plan
 

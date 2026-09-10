@@ -7,7 +7,8 @@
 - **Owner:** Spec Architect
 - **Status:** Draft
 - **Related documents:** `docs/requirements.md`, `docs/architechture.md`, `docs/contracts/openapi.json`,
-  `docs/specs/phase1/US-1.2-base-incident-client.md`, `docs/specs/phase1/US-1.3-llm-enrichment.md`
+  `docs/specs/phase1/US-1.2-base-incident-client.md`, `docs/specs/phase1/US-1.3-llm-enrichment.md`,
+  `docs/specs/phase2/US-2.5-llm-related-incidents-confluence-search.md`
 
 ## 2) Problem Statement
 
@@ -16,6 +17,9 @@ with too little operational context and no structured access to related historic
 resolution notes. This specification expands the incident context available in domain, discovers related incidents from
 the main record, fetches same-title historical incidents, and prepares a deduplicated context package for the existing
 LLM enrichment flow.
+
+The LLM-driven discovery path is refined further in `US-2.5`, which uses a preliminary prompt plus Confluence service
+documentation lookup.
 
 ## 3) User Story
 

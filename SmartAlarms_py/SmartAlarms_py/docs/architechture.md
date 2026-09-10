@@ -132,6 +132,8 @@ Examples:
 * ServiceNow connector (implements `IncidentSourceAdapter`)
 * Kibana connector (implements `LogsAdapter`)
 * CloudWatch connector (implements `LogsAdapter`)
+* Confluence connector (implements documentation search and retrieval for the `CD Location Services` space, including
+  parent pages and subpages)
 * LLM provider (implements `LLMGateway`)
 * Repositories and caches
 
@@ -211,6 +213,25 @@ Keeps everything from Phase 1 and adds:
 * **Concurrency**
 * **MCP Servers**
 * **Cache**
+* **Confluence documentation search** restricted to the `CD Location Services` space
+
+---
+
+# Expected Flow (Phase 2)
+
+```text
+1. Receive one or more incident IDs via GET /incident/details
+2. Fetch the full non-sensitive incident context from ITSM
+3. Call a simple LLM prompt to discover relevant related incidents and a Confluence search string
+4. In parallel, fetch incident-by-title, fallback incidents if needed, and related incidents
+5. Search Confluence only within the CD Location Services space
+6. Fetch the returned documentation tree (parent page plus subpages)
+7. Summarize the documentation tree and keep page URLs for the response
+8. Call the existing LLM enrichment step with the combined context, including summarized Confluence documentation
+9. Return the analysis including incident-level and suggestion-level `relatedPages`
+10. Collect responses and evaluate with BLEU/METEOR/ROUGE
+11. Store feedback (if applicable) for future analysis
+```
 
 ---
 
