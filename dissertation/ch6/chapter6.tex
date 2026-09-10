@@ -43,24 +43,67 @@
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia de Implementação}
-	\todo{todo}
 	
+	Nesta secção, é demonstrada a metodologia escolhida para o desenvolvimento do projeto (\gls{SDD}) assim como as razões por trás dessa escolha, as limitações, os métodos utilizados para combater os problemas causados pela metadologia e a forma como foi implementada.
+	
+%----------------------------------------------------------------------------------------
 	\subsection{Spec Driven Development}
 	
+		O desenvolvimento de software tem sido baseado em diferentes formas de organizar e controlar o processo de implementação. Com o aumento da complexidade dos sistemas e, mais recentemente, com a utilização de ferramentas de \gls{IA} na programação, tornou-se cada vez mais importante definir de forma clara aquilo que se pretende desenvolver antes de iniciar a implementação. Quando o desenvolvimento começa diretamente pelo código, surgem, normalmente, problemas relacionados com requisitos pouco claros, decisões técnicas inconsistentes e diferenças entre o comportamento esperado e o comportamento implementado.
 		
+		Esta metodologia coloca as especificações no centro do processo de desenvolvimento, sendo utilizadas como referência para definir e implementar as diferentes funcionalidades do sistema. Em vez de começar diretamente pela implementação, cada funcionalidade é primeiro descrita e detalhada através de uma especificação. A partir dessa documentação é definido o plano de implementação e, de seguida, as tarefas necessárias para desenvolver a funcionalidade.
+		
+		Esta abordagem foi escolhida principalmente devido à utilização de \gls{IA} como apoio ao desenvolvimento. Ao definir primeiro aquilo que o sistema deve fazer, é possível fornecer ao agente uma descrição mais clara do objetivo e das condições que a implementação deve cumprir. Desta forma, a utilização de \gls{IA} não fica limitada à geração direta de código a partir de um pedido, mas passa a fazer parte de um processo mais estruturado.
 	
+		Apesar da existência de um kit oficial de ferramentas (spec-kit), optou-se por aplicar \gls{SDD} diretamente assim, a aplicação da metodologia, não ficou dependente da estrutura definida pela ferramenta. Por esse motivo, o projeto conta com uma série de ficheiros documentais, que ajudam tanto no processo de criação de especificações como também no processo de implementação.
+		
+		A utilização desta abordagem permitiu também dedicar mais tempo ao pensamento critico e à compreensão do negócio, em vez de focar principalmente na implementação do código. Desta forma, foi possível dar maior atenção às decisões e ao problema que a solução pretendia resolver.
+	
+%----------------------------------------------------------------------------------------
 	\subsection{Limitações}
 		
+		Apesar das vantagens desta abordagem, foram identificadas algumas limitações durante o desenvolvimento. Uma delas foi o \textit{spec drift}, que ocorre quando são realizadas alterações no código sem que a respetiva especificação seja atualizada de forma prévia. Por exemplo, uma alteração feita através de \textit{vibe coding}, como adicionar uma lógica de \textit{retry} ao pedido feito ao \textit{ServiceNow}, pode ser implementada diretamente sem passar pelo processo definido pelo \gls{SDD}. Assim, o agente só segue esta abordagem quando essa disciplina é imposta pelo utilizador, podendo uma instrução simples levar à implementação direta e deixar a especificação desatualizada.
 		
+		Outra limitação está relacionada com o esforço adicional (\textit{overhead}) associado a pequenas alterações. Mesmo uma alteração simples pode exigir a atualização da especificação, a implementação e a posterior validação. Embora este processo ajude a manter o código alinhado com as especificações, pode representar um esforço adicional para alterações de pequena dimensão.
 	
+%----------------------------------------------------------------------------------------
 	\subsection{Agentic \gls{SDD}}
 	
+		Assim, foram criados agentes com o objetivo de apoiar o desenvolvimento e ajudar a garantir o cumprimento do processo definido pelo \gls{SDD}. Dessa forma, um agente pode ser visto como um assistente que, para além de responder a instruções, consegue seguir um conjunto de regras, consultar informação disponível no projeto e realizar diferentes tarefas de acordo com o contexto fornecido. Para além de ajudarem na criação e atualização das \textit{specs}, os agentes são instruídos a consultar informação adicional do projeto antes de realizar alterações. Esta informação encontra-se organizada em diferentes ficheiros, nomeadamente:
 		
+		\begin{itemize}
+			\item \textbf{\textit{Template} para as especificações} - Modelo base de uma especificação. Define os capítulos que todas as especificações devem conter assim como tópicos que devem ser abordados dentro de cada secção;
+			\item \textbf{Arquitetura} - Descreve a arquitetura pretendida para o projeto. Define quais as camadas e como devem ser organizadas;
+			\item \textbf{Requisitos} - Define os requisitos funcionais, não funcionais e de observabilidade do sistema;
+			\item \textbf{Especificação da API} - Descreve as especificações da API a ser desenvolvida, definindo os parâmetros de entrada e saída do serviço.
+		\end{itemize}
+		
+		Estes documentos foram o passo zero da implementação do projeto, servindo de base para iniciar a descrição as funcionalidades, objetivos pretendidos e a forma de os alcançar.
+		Após essa definição foram criados os agentes que permitiriam aplicar o processo SDD ao desenvolvimento do projeto. Assim, os agentes criados foram:
+		
+		\begin{itemize}
+			\item \textbf{Arquiteto de especificações} - Interpreta o contexto fornecido pelo desenvolvedor, define critérios de aceitação, cria/atualiza especificações de acordo com o modelo definido e atualiza outros documentos quando necessário. Nunca implementa código nem testes;
+			\item \textbf{Engenheiro de \textit{Software}} - Interpreta as especificações já criadas, cria tarefas orientadores, implementa código e testes e valida as implementações realizadas. Nunca altera especificações, quando deteta essa necessidade deve invocar o agente responsável;
+			\item \textbf{Agente de validação} - Compara implementações com especificações, valida a cobertura de critérios de aceitação e pede correções quando necessário.
+		\end{itemize}
+		
+		A utilização destes agentes, permite não só automatizar parte das tarefas associadas ao \gls{SDD}, mas também orientar o desenvolvedor durante todo o processo garantindo que o contexto necessário é considerado antes da implementação.
 	
+%----------------------------------------------------------------------------------------
 	\subsection{Specs}
-	% mais sub capitulos...
-		
 	
+		Falar da Estrutura
+		
+		Enumerar Specs que temos
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=110mm,keepaspectratio]{img/spec_template}
+			\caption[Modelo Base de uma Especificação]{Modelo Base de uma Especificação}
+			\label{fig:specTemplate}
+		\end{figure}
+	
+%----------------------------------------------------------------------------------------
 	\subsection{Validação}
 	
 		
@@ -69,6 +112,7 @@
 \section{Estrutura}
 	\todo{texto}
 	%Falar dos layers
+		% Facilita adiçao ou remoçao de sistemas externos
 	
 %----------------------------------------------------------------------------------------
 \section{Implementação}
