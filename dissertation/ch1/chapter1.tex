@@ -21,22 +21,23 @@
 	Uma interpretação ou resolução inadequada das ocorrências pode reduzir a disponibilidade dos serviços, o que, por sua vez, pode gerar prejuízos significativos para a organização, seja pela perda de receitas, seja pelo impacto negativo na experiência do utilizador final.
 
 \section{Objetivos}
-	O objetivo desta investigação passa por realizar uma revisão de literatura sobre o problema em questão, a fim de perceber que ferramentas existem atualmente para solucionar o problema mencionado anteriormente. Dessa forma, entender se as ferramentas foram eficazes nos seus contextos e concluir se é possível desenvolver uma solução que preencha todos os requisitos necessários para satisfazer todas as partes interessadas.
-	
-	No final, o propósito principal consiste em preparar e idealizar o desenvolvimento de uma solução capaz de:
+
+	O objetivo deste projeto consiste em solucionar os problemas demonstrados na ponto anterior. Assim, a solução deve ser capaz de:
 	\begin{itemize}
-		\item Gerar resumos de um incidente especifico, com base na sua descrição e no histórico de incidentes semelhantes.
-		\item Gerar sugestões de mitigação com base no histórico de incidentes semelhantes.
-		\item Informar incidentes relacionados que servem como base para futuras análises.
+		\item Utilizar contexto histórico, como incidentes anteriores e documentação dos projetos;
+		\item Gerar resumos de um incidente especifico;
+		\item Gerar sugestões de investigação e mitigação;
+		\item Informar incidentes relacionados com o incidente em questão.
 	\end{itemize}
 	
-	A fim de alcançar estes objetivos, foram definidos um conjunto de passos necessários de forma a organizar o trabalho a ser desenvolvido. Assim, foi selecionada uma metodologia de investigação, que ajuda no processo de categorização e análise de literatura relevante ao tema em estudo, que serve de base para a proposta de um projeto.
+	A fim de alcançar estes objetivos, foi definido um conjunto de passos necessários para organizar o trabalho desenvolvido. Uma metodologia de investigação foi selecionada para ajudar no processo de categorização e análise de literatura relevante ao tema em estudo, que serviu de base para o desenvolvimento do projeto proposto.
 	
 	Espera-se que, com a geração de textos em linguagem natural, se consiga uma resposta mais rápida e consistente, o que se reflete numa redução do \gls{TMR} aos incidentes. Assim, a carga de trabalho associada a operações por parte dos membros da equipa de suporte envolvidos diminui, libertando-os para o desenvolvimento de novas funcionalidades. De igual forma, é esperado que a diminuição do \gls{TMR} possa aumentar a disponibilidade das aplicações, o que traz um impacto direto ao cliente final.
-	Adicionalmente, a utilização de informação histórica procura ir ao encontro dos requisitos das diferentes partes interessadas, apoiando a tomada de decisão e permitindo que as equipas dediquem mais tempo a outras atividades de valor.
+	Adicionalmente, a utilização de informação histórica e documentação procura ir ao encontro dos requisitos das diferentes partes interessadas, apoiando a tomada de decisão e permitindo que as equipas dediquem mais tempo a outras atividades de valor.
 		
 
 \section{Planeamento}
+\todo{Atualizar!}
 	O planeamento do trabalho foi definido com base numa \textit{\gls{WBS}}, que serviu de base à construção do diagrama de \textit{Gantt} (Figura \ref{fig:wbsChart} e \ref{fig:gantChart}). A \textit{\gls{WBS}} permite estruturar o projeto em três fases distintas, cada uma com as respetivas tarefas e entregáveis. Por sua vez, o diagrama de \textit{Gantt} é utilizado para calendarizar as atividades, identificar dependências entre tarefas e definir marcos de controlo.
 	
 	\begin{figure}[H]
@@ -62,10 +63,24 @@
 	
 	Para além dos códigos acima mencionados, foi também seguido o Código de Boas Práticas e de Conduta do \gls{IPP}.
 	
-	Durante o desenvolvimento da solução foi também utilizada Inteligência Artificial como apoio à implementação do código. Esta utilização foi feita em conjunto com a abordagem \gls{SDD}, permitindo definir previamente as especificações e requisitos de cada componente antes da sua implementação. O código gerado pela IA foi analisado e validado pelo autor, não sendo utilizado de forma automática sem revisão. Desta forma, a responsabilidade pelas decisões tomadas e pelo código integrado na solução manteve-se sempre do lado do autor.
+	Durante o desenvolvimento da solução foi utilizada Inteligência Artificial como apoio à implementação do código. Esta utilização, em conjunto com a abordagem \gls{SDD}, permitiu definir previamente as especificações e requisitos de cada componente antes da sua implementação. O código gerado pela IA foi analisado e validado pelo autor, não sendo utilizado de forma automática sem revisão. Desta forma, a responsabilidade pelas decisões tomadas e pelo código integrado na solução manteve-se sempre do lado do autor.
 	
 	Quanto às competências necessárias, o autor é também um dos muitos membros de equipa de suporte que lidam com o tipo de problema que este projeto aborda, estando também a aprofundar os conceitos no mestrado que originou esta investigação. Essa combinação de experiência na área e aprendizagem académica ajuda a assegurar que o trabalho é feito com rigor, ética e atenção às melhores práticas profissionais.
 
 \section{Estrutura do Documento}
 
-	O relatório encontra-se dividido em três capítulos. No capítulo dois, está presente o estado da arte, onde foi apresentada a metodologia de investigação utilizada, a revisão de literatura e as soluções semelhantes à que se pretende desenvolver. No capítulo três, abordam-se os resultados obtidos no capítulo anterior e sugere-se uma arquitetura para o desenvolvimento da solução.
+	O relatório encontra-se dividido em sete capítulos que evidenciam os passos progressivos no desenvolvimento da solução:
+	\begin{itemize}
+		\item \textbf{Capitulo 1 - Introdução: }Explora os problemas e objetivos da projeto;
+		\item \textbf{Capitulo 2 - Estado da Arte:} Apresenta a metodologia de investigação utilizada, a revisão de literatura e as soluções semelhantes à que se pretende desenvolver;
+		\item \textbf{Capitulo 3 - Analise:} Aborda a solução proposta, o conjunto de dados utilizados e a engenharia de requisitos do problema;
+		\item \textbf{Capitulo 4 - Desenho:} Adiciona algum contexto ao funcionamente da solução através de diagramas de implementação e sequência;
+		\item \textbf{Capitulo 5 - Implementação:} Apresenta detalhes do desenvolvimento da solução, como a identificação das ferraments utilizadas, metodologia aplicada, a estrutura e decisões de negócio;
+		\item \textbf{Capitulo 6 - Validação de Resultados:} Descreve os resultados obtidos assim com a sua avaliação nas diferentes métricas obtidas;
+		\item \textbf{Capitulo 7 - Conclusão:} Conclui o desenvolvimento do projeto evidenciando os resultados obtidos e os objetivos inicialmente propostos de forma a concluir o sucesso do projeto;
+		\item \textbf{Anexo A - Incidente:} Apresenta o exemplo de um incidente real;
+		\item \textbf{Anexo B - Prompts:} ;
+		\item \textbf{Anexo C - Especificações:} ;
+		\item \textbf{Anexo D - Agentes:} ;
+	\end{itemize}
+	\todo{Ver que anexos faltam  adicionar}

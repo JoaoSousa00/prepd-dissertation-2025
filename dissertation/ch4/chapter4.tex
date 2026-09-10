@@ -3,68 +3,23 @@
 \chapter{Análise} % Main chapter title
 \label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
 
-	Neste capítulo, são abordados os próximos passos para o desenvolvimento da solução a ser proposta. Assim, é definida a metodologia a ser seguida na elaboração do projeto, é apresentado um desenho da solução onde, são identificados os sistemas externas a ser utilizados. \hl{São, ainda, identificados os pressupostos e restrições inerentes à solução proposta neste documento.} Também é abordada a estrutura e origem dos dados pertencentes ao \textit{dataset} assim como a apresentação dos requisitos funcionais e não funcionais que integram a engenharia de requisitos.
-
-%----------------------------------------------------------------------------------------
-\section{Metodologia Proposta}
-
 	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
 	
-	Assim, pretendemos conceber uma solução que, através de \gls{LLM}\textit{s}, seja capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução será baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Com a correlação de incidentes funcional, pretendemos gerar para o utilizador sugestões de mitigação que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
-
-%	- Relembrar brevemente o problema identificado na revisão de literatura	
-% 	- Explicar a abordagem geral (ex.: uso de LLMs + histórico de incidentes)
-%	- Clarificar o propósito da metodologia (apoiar interpretação, análise e mitigação)
-%	- Indicar que se trata de uma proposta conceptual, a validar numa fase futura
+	Assim, a solução, através da integração com um \gls{LLM}, deve ser capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução é baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Com o apoio de integrações externas, como \textit{Confluence}, pretende-se também aumentar o contexto do serviço afetado de forma a indicar uma mitigação mais viável. Com a correlação de incidentes funcional e documentação dos próprios produtos, procura-se encontrar sugestões de mitigação para o utilizador que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
 
 %----------------------------------------------------------------------------------------
 \section{Desenho da Solução}
 
-	Como referido anteriormente, o objetivo da solução passa por desenvolver um serviço capaz de integrar com diversos serviços externos, tais como:
+	Como referido anteriormente, o objetivo da solução passa por integrar com diversos serviços externos, tais como:
 	
 	\begin{itemize}
 		\item Serviço de incidentes: apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
-		\item Motor \gls{LLM}: outro elemento que devemos considerar como base da solução, visto que será responsável por fazer a ligação entre incidentes, a sumarização em linguagem natural e por recolher as sugestões de mitigação e as priorizar.
+		\item Serviço de documentação: com informação retirada do incidente, fornece documentação do serviço afetado;
+		\item Motor \gls{LLM}: outro elemento que devemos considerar como base da solução, visto que é responsável por fazer a ligação entre o incidente principal, os incidentes relacionados e a documentação do serviço devolvendo um resumo em linguagem natural e as sugestões de mitigação priorizarizadas.
 	\end{itemize}
 	
-	Assim, a solução proposta combina a informação obtida do serviço de incidentes com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação. Nos capítulos seguintes é apresentada a implementação desta solução e a forma como será avaliado o seu desempenho.
+	Assim, a solução proposta combina a informação obtida do serviço de incidentes e documentação com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação.
 
-%----------------------------------------------------------------------------------------
-\section{Pressupostos e Restrições}
-
-	Projetos de soluções na área de \gls{TI}, apresentam sempre riscos suscetíveis de acontecer durante a sua implementação ou até características que restringem o desenvolvimento da proposta. Por esse motivo, torna-se importante definir, logo de inicio, informações que possa limitar o progresso do projeto e criar planos alternativos que nos permitam, de forma mais controlada, lidar ou contornar estes problemas.
-
-%----------------------------------------------------------------------------------------
-	\subsection{Pressupostos} \todo{Eliminar?}
-	
-		Durante o planeamento do projeto, nem todas as informações podem ser assumidas como certas, sendo que muitos dos fatores não são controlados pelos membros das equipas de desenvolvimento. Os pressupostos são um conjunto de suposições que se assume que se vão realizar mas, que têm algum risco associado. Por norma, quando estas hipóteses são confirmadas, tornam-se restrições do projeto, porém, quando não é possível confirmar a sua premissa, acabam por se tornar em riscos do projeto. Dessa forma, devem ser criados planos alternativos para evitar que os riscos possam se tornar em barreiras ao desenvolvimento da solução. Os pressupostos e os planos de contingências foram identificados na Tabela \ref{tab:pressupostos}.
-		
-		\begin{table}[H]
-			\centering
-			\begin{tabular}{m{70mm} m{70mm}}
-				\hline
-				\textbf{Pressuposto} & \textbf{Plano Alternativo(s)} \\
-				\hline
-				O conjunto de dados será entregue por uma das equipas da \gls{CTW} num formato passível de utilização &  Plano B - Obter um conjunto de dados sobre incidentes online de plataformas reconhecidas, como \textit{Microsoft} \\
-				\hline
-				O motor \gls{LLM} a utilizar será disponibilizado pela \gls{CTW} de forma a não comprometer dados & Plano B - Compilar localmente um \gls{LLM} \newline \newline
-				Plano C - Utilizar um \gls{LLM} disponível com um \textit{dataset} sem informação confidencial \\
-				\hline
-			\end{tabular}
-			\caption[Pressupostos do Projeto]{Pressupostos do Projeto}
-			\label{tab:pressupostos}
-		\end{table}
-	
-%----------------------------------------------------------------------------------------
-	\subsection{Restrições} \todo{Passar para conclusão?}
-	
-		As restrições do projeto são fatores que limitam as opções a tomar durante o desenvolvimento da solução. Estes fatores não são negociáveis e por isso a sua identificação precoce, é essencial para avaliar o futuro e a qualidade que proposta pode ter.
-	
-		As restrições identificadas são:
-		\begin{enumerate}
-			\item Os dados presentes no \textit{dataset} fornecido pela empresa terão de ser parcialmente/totalmente anonimizados.
-		\end{enumerate}
-		
 %----------------------------------------------------------------------------------------
 \section{Dataset}
 	
@@ -199,6 +154,11 @@
 		\end{figure}
 		
 		Deduz-se portanto, que é importante realizar uma boa analise do incidente, com recurso a histórico e incidentes relacionados, com o objetivo de indicar ao utilizador se o mesmo deve mitigar o problema ou encaminha-lo para a equipa mais competente.
+		
+%----------------------------------------------------------------------------------------
+	\subsection{Conclusão}
+		
+		\todo{Pequena conclusão de quais são os principais tipos de incidentes}
 
 %----------------------------------------------------------------------------------------
 \section{Engenharia de Requisitos}
@@ -216,14 +176,14 @@
 			\item \textit{Must have} - Essencial para o funcionamento da solução;
 			\item \textit{Should have} - Importante mas não impede o funcionamento da solução caso não seja implementado;
 			\item \textit{Could have} - Pode ser incluído caso existam recursos e tempo disponíveis;
-			\item \textit{Won't have} - Não está nos planos do projeto.
+			\item \textit{Won't have} - Não está nos planos imediatos do projeto, mas pode fazer parte dos planos futuros.
 		\end{itemize}
 		
 		Esta classificação permite definir quais as funcionalidades que devem ser desenvolvidas primeiro e ajuda a manter o foco nos objetivos principais da solução.
 	
 		\begin{table}[H]
 			\centering
-			\begin{tabular}{p{2.1cm}p{9cm}p{1.8cm}}
+			\begin{tabular}{p{2.1cm}p{9cm}p{2cm}}
 				\hline
 				\textbf{Identificador} & \textbf{Descrição} & \textbf{Prioridade} \\
 				\hline
@@ -249,6 +209,10 @@
 				\hline
 				\textit{RF-11} & O sistema deve permitir configurar o modelo utilizado pela \gls{LLM} & Could have \\
 				\hline
+				\textit{RF-12} & O sistema deve procurar informação relevante na documentação do serviço afetado, resumir o conteúdo encontrado e utiliza-lo na análise do incidente & Could have \\
+				\hline
+				\textit{RF-13} & O sistema deve consultar os logs do serviço afetado para encontrar informação relacionada com o incidente e utilizá-la na análise & Won't have \\
+				\hline
 			\end{tabular}
 			\caption[Requisitos Funcionais]{Requisitos Funcionais}
 			\label{tab:requisitos_funcionais}
@@ -265,17 +229,11 @@
 				\hline
 				\textbf{Identificador} & \textbf{Descrição} \\
 				\hline
-				\textit{RNF-01} & O sistema deve ser capaz de continuar a processar pedidos desde que os serviços externos necessários estejam disponíveis \\
+				\textit{RNF-01} & O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar \\
 				\hline
-				\textit{RNF-02} & O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar \\
+				\textit{RNF-02} & O sistema deve estar organizado de forma a permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço \\
 				\hline
-				\textit{RNF-03} & O sistema deve estar organizado de forma a permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço \\
-				\hline
-				\textit{RNF-04} & O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis \\
-				\hline
-				\textit{RNF-05} & O sistema deve permitir identificar os incidentes utilizados como contexto para cada análise \\
-				\hline
-				\textit{RNF-06} & As respostas geradas devem apresentar um nível de qualidade adequado para apoiar a análise e resolução de incidentes \\
+				\textit{RNF-03} & O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis \\
 				\hline
 			\end{tabular}
 			\caption[Requisitos não Funcionais]{Requisitos não Funcionais}
@@ -285,4 +243,4 @@
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-	Neste capitulo pudemos observar a metodologia adotada e o planeamento da solução a ser desenvolvida, sendo apresentados as funcionalidades principais e as integrações externas. Foram ainda apresentadas, estatísticas sobre o conjunto de dados que permitiram perceber qual a maior área de impacto do serviço. Por fim, foram apresentados requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido.
+	Neste capitulo pudemos observar o planeamento da solução desenvolvida, sendo apresentadas as funcionalidades principais e as integrações externas. Foram ainda abordadas, estatísticas sobre o conjunto de dados que permitem perceber qual a maior área de impacto do serviço. Por fim, foram apresentados requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido.
