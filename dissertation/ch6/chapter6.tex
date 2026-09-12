@@ -91,28 +91,70 @@
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Specs}
-	
-		Falar da Estrutura
 		
-		Enumerar Specs que temos
+		As especificações foram organizadas em ficheiros próprios dentro da pasta \texttt{docs/specs/}, seguindo o modelo definido no início do projeto, como demonstrado na figura \ref{fig:specTemplate}. Este modelo permite manter uma estrutura semelhante entre as diferentes especificações e facilita a sua consulta e atualização ao longo do desenvolvimento.
 		
 		\begin{figure}[H]
 			\centering
-			\includegraphics[width=110mm,keepaspectratio]{img/spec_template}
+			\includegraphics[width=130mm,keepaspectratio]{img/spec_template}
 			\caption[Modelo Base de uma Especificação]{Modelo Base de uma Especificação}
 			\label{fig:specTemplate}
 		\end{figure}
-	
-%----------------------------------------------------------------------------------------
-	\subsection{Validação}
-	
 		
+		Cada especificação contém a informação necessária para orientar o desenvolvimento da funcionalidade, incluindo o problema a resolver, os objetivos, os critérios de aceitação, as integrações com serviços externos, o plano de testes e as alterações necessárias. A especificação pode também ser atualizada ao longo do desenvolvimento sempre que sejam identificadas novas necessidades ou alterações ao comportamento esperado.
+		
+		Todo este trabalho deve ser realizado com o uso do Arquiteto de especificações para que, no momento da criação das espeficificações, o agente saiba que documentos extra deve ter em conta para além do contexto dado pelo desenvolvedor. 
+		
+		Já o desenvolvimento foi dividido em diferentes fases, permitindo adicionar funcionalidades de forma gradual e validar cada etapa antes de avançar para a seguinte. A primeira fase esteve focada na criação da API e na primeira integração com o \gls{LLM}. A segunda fase adicionou contexto de incidentes, observabilidade e integração com a documentação do Confluence. Por fim, a terceira fase contém uma funcionalidade que já foi especificada e preparada para implementação, mas que ficou fora do âmbito do trabalho desenvolvido.
+		
+		A seguinte lista apresenta as especificações criadas ao longo do desenvolvimento, agrupadas por fase:
+		
+		\begin{itemize}
+			\item \textbf{Fase 1}
+			\begin{itemize}
+				\item \textit{US-1.1: Disponibilização da \gls{API} de detalhes do incidente}
+				\item \textit{US-1.2: Obtenção dos dados base do incidente a partir do cliente}
+				\item \textit{US-1.3: Integração do enriquecimento com LLM no GET /incident/details}
+				\item \textit{US-1.4: Registo do custo de utilização do LLM e do tempo de resposta}
+				\item \textit{US-1.5: Avaliação manual entre versões}
+			\end{itemize}
+			
+			\item \textbf{Fase 2}
+			\begin{itemize}
+				\item \textit{US-2.1: Adição da análise de logs e de observabilidade mais detalhada}
+				\item \textit{US-2.2: Implementação de rastreabilidade distribuída com Langfuse e OpenTelemetry}
+				\item \textit{US-2.3: Integração do contexto de incidentes relacionados no enriquecimento com LLM}
+				\item \textit{US-2.4: Pesquisa alternativa por incidentes recentes da equipa quando não são encontrados incidentes com o mesmo título}
+				\item \textit{US-2.5: Utilização de um LLM para encontrar incidentes relacionados e documentação do serviço no Confluence}
+			\end{itemize}
+			
+			\item \textbf{Fase 3}
+			\begin{itemize}
+				\item \textit{US-3.1: Integração da base de dados de logs (CloudWatch/Kibana) para fornecer logs de transações relacionados como contexto para o LLM}
+			\end{itemize}
+		\end{itemize}
+		
+		A organização das especificações por fases permitiu acompanhar a evolução da solução e manter o desenvolvimento dividido em partes mais pequenas. Desta forma, cada nova funcionalidade podia ser analisada, implementada e validada antes de avançar para a fase seguinte.
 
 %----------------------------------------------------------------------------------------
 \section{Estrutura}
-	\todo{texto}
-	%Falar dos layers
-		% Facilita adiçao ou remoçao de sistemas externos
+
+	A arquitetura do projeto foi definida com base em princípios de \gls{DDD}, adaptados às necessidades de um protótipo de apoio à análise de incidentes. O objetivo foi manter a lógica relacionada com o negócio separada das tecnologias e serviços externos utilizados pelo sistema.
+	
+	O domínio do projeto está centrado na análise e correlação de incidentes, incluindo a interpretação da informação dos tickets, a identificação de incidentes relacionados, a organização da informação e a geração de sugestões de mitigação. Desta forma, a lógica principal do sistema não fica diretamente dependente das APIs ou tecnologias utilizadas para obter ou processar esta informação.
+	
+	Para garantir esta separação, o projeto foi dividido em três camadas principais, como demonstra a figura \ref{fig:projectStructure}. A camada \texttt{domain} contém os modelos e regras de negócio, bem como as interfaces necessárias para comunicar com serviços externos. A camada \texttt{infrastructure} contém as implementações dessas interfaces e é responsável pela comunicação com sistemas como o ITSM e os serviços de LLM. Por fim, a camada \texttt{presentation} é responsável pela exposição da aplicação, nomeadamente através da API REST.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=60mm,keepaspectratio]{img/project_structure}
+		\caption[Modelo Base de uma Especificação]{Modelo Base de uma Especificação}
+		\label{fig:projectStructure}
+	\end{figure}
+	
+	Esta organização foi escolhida também para dar resposta ao \textit{RNF-02}, que define que o sistema deve permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço. Ao manter as integrações externas isoladas na camada de infraestrutura e ao definir os seus contratos no domínio, é possível substituir uma implementação sem alterar diretamente a lógica de negócio. Por exemplo, a integração com um determinado fornecedor de LLM pode ser substituída por outra implementação sem necessidade de alterar as regras utilizadas na análise dos incidentes.
+	
+	Assim, a estrutura adotada permite manter o núcleo da aplicação independente das tecnologias externas, facilitando futuras alterações e reduzindo o impacto das mudanças nas integrações. Ao mesmo tempo, mantém uma organização simples e adequada ao âmbito do projeto, evitando uma separação excessivamente complexa para as necessidades do protótipo.
 	
 %----------------------------------------------------------------------------------------
 \section{Implementação}
@@ -130,6 +172,8 @@
 	\subsection{Fase 2 - Sugestões através de RAG}
 		% Evolução do Prompt
 		% Langfuse
+		
+	
 		
 
 %----------------------------------------------------------------------------------------
