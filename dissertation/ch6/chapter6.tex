@@ -159,22 +159,74 @@
 %----------------------------------------------------------------------------------------
 \section{Implementação}
 	\todo{Vai ser aqui que falamos de todas as decisões que fizemos}
-	% - ver caderno...
 	
 %----------------------------------------------------------------------------------------
-	\subsection{Fase 1 - Detalhes do incidente}
-		% Prompt Básico
-			% Falar que a equipa escolheu comunicação simples, formal e human-readable
+	\subsection{Integração com ITSM}
 		
-	
+		A integração com o \textit{ITSM} foi responsável por obter a informação necessária para a análise do incidente principal e por disponibilizar a informação de incidentes anteriores para que fosse utilizada de seguida pelo \textit{LLM}. O processo foi dividido entre a obtenção do incidente principal e a recuperação de possíveis incidentes relacionados.
+		
+		%\subsubsection{Obtenção do Incidente Principal}
+		
+		O processo começa com a obtenção do incidente a ser analisado. A informação devolvida pelo \textit{ITSM} é, então, convertida para os modelos utilizados pelo domínio, permitindo que a restante aplicação trabalhe com uma estrutura independente da representação utilizada pelo sistema externo.
+		
+		São selecionados apenas os campos necessários para a análise do incidente e para fornecer contexto adicional ao \textit{LLM}. Desta forma, evita-se também a propagação de informação que não seja relevante ou que tenha sido identificada como sensível.
+		
+		% \subsubsection{Recuperação de Incidentes Relacionados}
+		
+		Após a obtenção do incidente principal, são realizadas pesquisas no \textit{ITSM} para obter possíveis incidentes relacionados. Nesta fase, o objetivo não é determinar se os incidentes estão efetivamente relacionados, mas sim recolher um conjunto de incidentes que possa posteriormente ser analisado pelo \textit{LLM}. São consideradas as referências no incidente principal através dos campos:
+		
+		\begin{itemize}
+			\item \texttt{parent\_incident}
+			\item \texttt{description}
+			\item \texttt{close\_notes}
+			\item \texttt{comments}
+			\item \texttt{work\_notes}
+			\item \texttt{hold\_reason}
+		\end{itemize}
+		
+		Os incidentes encontrados são também identificados pelo seu número, permitindo evitar duplicados durante o
+		processo.
+		
+		A pesquisa é feita apenas a partir do incidente principal. Os incidentes obtidos nesta fase não são utilizados para procurar novos incidentes relacionados. Esta decisão evita que a pesquisa se torne recursiva e que sejam obtidos incidentes cada vez mais afastados do contexto do problema original.
+		
+		É também realizada uma pesquisa por incidentes que tenham o mesmo \texttt{short\_description} do incidente principal. Esta pesquisa permite encontrar ocorrências anteriores com um título semelhante, que podem conter informação útil sobre problemas e resoluções anteriores.
+		
+		%\subsubsection{Recuperação do Histórico de Incidentes}
+		
+		Quando a pesquisa por incidentes com o mesmo \texttt{short\_description} não produz resultados, é utilizado um mecanismo de \textit{fallback}. Neste caso, são obtidos incidentes mais recentes associados à equipa responsável, incluindo incidentes ativos e fechados. O objetivo deste mecanismo é garantir que o \textit{LLM} recebe algum contexto histórico mesmo quando não existem incidentes anteriores com o mesmo título. Este fallback também permite ao \textit{LLM} ter em conta falhas no serviço que possam estar relacionados ou mesmo ser a causa de outro incidente.
+			
+			
+	\subsection{Integração com Confluence}
+		
+		5.4.1. Obtenção da Documentação
+		5.4.2. Seleção da Informação Relevante
+		5.4.3. Integração da Documentação no Contexto
 	
 %----------------------------------------------------------------------------------------
-	\subsection{Fase 2 - Sugestões através de RAG}
-		% Evolução do Prompt
+	\subsection{Integração com LLM}
+
 		% Langfuse
-		
+			
+		5.5.1 Preparação do Prompt
+			% Evolução do Prompt
+			% Falar que a equipa escolheu comunicação simples, formal e human-readable
+		5.5.2. Estrutura da Informação Enviada
+
+		5.5.3. Geração das Sugestões de Mitigação
+			
+	%----------------------------------------------------------------------------------------
+	\subsection{Considerações de Implementação}
 	
+		\subsubsection{RAG vs Fine Tuning}
+			% Explicar porque não vetorizamos o RAG
+			
 		
+		\subsubsection{Dados Sensíveis}
+			% Referir o RNF
+			
+		\subsubsection{Custos e Tempo de Execução}
+			%vReferir o RNF
+
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
