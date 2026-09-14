@@ -198,34 +198,70 @@
 			
 	\subsection{Integração com Confluence}
 		
-		5.4.1. Obtenção da Documentação
-		5.4.2. Seleção da Informação Relevante
-		5.4.3. Integração da Documentação no Contexto
+		% Obtençao das páginas relacionadas
+			% Explicar que a pesquisa não é feita em todo o Confluence, mas limitada ao espaço definido.
+			% Nesta pesquisa percorre páginas e respetivas subpáginas
+		% Obtenção do conteúdo da Documentação
+		% Seleção da Informação Relevante (com ajuda do LLM mas não explorar muito isto e deixar para a integração com o LLM)
+		% Integração da Documentação no Contexto
+		
+		O \textit{Confluence} é utilizado como uma fonte adicional de informação para complementar os dados obtidos através do \textit{ITSM}. O objetivo é encontrar documentação que possa ajudar a compreender melhor o problema identificado no incidente e que possa ser utilizada pelo LLM durante a análise final.
+		
+		A pesquisa no \textit{Confluence} não é realizada sobre todas as páginas disponíveis. Para limitar os resultados a informação relevante para o projeto, a pesquisa é restringida ao espaço referente desse produto. A partir da informação do incidente são procuradas páginas que possam estar relacionadas com o projeto. Quando uma página é encontrada, são também consideradas as suas subpáginas, uma vez que a informação sobre uma determinada funcionalidade ou componente pode estar distribuída por diferentes páginas da documentação.
+		
+		Depois de identificadas as páginas, é obtido o seu conteúdo para que possa ser utilizado nas etapas seguintes. Nesta fase são recolhidas as informações necessárias para identificar cada página, desta forma, a aplicação consegue manter a referência à origem da informação que será posteriormente utilizada no contexto enviado ao \textit{LLM}.
+		
+		A pesquisa pode devolver páginas que, apesar de estarem relacionadas com o projeto ou com os termos utilizados na pesquisa, não sejam relevantes para o incidente em análise. Por esse motivo, a informação obtida do \textit{Confluence} é analisada com o apoio do \textit{LLM}, que determina quais as páginas que apresentam informação útil para o problema atual.
+		
+		Após a seleção das páginas relevantes, o seu conteúdo é integrado com a restante informação recolhida durante o processo. Assim, o contexto final utilizado pelo \textit{LLM} pode incluir a informação do incidente principal, os incidentes relacionados e a documentação relevante do Confluence. Para além do conteúdo, é mantida a referência para cada página selecionada, permitindo identificar posteriormente a documentação utilizada e apresentar ao utilizador a respetiva página como fonte de informação.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Integração com LLM}
-
-		% Langfuse
-			
-		5.5.1 Preparação do Prompt
+		% Explicar o que é LLM
+		% Explicar como usamos LLM ( e introduzir o uso de prompts)
+			%Explicar que foi divido em 3 chamadas em vez de uma grande
+		% Explicar o que é prompt engineering
+	
+		% Prompt para obter incidentes relacionados e projeto afetado
+		% Prompt para identificar documentação relevante ao problema
+		% Preparação do Prompt da chamada final
 			% Evolução do Prompt
-			% Falar que a equipa escolheu comunicação simples, formal e human-readable
-		5.5.2. Estrutura da Informação Enviada
+			% Falar que a equipa escolheu comunicação simples, formal e human-readable (alguns escolheram mas ainda vou ter que falar com mais portnato ainda a confirma)
+		
+		% Estrutura da Informação Enviada
 
-		5.5.3. Geração das Sugestões de Mitigação
+		% Geração das Sugestões de Mitigação
+		
+		% Conexão com o Langfuse
 			
 	%----------------------------------------------------------------------------------------
 	\subsection{Considerações de Implementação}
 	
 		\subsubsection{RAG vs Fine Tuning}
-			% Explicar porque não vetorizamos o RAG
+			% Explicar o que é RAG
+			% Explicar o que é Fine Tuning
 			
+			% Explicar como usamos o RAG (tanto nos incidentes como na documentação)
+			
+			% Explicar porque não vetorizamos o RAG (sendo o contexto tão dinamico (em temos de mitigações) e ao mesmo tempo por maioria dos incidentes ser de cariz automática)
 		
 		\subsubsection{Dados Sensíveis}
-			% Referir o RNF
+			% Referir novamente que "dropamos" a informação sensivel identificada na tabela X logo na infraestrutra, sendo que o nosso dominio nunca chega a ter essa informaçao e por isso nunca é utilizada seja em logs ou no LLM
+			
+			% Referir que conseguimos alcançar o RNF ({RNF-01} - O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar)
 			
 		\subsubsection{Custos e Tempo de Execução}
-			%vReferir o RNF
+			% Referir que mantemos tracking deste valores quer pelo Langfuse quer por apresentar em cada pedido essa informação
+			
+			% Referir que é configurável o limite máximo de tokens enviados ao LLM de forma a controlar estes possiveis "outsiders"
+			
+			% Referir que o modelo de LLM também é configurável para permitir a escolha do modelo que traz mais qualidade aliado ao melhor custo e latencia
+			
+			% Referir que temos a preocupação de ter o máximo de histórico de incidentes obtidos assim como os enviados para o LLm como configuração
+			
+			% Referir que temos o máximo de páginas obtidas do confluence como configurável
+			
+			% Referir que conseguimos alcançar o RNF ({RNF-03} - O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis)
 
 
 %----------------------------------------------------------------------------------------
