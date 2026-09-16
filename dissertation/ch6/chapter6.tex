@@ -3,13 +3,12 @@
 \chapter{Desenvolvimento} % Main chapter title
 \label{chap:Chapter6} % For referencing the chapter elsewhere, use \ref{chap:Chapter6} 
 
-	\todo{TODO}
+	Neste capítulo são abordadas as principais decisões tomadas pelo autor durante a implementação das funcionalidades planeadas para o projeto. Para além das ferramentas e tecnologias utilizadas, é apresentada a metodologia seguida durante o desenvolvimento e a estrutura adotada para o \textit{backend}. São também descritas as principais integrações realizadas e as opções tomadas na utilização do \gls{LLM}, bem como algumas considerações relacionadas com os dados, custos e tempo de execução.
 
 %----------------------------------------------------------------------------------------
 \section{Stack Tecnológica}
 
-	No inicio do projeto foi realizada uma análise sobre quais as melhores
-	ferramentas e plataformas para o desenvolvimento do mesmo. Este capitulo apresenta as escolhas realizadas explicando os motivos de cada seleção.
+	No inicio do projeto foi realizada uma análise sobre quais as melhores ferramentas e plataformas para o desenvolvimento do mesmo. Este capitulo apresenta as escolhas realizadas explicando os motivos de cada seleção.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Python}
@@ -105,7 +104,7 @@
 		
 		Todo este trabalho deve ser realizado com o uso do Arquiteto de especificações para que, no momento da criação das espeficificações, o agente saiba que documentos extra deve ter em conta para além do contexto dado pelo desenvolvedor. 
 		
-		Já o desenvolvimento foi dividido em diferentes fases, permitindo adicionar funcionalidades de forma gradual e validar cada etapa antes de avançar para a seguinte. A primeira fase esteve focada na criação da API e na primeira integração com o \gls{LLM}. A segunda fase adicionou contexto de incidentes, observabilidade e integração com a documentação do Confluence. Por fim, a terceira fase contém uma funcionalidade que já foi especificada e preparada para implementação, mas que ficou fora do âmbito do trabalho desenvolvido.
+		Já o desenvolvimento foi dividido em diferentes fases, permitindo adicionar funcionalidades de forma gradual e validar cada etapa antes de avançar para a seguinte. A primeira fase esteve focada na criação da \textit{API} e na primeira integração com o \gls{LLM}. A segunda fase adicionou contexto de incidentes, observabilidade e integração com a documentação do \textit{Confluence}. Por fim, a terceira fase contém uma funcionalidade que já foi especificada e preparada para implementação, mas que ficou fora do âmbito do trabalho desenvolvido.
 		
 		A seguinte lista apresenta as especificações criadas ao longo do desenvolvimento, agrupadas por fase:
 		
@@ -114,23 +113,23 @@
 			\begin{itemize}
 				\item \textit{US-1.1: Disponibilização da \gls{API} de detalhes do incidente}
 				\item \textit{US-1.2: Obtenção dos dados base do incidente a partir do cliente}
-				\item \textit{US-1.3: Integração do enriquecimento com LLM no GET /incident/details}
-				\item \textit{US-1.4: Registo do custo de utilização do LLM e do tempo de resposta}
+				\item \textit{US-1.3: Integração do enriquecimento com \gls{LLM} no \textit{GET} \texttt{/incident/details}}
+				\item \textit{US-1.4: Registo do custo de utilização do \gls{LLM} e do tempo de resposta}
 				\item \textit{US-1.5: Avaliação manual entre versões}
 			\end{itemize}
 			
 			\item \textbf{Fase 2}
 			\begin{itemize}
 				\item \textit{US-2.1: Adição da análise de logs e de observabilidade mais detalhada}
-				\item \textit{US-2.2: Implementação de rastreabilidade distribuída com Langfuse e OpenTelemetry}
-				\item \textit{US-2.3: Integração do contexto de incidentes relacionados no enriquecimento com LLM}
+				\item \textit{US-2.2: Implementação de rastreabilidade distribuída com \textit{Langfuse} e \textit{OpenTelemetry}}
+				\item \textit{US-2.3: Integração do contexto de incidentes relacionados no enriquecimento com \gls{LLM}}
 				\item \textit{US-2.4: Pesquisa alternativa por incidentes recentes da equipa quando não são encontrados incidentes com o mesmo título}
-				\item \textit{US-2.5: Utilização de um LLM para encontrar incidentes relacionados e documentação do serviço no Confluence}
+				\item \textit{US-2.5: Utilização de um \gls{LLM} para encontrar incidentes relacionados e documentação do serviço no Confluence}
 			\end{itemize}
 			
 			\item \textbf{Fase 3}
 			\begin{itemize}
-				\item \textit{US-3.1: Integração da base de dados de logs (CloudWatch/Kibana) para fornecer logs de transações relacionados como contexto para o LLM}
+				\item \textit{US-3.1: Integração da base de dados de \textit{logs} para fornecer registos de transações relacionados como contexto para o \gls{LLM}}
 			\end{itemize}
 		\end{itemize}
 		
@@ -141,10 +140,11 @@
 
 	A arquitetura do projeto foi definida com base em princípios de \gls{DDD}, adaptados às necessidades de um protótipo de apoio à análise de incidentes. O objetivo foi manter a lógica relacionada com o negócio separada das tecnologias e serviços externos utilizados pelo sistema.
 	
-	O domínio do projeto está centrado na análise e correlação de incidentes, incluindo a interpretação da informação dos tickets, a identificação de incidentes relacionados, a organização da informação e a geração de sugestões de mitigação. Desta forma, a lógica principal do sistema não fica diretamente dependente das APIs ou tecnologias utilizadas para obter ou processar esta informação.
+	O domínio do projeto está centrado na análise e correlação de incidentes, incluindo a interpretação da informação dos tickets, a identificação de incidentes relacionados, a organização da informação e a geração de sugestões de mitigação. Desta forma, a lógica principal do serviço não fica diretamente dependente das \gls{API}\textit{s} ou tecnologias utilizadas para obter ou processar esta informação.
 	
-	Para garantir esta separação, o projeto foi dividido em três camadas principais, como demonstra a figura \ref{fig:projectStructure}. A camada \texttt{domain} contém os modelos e regras de negócio, bem como as interfaces necessárias para comunicar com serviços externos. A camada \texttt{infrastructure} contém as implementações dessas interfaces e é responsável pela comunicação com sistemas como o ITSM e os serviços de LLM. Por fim, a camada \texttt{presentation} é responsável pela exposição da aplicação, nomeadamente através da API REST.
+	Para garantir esta separação, o projeto foi dividido em três camadas principais, como demonstra a figura \ref{fig:projectStructure}. A camada \textit{domain} contém os modelos e regras de negócio, bem como as interfaces necessárias para comunicar com serviços externos. A camada \textit{infrastructure} contém as implementações dessas interfaces e é responsável pela comunicação com sistemas como o \gls{ITSM} e os serviços de \gls{LLM}. Por fim, a camada \textit{presentation} é responsável pela exposição da aplicação, nomeadamente através da \textit{API REST}.
 	
+	\todo[inline]{Domain não devia ter ficheiros Confluence}
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=60mm,keepaspectratio]{img/project_structure}
@@ -152,28 +152,31 @@
 		\label{fig:projectStructure}
 	\end{figure}
 	
-	Esta organização foi escolhida também para dar resposta ao \textit{RNF-02}, que define que o sistema deve permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço. Ao manter as integrações externas isoladas na camada de infraestrutura e ao definir os seus contratos no domínio, é possível substituir uma implementação sem alterar diretamente a lógica de negócio. Por exemplo, a integração com um determinado fornecedor de LLM pode ser substituída por outra implementação sem necessidade de alterar as regras utilizadas na análise dos incidentes.
+	Esta organização foi escolhida também para dar resposta ao \textit{RNF-02}, que define que o sistema deve permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço. Ao manter as integrações externas isoladas na camada de infraestrutura e ao definir os seus contratos no domínio, é possível substituir uma implementação sem alterar diretamente a lógica de negócio. Por exemplo, a integração com um determinado fornecedor de \textit{LLM} pode ser substituída por outra implementação sem necessidade de alterar as regras utilizadas na análise dos incidentes.
 	
 	Assim, a estrutura adotada permite manter o núcleo da aplicação independente das tecnologias externas, facilitando futuras alterações e reduzindo o impacto das mudanças nas integrações. Ao mesmo tempo, mantém uma organização simples e adequada ao âmbito do projeto, evitando uma separação excessivamente complexa para as necessidades do protótipo.
 	
 %----------------------------------------------------------------------------------------
 \section{Implementação}
-	\todo{Vai ser aqui que falamos de todas as decisões que fizemos}
+
+	A aplicação integra diferentes fontes de informação e serviços externos, sendo necessário tratar e organizar essa informação antes de a disponibilizar ao \gls{LLM}. 
+	
+	A implementação é apresentada de acordo com os principais componentes envolvidos no processo. Primeiro, é descrita a integração com o sistema \gls{ITSM}, responsável pela obtenção do incidente principal e de informação sobre incidentes anteriores. De seguida, é apresentada a integração com o \textit{Confluence}, utilizada para obter documentação adicional relacionada com o problema. Posteriormente, é explicada a integração com o \gls{LLM}, incluindo a utilização dos diferentes \textit{prompts}, a análise da informação recolhida e a geração das sugestões de mitigação. Por fim, são apresentadas algumas decisões tomadas durante a implementação, nomeadamente a utilização de \gls{RAG}, o tratamento de dados sensíveis e o controlo dos custos e do tempo de execução.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Integração com ITSM}
 		
-		A integração com o \textit{ITSM} foi responsável por obter a informação necessária para a análise do incidente principal e por disponibilizar a informação de incidentes anteriores para que fosse utilizada de seguida pelo \textit{LLM}. O processo foi dividido entre a obtenção do incidente principal e a recuperação de possíveis incidentes relacionados.
+		A integração com o \gls{ITSM} (produto do \textit{ServiceNow}) foi responsável por obter a informação necessária para a análise do incidente principal e por disponibilizar a informação de incidentes anteriores para que fosse utilizada de seguida pelo \gls{LLM}. O processo foi dividido entre a obtenção do incidente principal e a recuperação de possíveis incidentes relacionados.
 		
 		%\subsubsection{Obtenção do Incidente Principal}
 		
-		O processo começa com a obtenção do incidente a ser analisado. A informação devolvida pelo \textit{ITSM} é, então, convertida para os modelos utilizados pelo domínio, permitindo que a restante aplicação trabalhe com uma estrutura independente da representação utilizada pelo sistema externo.
+		O processo começa com a obtenção do incidente a ser analisado. A informação devolvida pelo \gls{ITSM} é, então, convertida para os modelos utilizados pelo domínio, permitindo que a restante aplicação trabalhe com uma estrutura independente da representação utilizada pelo sistema externo.
 		
-		São selecionados apenas os campos necessários para a análise do incidente e para fornecer contexto adicional ao \textit{LLM}. Desta forma, evita-se também a propagação de informação que não seja relevante ou que tenha sido identificada como sensível.
+		São selecionados apenas os campos necessários para a análise do incidente e para fornecer contexto adicional ao \gls{LLM}. Desta forma, evita-se também a propagação de informação que não seja relevante ou que tenha sido identificada como sensível.
 		
 		% \subsubsection{Recuperação de Incidentes Relacionados}
 		
-		Após a obtenção do incidente principal, são realizadas pesquisas no \textit{ITSM} para obter possíveis incidentes relacionados. Nesta fase, o objetivo não é determinar se os incidentes estão efetivamente relacionados, mas sim recolher um conjunto de incidentes que possa posteriormente ser analisado pelo \textit{LLM}. São consideradas as referências no incidente principal através dos campos:
+		Após a obtenção do incidente principal, são realizadas pesquisas no \gls{ITSM} para obter possíveis incidentes relacionados. Nesta fase, o objetivo não é determinar se os incidentes estão efetivamente relacionados, mas sim recolher um conjunto de incidentes que possa posteriormente ser analisado pelo \gls{LLM}. São consideradas as referências no incidente principal através dos campos:
 		
 		\begin{itemize}
 			\item \texttt{parent\_incident}
@@ -193,7 +196,7 @@
 		
 		%\subsubsection{Recuperação do Histórico de Incidentes}
 		
-		Quando a pesquisa por incidentes com o mesmo \texttt{short\_description} não produz resultados, é utilizado um mecanismo de \textit{fallback}. Neste caso, são obtidos incidentes mais recentes associados à equipa responsável, incluindo incidentes ativos e fechados. O objetivo deste mecanismo é garantir que o \textit{LLM} recebe algum contexto histórico mesmo quando não existem incidentes anteriores com o mesmo título. Este fallback também permite ao \textit{LLM} ter em conta falhas no serviço que possam estar relacionados ou mesmo ser a causa de outro incidente.
+		Quando a pesquisa por incidentes com o mesmo \texttt{short\_description} não produz resultados, é utilizado um mecanismo de \textit{fallback}. Neste caso, são obtidos incidentes mais recentes associados à equipa responsável, incluindo incidentes ativos e fechados. O objetivo deste mecanismo é garantir que o \gls{LLM} recebe algum contexto histórico mesmo quando não existem incidentes anteriores com o mesmo título. Este fallback também permite ao \gls{LLM} ter em conta falhas no serviço que possam estar relacionados ou mesmo ser a causa de outro incidente.
 			
 			
 	\subsection{Integração com Confluence}
@@ -205,15 +208,15 @@
 		% Seleção da Informação Relevante (com ajuda do LLM mas não explorar muito isto e deixar para a integração com o LLM)
 		% Integração da Documentação no Contexto
 		
-		O \textit{Confluence} é utilizado como uma fonte adicional de informação para complementar os dados obtidos através do \textit{ITSM}. O objetivo é encontrar documentação que possa ajudar a compreender melhor o problema identificado no incidente e que possa ser utilizada pelo LLM durante a análise final.
+		O \textit{Confluence} é utilizado como uma fonte adicional de informação para complementar os dados obtidos através do \gls{ITSM}. O objetivo é encontrar documentação que possa ajudar a compreender melhor o problema identificado no incidente e que possa ser utilizada pelo \gls{LLM} durante a análise final.
 		
 		A pesquisa no \textit{Confluence} não é realizada sobre todas as páginas disponíveis. Para limitar os resultados a informação relevante para o projeto, a pesquisa é restringida ao espaço referente desse produto. A partir da informação do incidente são procuradas páginas que possam estar relacionadas com o projeto. Quando uma página é encontrada, são também consideradas as suas subpáginas, uma vez que a informação sobre uma determinada funcionalidade ou componente pode estar distribuída por diferentes páginas da documentação.
 		
-		Depois de identificadas as páginas, é obtido o seu conteúdo para que possa ser utilizado nas etapas seguintes. Nesta fase são recolhidas as informações necessárias para identificar cada página, desta forma, a aplicação consegue manter a referência à origem da informação que será posteriormente utilizada no contexto enviado ao \textit{LLM}.
+		Depois de identificadas as páginas, é obtido o seu conteúdo para que possa ser utilizado nas etapas seguintes. Nesta fase são recolhidas as informações necessárias para identificar cada página, desta forma, a aplicação consegue manter a referência à origem da informação que será posteriormente utilizada no contexto enviado ao \gls{LLM}.
 		
-		A pesquisa pode devolver páginas que, apesar de estarem relacionadas com o projeto ou com os termos utilizados na pesquisa, não sejam relevantes para o incidente em análise. Por esse motivo, a informação obtida do \textit{Confluence} é analisada com o apoio do \textit{LLM}, que determina quais as páginas que apresentam informação útil para o problema atual.
+		A pesquisa pode devolver páginas que, apesar de estarem relacionadas com o projeto ou com os termos utilizados na pesquisa, não sejam relevantes para o incidente em análise. Por esse motivo, a informação obtida do \textit{Confluence} é analisada com o apoio do \gls{LLM}, que determina quais as páginas que apresentam informação útil para o problema atual.
 		
-		Após a seleção das páginas relevantes, o seu conteúdo é integrado com a restante informação recolhida durante o processo. Assim, o contexto final utilizado pelo \textit{LLM} pode incluir a informação do incidente principal, os incidentes relacionados e a documentação relevante do Confluence. Para além do conteúdo, é mantida a referência para cada página selecionada, permitindo identificar posteriormente a documentação utilizada e apresentar ao utilizador a respetiva página como fonte de informação.
+		Após a seleção das páginas relevantes, o seu conteúdo é integrado com a restante informação recolhida durante o processo. Assim, o contexto final utilizado pelo \gls{LLM} pode incluir a informação do incidente principal, os incidentes relacionados e a documentação relevante do \textit{Confluence}. Para além do conteúdo, é mantida a referência para cada página selecionada, permitindo identificar posteriormente a documentação utilizada e apresentar ao utilizador a respetiva página como fonte de informação.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Integração com LLM}
@@ -229,12 +232,32 @@
 			% Falar que a equipa escolheu comunicação simples, formal e human-readable (alguns escolheram mas ainda vou ter que falar com mais portnato ainda a confirma)
 		
 		% Estrutura da Informação Enviada
-
 		% Geração das Sugestões de Mitigação
-		
 		% Conexão com o Langfuse
-			
-	%----------------------------------------------------------------------------------------
+		
+		Os \gls{LLM} são modelos de inteligência artificial treinados com grandes quantidades de dados textuais, sendo capazes de compreender e gerar texto em linguagem natural. Neste contexto, o \gls{LLM} foi utilizado para analisar a informação recolhida dos diferentes sistemas e transformá-la em conhecimento útil para a análise do incidente. Em vez de utilizar o modelo apenas para gerar uma resposta a partir do incidente principal, a aplicação utilizou-o em diferentes momentos do processo, permitindo realizar tarefas específicas antes de devolver a resposta final.
+		
+		A utilização do \gls{LLM} foi dividida em três chamadas distintas. Esta divisão foi feita para evitar concentrar toda a informação e todas as tarefas numa única chamada, o que resultaria num \textit{prompt} maior e mais difícil de controlar. Na primeira chamada, o modelo analisa o incidente principal e a informação dos incidentes candidatos obtidos através do \gls{ITSM}, identificando quais apresentam uma relação relevante com o problema atual e qual o projeto ou componente afetado. Desta forma, a aplicação não assume que todos os incidentes obtidos durante a pesquisa são realmente relacionados, deixando essa decisão para o modelo. Na segunda chamada, o \gls{LLM} analisa a documentação obtida através do \textit{Confluence} e determina quais as páginas que contêm informação relevante para o incidente. A terceira chamada corresponde à análise final, onde são combinadas as informações selecionadas nas etapas anteriores para produzir as sugestões de mitigação.
+		
+		Para controlar o comportamento do modelo nestas diferentes fases, foram utilizados \textit{prompts} específicos. Um \textit{prompt} corresponde à informação e às instruções fornecidas ao \gls{LLM} para indicar o que deve ser analisado e qual o resultado esperado. A definição e melhoria destes \textit{prompts} enquadra-se no conceito de \textit{Prompt Engineering}, que consiste na criação e ajuste das instruções fornecidas ao modelo de forma a obter respostas mais consistentes e adequadas ao objetivo pretendido. Neste projeto, os \textit{prompts} foram sendo ajustados ao longo do desenvolvimento, tendo em consideração não só a informação disponível, mas também a forma como os resultados deveriam ser apresentados e utilizados pelas etapas seguintes.
+		
+		O primeiro \textit{prompt} é responsável pela análise dos incidentes candidatos. O modelo recebe a informação dos campos não sensiveis do incidente principal, sendo instruído a identificar, nesses campos, incidentes relacionados com o problema atual. Nesta mesma etapa é também identificado o projeto ou componente afetado, informação que será utilizada posteriormente para orientar a análise e apresentar sugestões. A pesquisa de incidentes é feita apenas a partir do incidente principal, não sendo realizada uma nova pesquisa com base nos incidentes identificados como relacionados. Esta decisão evita uma expansão sucessiva da pesquisa, na qual um incidente poderia levar à obtenção de outros incidentes apenas por estarem relacionados entre si, aumentando a quantidade de informação enviada ao modelo e o risco de incluir informação pouco relevante.
+		
+		O segundo \textit{prompt} é utilizado para analisar a documentação obtida através do \textit{Confluence}. A pesquisa inicial pode devolver páginas que estejam relacionadas com os termos utilizados, mas que não contenham informação útil para o problema específico. O \gls{LLM} recebe, por isso, o conteúdo das páginas encontradas e seleciona aquelas que apresentam informação relevante para o incidente. O objetivo desta etapa não é gerar uma resposta final, mas reduzir a documentação disponível à informação que poderá contribuir para a análise seguinte.
+		
+		A última chamada recebe a informação selecionada nas etapas anteriores, incluindo os dados do incidente principal, os incidentes identificados como relacionados e a documentação considerada relevante. A preparação deste \textit{prompt} foi uma das partes que sofreu mais alterações durante o desenvolvimento, uma vez que pequenas alterações na forma de apresentar a informação ou nas instruções dadas ao modelo podiam influenciar o resultado obtido. O objetivo foi chegar a um formato que permitisse ao \gls{LLM} compreender facilmente o contexto e, ao mesmo tempo, produzir uma resposta que pudesse ser utilizada diretamente pela equipa de suporte. 
+		
+		A informação enviada ao \gls{LLM} é organizada de forma estruturada, separando os diferentes elementos que fazem parte do contexto. O incidente principal é apresentado como o problema que está a ser analisado, enquanto os incidentes relacionados e a documentação do \textit{Confluence} funcionam como informação adicional para ajudar na análise. Esta separação permite ao modelo distinguir a situação atual do histórico e da documentação utilizada como apoio. A aplicação também limita a quantidade de informação enviada ao modelo, evitando incluir dados que não sejam necessários para a análise e contribuindo para manter o custo e o tempo de execução dentro dos valores definidos para o sistema.
+		
+		Com base neste contexto, a chamada final gera sugestões de mitigação para o incidente. As sugestões são construídas tendo em consideração não só o incidente atual, mas também as soluções registadas em incidentes anteriores e a informação existente na documentação selecionada. Desta forma, o objetivo não é simplesmente solicitar ao \gls{LLM} que proponha uma solução genérica, mas fornecer-lhe informação relacionada com situações que já ocorreram e com o funcionamento do projeto afetado. A resposta produzida pelo modelo pode assim apresentar ações de mitigação que sirvam de apoio à equipa durante a resolução do incidente.
+		
+		Por fim, a integração com o \gls{LLM} é acompanhada através do \textit{Langfuse}. Esta ferramenta permite registar e acompanhar as diferentes chamadas realizadas durante uma análise, incluindo informação sobre o tempo de execução e os custos associados a cada pedido. Como o processo utiliza várias chamadas ao \gls{LLM}, esta observabilidade permite analisar cada operação individualmente e perceber quais as etapas que apresentam maior custo ou tempo de execução. Estes dados podem também ser utilizados posteriormente para avaliar o comportamento do sistema e identificar possíveis oportunidades de otimização.
+		
+		\todo[inline]{Acrescentar imagem com traces do LangFuse e referir no texto acima}
+		
+		
+		
+%----------------------------------------------------------------------------------------
 	\subsection{Considerações de Implementação}
 	
 		\subsubsection{RAG vs Fine Tuning}
@@ -244,12 +267,30 @@
 			% Explicar como usamos o RAG (tanto nos incidentes como na documentação)
 			
 			% Explicar porque não vetorizamos o RAG (sendo o contexto tão dinamico (em temos de mitigações) e ao mesmo tempo por maioria dos incidentes ser de cariz automática)
+			
+			Para o projeto foi escolhida a utilização de \gls{RAG}, devido sua à natureza dinâmica da informação usada durante a análise. Os incidentes existentes no \gls{ITSM} estão constantemente a ser alterados com a entrada de novos registos e, em particular, as informações relacionadas com a resolução dos incidentes podem mudar ao longo do tempo. O mesmo acontece com a documentação disponível no \textit{Confluence}. Com o uso de \gls{RAG}, esta informação pode ser obtida no momento da análise e fornecida ao modelo como contexto, sem ser necessário alterar o modelo sempre que são adicionados novos dados. No caso do \textit{Fine Tuning}, os novos dados teriam de ser novamente utilizados num processo de treino para que fossem incorporados pelo modelo.
+			
+			Para o caso dos incidentes, são recuperados do \gls{ITSM} possíveis candidatos a incidentes relacionados com o incidente principal. Estes dados são posteriormente analisados pelo \gls{LLM}, que determina quais são realmente relevantes para o problema em análise. A informação dos incidentes selecionados, especialmente as descrições e as notas de resolução, pode fornecer contexto sobre problemas semelhantes e sobre as soluções utilizadas anteriormente.
+			
+			Do mesmo modo, o \gls{RAG} foi utilizado para a documentação, visto que, é algo frequentemente alterado com o surgimento de novas funcionalidades ou alteração das mesmas. Neste caso, são pesquisadas páginas no \textit{Confluence} que possam estar relacionadas com o incidente e, após a sua recuperação, o modelo seleciona a informação considerada relevante. Esta informação é posteriormente utilizada como parte do contexto da análise final.
+			
+			Dentro da abordagem de \gls{RAG}, foi ainda considerada a utilização de uma pesquisa baseada em vetores onde, neste caso, os documentos seriam convertidos em \textit{embeddings} e armazenados numa base de dados vetorial, permitindo recuperar informação com base na sua similaridade semântica. Apesar de esta abordagem ser útil em cenários onde existe uma grande quantidade de informação não estruturada, considerou-se uma opção mais simples. 	
+			
+			A escolha de uma abordagem estrutural, permite também evitar a necessidade de manter uma infraestrutura adicional para criação, armazenamento e atualização de \textit{embeddings}. Esta decisão é particularmente relevante devido à frequência com que os incidentes são criados e à necessidade de utilizar informação recente, sobretudo quando se pretende aproveitar as soluções de mitigação registadas em incidentes anteriores. Assim, a solução utiliza \gls{RAG} através dos mecanismos de pesquisa existentes no \gls{ITSM} e no \textit{Confluence}, recuperando a informação no momento da análise em vez de a incorporar diretamente no modelo através de \textit{Fine Tuning}.
 		
+%----------------------------------------------------------------------------------------
 		\subsubsection{Dados Sensíveis}
 			% Referir novamente que "dropamos" a informação sensivel identificada na tabela X logo na infraestrutra, sendo que o nosso dominio nunca chega a ter essa informaçao e por isso nunca é utilizada seja em logs ou no LLM
 			
 			% Referir que conseguimos alcançar o RNF ({RNF-01} - O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar)
+
+			A informação obtida através do \gls{ITSM} pode conter dados sensíveis que não são necessários para a análise realizada pelo serviço. Como definido anteriormente na tabela \ref{tab:campos-descartados}, estes campos são identificados e removidos logo na camada de infraestrutura, no momento em que os dados são recebidos do sistema externo. Desta forma, a informação sensível não é transmitida para as restantes camadas da aplicação.
 			
+			Esta decisão permite que o domínio trabalhe apenas com a informação necessária para a análise do incidente. Como os dados sensíveis são removidos antes de chegarem ao domínio, estes não fazem parte das entidades utilizadas pela lógica de negócio e, consequentemente, não podem ser utilizados nas chamadas ao \gls{LLM} ou registados nos mecanismos de \textit{logging} da aplicação. A proteção dos dados é assim realizada na entrada do sistema, em vez de depender de verificações individuais em cada etapa posterior do processamento.
+			
+			Com esta abordagem é possível cumprir o \textit{RNF-01}, presente na tabela \ref{tab:requisitos_nao_funcionais}, que define que o sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar.
+			
+%----------------------------------------------------------------------------------------
 		\subsubsection{Custos e Tempo de Execução}
 			% Referir que mantemos tracking deste valores quer pelo Langfuse quer por apresentar em cada pedido essa informação
 			
@@ -263,8 +304,18 @@
 			
 			% Referir que conseguimos alcançar o RNF ({RNF-03} - O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis)
 
+			Durante o desenvolvimento existiu também a preocupação de acompanhar o custo e o tempo de execução de cada análise. Estes valores são monitorizados através do \textit{Langfuse}, que permite acompanhar as diferentes chamadas realizadas ao \gls{LLM}, mas também são disponibilizados na resposta de cada pedido. Desta forma, é possível consultar diretamente o custo e o tempo associados a uma análise, permitindo avaliar o impacto das diferentes configurações utilizadas pelo sistema.
+			
+			Para controlar a quantidade de informação enviada para o \gls{LLM}, foram definidos vários parâmetros configuráveis. Um dos principais parâmetros corresponde ao limite máximo de \textit{tokens} que podem ser enviados ao modelo. Este limite permite evitar, que um aumento inesperado da quantidade de informação recolhida resulte num pedido com uma dimensão excessiva e, num consequente aumento do custo e do tempo de execução. O modelo utilizado pelo sistema também é configurável, permitindo escolher entre diferentes modelos de acordo com o equilíbrio pretendido entre qualidade das respostas, custo e latência.
+			
+			A quantidade de informação recuperada das fontes externas é igualmente controlada através de configurações. No caso do \gls{ITSM}, é possível definir o número máximo de incidentes do histórico que podem ser obtidos e utilizados durante a análise. Esta configuração permite manter uma quantidade suficiente de histórico para que o \gls{LLM} tenha contexto sobre problemas anteriores, sem enviar informação desnecessária. De forma semelhante, é possível definir o número máximo de páginas a obter do \textit{Confluence}, evitando que uma pesquisa devolva uma quantidade excessiva de documentação para uma única análise.
+			
+			Estas configurações permitem ajustar o nível de informação utilizado pelo sistema de acordo com as necessidades do projeto e com os recursos disponíveis. Em conjunto com o acompanhamento do custo e do tempo de execução, permitem avaliar o impacto das alterações realizadas e encontrar um equilíbrio entre a quantidade de contexto fornecida ao \gls{LLM} e o custo de cada análise.
+			
+			Com esta abordagem é possível cumprir o \textit{RNF-03}, que define que o sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis.
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-	\todo{TODO}
+	Com este capítulo, foi possível verificar as principais ferramentas utilizadas, a metodologia aplicada e as decisões implementadas pelo autor do estudo, sendo que estas escolhas tiveram como principal objetivo construir uma solução simples, flexível e adequada ao problema identificado. A implementação permitiu também perceber a importância de separar as diferentes responsabilidades da aplicação e de manter as integrações externas isoladas da lógica principal do sistema.
+	
