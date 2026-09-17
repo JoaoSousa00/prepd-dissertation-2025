@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Optional
 
 import httpx2 as httpx
@@ -9,6 +10,8 @@ from src.domain.documentation import (
     DocumentationSourceUnauthorizedError,
     DocumentationSourceUnavailableError,
 )
+from src.shared.observability import get_current_request_context
+from src.shared.tracing import set_span_status_error, set_span_status_ok, start_span
 
 logger = logging.getLogger(__name__)
 DEFAULT_CONFLUENCE_SPACE_KEY = "CDLOS"
@@ -39,29 +42,54 @@ class ConfluenceClient:
         if not self.pat_token:
             raise DocumentationSourceUnauthorizedError("Confluence PAT token is missing")
 
-        query = f'space="{self._escape_cql(self.space_key)}" AND type=page AND text ~ "{self._escape_cql(search_query)}"'
-        params = {
-            "cql": query,
-            "limit": str(limit or 25),
-            "expand": "space,version,body.storage.value",
-        }
+        context = get_current_request_context()
+        with start_span(
+            "confluence.search",
+            request_id=context.request_id if context is not None else None,
+            workflow="incident_summary",
+            component="confluence",
+            attributes={
+                "operation": "search_pages",
+                "space_key": self.space_key,
+                "query": search_query,
+                "limit": limit or 25,
+                "langfuse.observation.type": "span",
+            },
+        ) as span:
+            started_at = time.perf_counter()
+            try:
+                query = f'space="{self._escape_cql(self.space_key)}" AND type=page AND text ~ "{self._escape_cql(search_query)}"'
+                params = {
+                    "cql": query,
+                    "limit": str(limit or 25),
+                    "expand": "space,version,body.storage.value",
+                }
 
-        response = self._request("GET", self._api_url("/content/search"), params=params)
-        payload = response.json()
-        results = []
-        for item in payload.get("results", []):
-            page_id = str(item.get("id") or item.get("_id") or "").strip()
-            title = str(item.get("title") or "Untitled page").strip()
-            if not page_id:
-                continue
-            page = DocumentationPage(
-                id=page_id,
-                title=title,
-                url=self._page_url(page_id),
-                body=self._extract_body(item),
-            )
-            results.append(page)
-        return results
+                response = self._request("GET", self._api_url("/content/search"), params=params)
+                payload = response.json()
+                results = []
+                for item in payload.get("results", []):
+                    page_id = str(item.get("id") or item.get("_id") or "").strip()
+                    title = str(item.get("title") or "Untitled page").strip()
+                    if not page_id:
+                        continue
+                    page = DocumentationPage(
+                        id=page_id,
+                        title=title,
+                        url=self._page_url(page_id),
+                        body=self._extract_body(item),
+                    )
+                    results.append(page)
+                set_span_status_ok(span, (time.perf_counter() - started_at) * 1000)
+                return results
+            except Exception as exc:
+                set_span_status_error(
+                    span,
+                    error_code="confluence_search_failure",
+                    error_message=str(exc),
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
+                raise
 
     def _request(self, method: str, url: str, params: Optional[dict] = None) -> httpx.Response:
         logger.debug("Confluence %s request url=%s params=%s", method.upper(), url, params)

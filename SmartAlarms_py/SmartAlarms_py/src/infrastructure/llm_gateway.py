@@ -156,6 +156,20 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         )
         self._token_cache: Optional[str] = None
         self._token_expiry: float = 0
+
+    def is_enabled(self) -> bool:
+        """Return whether the GAIA gateway is enabled for LLM calls."""
+        return bool(self._settings.gateway_enabled)
+
+    def _is_enabled(self) -> bool:
+        """Backward-compatible internal alias for the enabled-state check."""
+        return self.is_enabled()
+
+    def call_llm(self, *, incident_id: str, prompt: str, max_tokens: int) -> dict:
+        """Compatibility wrapper used by documentation relevance checks."""
+        token = self._get_access_token()
+        response, _ = self._call_llm(prompt=prompt, token=token, max_tokens=max_tokens)
+        return response
     
     def discover_related_context(
         self,
@@ -199,12 +213,23 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     max_tokens=min(self._settings.default_max_tokens, 1500),
                 )
                 discovery = self._parse_discovery_response(response)
+                usage = self._parse_usage(response)
+                if context is not None and usage is not None:
+                    context.record_llm_usage(
+                        tokens_in=usage.tokens_in,
+                        tokens_out=usage.tokens_out,
+                        cost_usd=usage.estimated_cost,
+                    )
                 if span is not None:
                     span.set_attribute("gen_ai.request.model", self._settings.model)
                     span.set_attribute("gen_ai.prompt", prompt)
                     span.set_attribute("retry_count", retry_count)
                     span.set_attribute("related_incident_count", len(discovery.related_incidents))
                     span.set_attribute("confluence_search_query", discovery.confluence_search_query)
+                    if usage is not None:
+                        span.set_attribute("tokens_in", usage.tokens_in)
+                        span.set_attribute("tokens_out", usage.tokens_out)
+                        span.set_attribute("cost_usd", usage.estimated_cost)
                 set_span_status_ok(span, (time.perf_counter() - started_at) * 1000)
                 return discovery
             except (LlmGatewayUnavailableError, LlmGatewayConfigurationError) as exc:
@@ -704,21 +729,96 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         """Check if a documentation page is relevant and extract key content."""
         if not self._is_enabled():
             return {"is_relevant": False, "extracted_content": ""}
-        
-        prompt_template = self._load_prompt_template("documentation_relevance_prompt.txt")
-        prompt_text = prompt_template.format(
-            incident_description=incident_description[:1000],  # Limit incident context
-            page_title=page_title,
-            page_body=page_body[:3000],  # Limit page body to avoid token explosion
-        )
-        
-        response = self.call_llm(
-            incident_id=incident_id,
-            prompt=prompt_text,
-            max_tokens=max_tokens or 500,  # Relevance check needs small context
-        )
-        
-        return self._parse_relevance_response(response)
+
+        context = get_current_request_context()
+        with start_span(
+            "llm.check_documentation_relevance",
+            request_id=context.request_id if context is not None else None,
+            workflow="incident_summary",
+            component="llm",
+            attributes={
+                "operation": "check_documentation_relevance",
+                "provider": "gaia",
+                "model": self._settings.model,
+                "langfuse.observation.type": "generation",
+            },
+        ) as span:
+            started_at = time.perf_counter()
+            try:
+                prompt_template = self._load_prompt_template(
+                    Path(__file__).resolve().parent / "prompt" / "documentation_relevance_prompt.txt"
+                )
+                prompt_text = prompt_template.format(
+                    incident_description=incident_description[:1000],
+                    page_title=page_title,
+                    page_body=page_body[:3000],
+                )
+
+                response = self.call_llm(
+                    incident_id=incident_id,
+                    prompt=prompt_text,
+                    max_tokens=max_tokens or 500,
+                )
+                usage = self._parse_usage(response)
+                if context is not None and usage is not None:
+                    context.record_llm_usage(
+                        tokens_in=usage.tokens_in,
+                        tokens_out=usage.tokens_out,
+                        cost_usd=usage.estimated_cost,
+                    )
+                result = self._parse_relevance_response(response)
+                llm_output = self._extract_message_content(
+                    (response.get("choices") or [{}])[0].get("message", {}).get("content")
+                )
+                if span is not None:
+                    span.set_attribute("gen_ai.request.model", self._settings.model)
+                    span.set_attribute("gen_ai.prompt", prompt_text)
+                    span.set_attribute("langfuse.observation.input", json.dumps({
+                        "incident_id": incident_id,
+                        "incident_description": incident_description,
+                        "page_title": page_title,
+                        "page_body": page_body[:3000],
+                        "prompt": prompt_text,
+                    }, ensure_ascii=True))
+                    span.set_attribute("gen_ai.response.model", self._settings.model)
+                    span.set_attribute("llm.model_name", self._settings.model)
+                    span.set_attribute("is_relevant", bool(result.get("is_relevant")))
+                    if llm_output.strip():
+                        span.set_attribute("gen_ai.completion", llm_output)
+                        span.set_attribute("langfuse.observation.output", llm_output)
+                    if usage is not None:
+                        span.set_attribute("tokens_in", usage.tokens_in)
+                        span.set_attribute("tokens_out", usage.tokens_out)
+                        span.set_attribute("cost_usd", usage.estimated_cost)
+                        span.set_attribute("gen_ai.usage.input_tokens", usage.tokens_in)
+                        span.set_attribute("gen_ai.usage.output_tokens", usage.tokens_out)
+                        span.set_attribute("gen_ai.usage.total_tokens", usage.tokens_total)
+                        span.set_attribute("gen_ai.usage.cost", usage.estimated_cost)
+                        usage_details: dict[str, int | float] = {}
+                        if usage.tokens_in is not None:
+                            usage_details["input_tokens"] = usage.tokens_in
+                        if usage.tokens_out is not None:
+                            usage_details["output_tokens"] = usage.tokens_out
+                        if usage.tokens_total is not None:
+                            usage_details["total_tokens"] = usage.tokens_total
+                        if usage.estimated_cost is not None:
+                            usage_details["cost_usd"] = usage.estimated_cost
+                        if usage_details:
+                            span.set_attribute(
+                                "langfuse.observation.usage_details",
+                                json.dumps(usage_details, ensure_ascii=True),
+                            )
+                set_span_status_ok(span, (time.perf_counter() - started_at) * 1000)
+                return result
+            except Exception as exc:
+                set_span_status_error(
+                    span,
+                    error_code="llm_documentation_relevance_failure",
+                    error_message=str(exc),
+                    latency_ms=(time.perf_counter() - started_at) * 1000,
+                )
+                logger.warning("Documentation relevance check failed: %s", exc)
+                return {"is_relevant": False, "extracted_content": ""}
     
     def _parse_relevance_response(self, response: dict) -> dict:
         """Parse LLM response for documentation relevance check."""

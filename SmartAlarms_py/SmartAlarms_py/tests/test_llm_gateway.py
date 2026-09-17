@@ -56,6 +56,31 @@ class TestGaiaLlmGatewayAdapterDisabled:
                 description="Test description",
             )
 
+    def test_documentation_relevance_check_uses_enabled_state(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        with patch.object(adapter, "_get_access_token", return_value="token-123"), patch.object(
+            adapter,
+            "_call_llm",
+            return_value=(
+                {
+                    "choices": [
+                        {"message": {"content": '{"is_relevant": true, "extracted_content": "Known fix"}'}}
+                    ],
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                },
+                0,
+            ),
+        ):
+            result = adapter.check_documentation_relevance(
+                incident_id="INC001",
+                incident_description="Place search outage",
+                page_title="Place Search Runbook",
+                page_body="Troubleshooting steps",
+            )
+
+        assert result == {"is_relevant": True, "extracted_content": "Known fix"}
+
 
 class TestGaiaLlmGatewayAdapterAuthentication:
     """Tests for OAuth authentication."""

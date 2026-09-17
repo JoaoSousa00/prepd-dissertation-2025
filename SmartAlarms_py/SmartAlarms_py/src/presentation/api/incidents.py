@@ -95,6 +95,17 @@ async def get_incident_details(
             context.record_itsm_error(str(exc), 401)
             context.summary_completed = False
         return create_unauthorized_response(str(exc))
+
+    aggregate_usage = None
+    if context is not None and (context.llm_tokens_in or context.llm_tokens_out or context.llm_cost_usd):
+        aggregate_usage = LlmUsageData(
+            model="aggregate-request",
+            tokensIn=context.llm_tokens_in,
+            tokensOut=context.llm_tokens_out,
+            tokensTotal=context.llm_tokens_in + context.llm_tokens_out,
+            cost_USD=context.llm_cost_usd,
+        )
+
     return DetailsResponse(
         incidents=[
             IncidentData(
@@ -118,13 +129,13 @@ async def get_incident_details(
                 or None,
                 llmUsage=(
                     LlmUsageData(
-                        model=incident.llm_usage.model,
-                        tokensIn=incident.llm_usage.tokens_in,
-                        tokensOut=incident.llm_usage.tokens_out,
-                        tokensTotal=incident.llm_usage.tokens_total,
-                        cost_USD=incident.llm_usage.estimated_cost,
+                        model=aggregate_usage.model if aggregate_usage is not None else incident.llm_usage.model,
+                        tokensIn=aggregate_usage.tokensIn if aggregate_usage is not None else incident.llm_usage.tokens_in,
+                        tokensOut=aggregate_usage.tokensOut if aggregate_usage is not None else incident.llm_usage.tokens_out,
+                        tokensTotal=aggregate_usage.tokensTotal if aggregate_usage is not None else incident.llm_usage.tokens_total,
+                        cost_USD=aggregate_usage.cost_USD if aggregate_usage is not None else incident.llm_usage.estimated_cost,
                     )
-                    if incident.llm_usage is not None
+                    if (aggregate_usage is not None or incident.llm_usage is not None)
                     else None
                 ),
                 requestLatencyMs=incident.request_latency_ms,

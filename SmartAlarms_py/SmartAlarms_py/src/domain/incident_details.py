@@ -172,35 +172,54 @@ class IncidentDetailsService:
             context = get_current_request_context()
             if context and search_query:
                 context.record_documentation_query(search_query)
-            
-            # Single call to search - returns pages with body.storage.value already included
+
             matched_pages = self._confluence_source.search_pages(search_query, limit=25)
             if context:
                 context.record_documentation_status(200)
                 context.record_documentation_pages_fetched(len(matched_pages))
-                context.record_documentation_relevant_pages(len(matched_pages))
-            
-            if not matched_pages:
+
+            relevant_pages: list[RelatedPage] = []
+            relevant_details: list[str] = []
+            if self._llm_gateway is not None and hasattr(self._llm_gateway, "check_documentation_relevance"):
+                for page in matched_pages:
+                    result = self._llm_gateway.check_documentation_relevance(
+                        incident_id="",
+                        incident_description=search_query,
+                        page_title=page.title,
+                        page_body=page.body or "",
+                    )
+                    if not result.get("is_relevant"):
+                        continue
+                    title = page.title.strip()
+                    url = page.url.strip()
+                    if not title or not url:
+                        continue
+                    relevant_pages.append(RelatedPage(title=title, url=url))
+                    extracted = str(result.get("extracted_content") or "").strip()
+                    relevant_details.append(
+                        f"- {title}: {url}\n  {extracted}" if extracted else f"- {title}: {url}"
+                    )
+            if context:
+                context.record_documentation_relevant_pages(len(relevant_pages))
+
+            if not relevant_pages:
                 return {
                     "documentation_context": "No Confluence documentation context was available for this incident.",
                     "related_pages_context": "No relevant Confluence pages were found.",
                     "related_pages": [],
                 }
-            
-            documentation_context = "\n".join(
-                f"- {page.title}: {page.url}" for page in matched_pages[:10]
-            )
+
+            documentation_context = "\n".join(relevant_details[:10])
             return {
                 "documentation_context": documentation_context,
-                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in matched_pages),
-                "related_pages": matched_pages,
+                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in relevant_pages),
+                "related_pages": relevant_pages,
             }
         except Exception as exc:  # pragma: no cover - defensive fallback for missing external access
             logger.warning("Confluence lookup failed for query %r: %s", search_query, exc)
             context = get_current_request_context()
             if context and search_query:
                 context.record_documentation_query(search_query)
-                # Extract status code from error message if available
                 status_code = self._extract_status_code_from_error(str(exc))
                 if status_code:
                     context.record_documentation_error(str(exc), status_code)

@@ -261,7 +261,7 @@ class TestIncidentDetailsLlmEnrichment:
             }
         ]
         assert incident["llmUsage"] == {
-            "model": "openai/gpt-5",
+            "model": "aggregate-request",
             "tokensIn": 120,
             "tokensOut": 80,
             "tokensTotal": 200,

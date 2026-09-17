@@ -103,7 +103,8 @@ class IncidentData(BaseModel):
         None, description="The list of ordered suggestions to mitigate the incident"
     )
     llmUsage: Optional[LlmUsageData] = Field(
-        None, description="LLM usage and estimated cost metadata"
+        None,
+        description="Total LLM usage and estimated cost metadata across all calls in the current request",
     )
     requestLatencyMs: Optional[float] = Field(
         None, description="End-to-end latency for generating the incident details"
