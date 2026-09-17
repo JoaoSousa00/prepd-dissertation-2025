@@ -1,7 +1,7 @@
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident
-from src.domain.confluence import RelatedPage
+from src.domain.documentation import RelatedPage
 from src.domain.llm import (
     IncidentEnrichment,
     LlmGatewayUnavailableError,

@@ -4,10 +4,10 @@ from typing import Optional
 
 import httpx2 as httpx
 
-from src.domain.confluence import (
-    ConfluencePage,
-    ConfluenceSourceUnauthorizedError,
-    ConfluenceSourceUnavailableError,
+from src.domain.documentation import (
+    DocumentationPage,
+    DocumentationSourceUnauthorizedError,
+    DocumentationSourceUnavailableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ DEFAULT_CONFLUENCE_SPACE_KEY = "CDLOS"
 
 
 class ConfluenceClient:
-    """Minimal PAT-based Confluence adapter restricted to the CD Location Services space."""
+    """Minimal PAT-based Confluence adapter implementing DocumentationSourceAdapter for the CD Location Services space."""
 
     def __init__(
         self,
@@ -33,17 +33,17 @@ class ConfluenceClient:
         self.timeout_seconds = float(timeout_seconds or os.getenv("CONFLUENCE_TIMEOUT_SECONDS", "30"))
         self._transport = transport
 
-    def search_pages(self, search_query: str, limit: Optional[int] = None) -> list[ConfluencePage]:
+    def search_pages(self, search_query: str, limit: Optional[int] = None) -> list[DocumentationPage]:
         if not search_query or not search_query.strip():
             return []
         if not self.pat_token:
-            raise ConfluenceSourceUnauthorizedError("Confluence PAT token is missing")
+            raise DocumentationSourceUnauthorizedError("Confluence PAT token is missing")
 
         query = f'space="{self._escape_cql(self.space_key)}" AND type=page AND text ~ "{self._escape_cql(search_query)}"'
         params = {
             "cql": query,
             "limit": str(limit or 25),
-            "expand": "space,version",
+            "expand": "space,version,body.storage.value",
         }
 
         response = self._request("GET", self._api_url("/content/search"), params=params)
@@ -54,7 +54,7 @@ class ConfluenceClient:
             title = str(item.get("title") or "Untitled page").strip()
             if not page_id:
                 continue
-            page = ConfluencePage(
+            page = DocumentationPage(
                 id=page_id,
                 title=title,
                 url=self._page_url(page_id),
@@ -62,48 +62,6 @@ class ConfluenceClient:
             )
             results.append(page)
         return results
-
-    def fetch_page_tree(self, page_id: str) -> Optional[ConfluencePage]:
-        if not page_id:
-            return None
-        if not self.pat_token:
-            raise ConfluenceSourceUnauthorizedError("Confluence PAT token is missing")
-
-        response = self._request(
-            "GET",
-            self._api_url(f"/content/{page_id}"),
-            params={"expand": "children.page,body.storage,space"},
-        )
-        payload = response.json()
-        page = self._map_page(payload)
-        if page is None:
-            return None
-
-        page.children = self._fetch_child_pages(page_id, seen=set())
-        return page
-
-    def _fetch_child_pages(self, page_id: str, seen: Optional[set[str]] = None) -> list[ConfluencePage]:
-        seen = seen or set()
-        if page_id in seen:
-            return []
-        response = self._request(
-            "GET",
-            self._api_url(f"/content/{page_id}/child/page"),
-            params={"limit": 50, "expand": "page,body.storage,space"},
-        )
-        payload = response.json()
-        children = []
-        for item in payload.get("results", []):
-            child_id = str(item.get("id") or item.get("_id") or "").strip()
-            if not child_id or child_id in seen:
-                continue
-            seen.add(child_id)
-            child_page = self._map_page(item)
-            if child_page is None:
-                continue
-            child_page.children = self._fetch_child_pages(child_id, seen=seen)
-            children.append(child_page)
-        return children
 
     def _request(self, method: str, url: str, params: Optional[dict] = None) -> httpx.Response:
         logger.debug("Confluence %s request url=%s params=%s", method.upper(), url, params)
@@ -123,18 +81,18 @@ class ConfluenceClient:
                 )
                 if response.status_code == 401:
                     auth_hint = response.headers.get("www-authenticate", "")
-                    raise ConfluenceSourceUnauthorizedError(
+                    raise DocumentationSourceUnauthorizedError(
                         f"Confluence unauthorized (401) for {url}; "
                         f"www-authenticate={auth_hint!r}; "
                         f"response={self._safe_body_preview(response.text, max_chars=200)}"
                     )
                 if response.status_code >= 400:
-                    raise ConfluenceSourceUnavailableError(
+                    raise DocumentationSourceUnavailableError(
                         f"Confluence request failed with status {response.status_code}: {response.text[:500]}"
                     )
                 return response
         except httpx.HTTPError as exc:
-            raise ConfluenceSourceUnavailableError(f"Confluence request failed: {exc}") from exc
+            raise DocumentationSourceUnavailableError(f"Confluence request failed: {exc}") from exc
 
     def _api_url(self, path: str) -> str:
         return f"{self.base_url}/rest/api{path}"
@@ -160,12 +118,12 @@ class ConfluenceClient:
         base = os.getenv("CONFLUENCE_BASE_URL", "https://atc.bmwgroup.net/confluence").rstrip("/")
         return f"{base}/pages/viewpage.action?pageId={page_id}"
 
-    def _map_page(self, payload: dict) -> Optional[ConfluencePage]:
+    def _map_page(self, payload: dict) -> Optional[DocumentationPage]:
         page_id = str(payload.get("id") or payload.get("_id") or "").strip()
         title = str(payload.get("title") or "Untitled page").strip()
         if not page_id:
             return None
-        return ConfluencePage(
+        return DocumentationPage(
             id=page_id,
             title=title,
             url=self._page_url(page_id),

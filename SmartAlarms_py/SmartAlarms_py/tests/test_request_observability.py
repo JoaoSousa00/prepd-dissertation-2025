@@ -21,6 +21,10 @@ def test_request_log_summary_formats_required_payload(caplog):
         context.record_llm_error("LLM failed", 400)
         context.record_llm_error("LLM retry failed", 503)
         context.record_llm_usage(tokens_in=333, tokens_out=3000, cost_usd=0.0333213)
+        context.record_documentation_status(200)
+        context.record_documentation_query("place-search")
+        context.record_documentation_pages_fetched(5)
+        context.record_documentation_relevant_pages(2)
         context.main_incident = "INC001"
         context.record_fetched_related_incident("INC002")
         context.record_fetched_related_incident("INC003")
@@ -47,6 +51,11 @@ def test_request_log_summary_formats_required_payload(caplog):
     assert payload["itsm_summary"]["total_incidents_fallback"] == 0
     assert payload["itsm_summary"]["summary"] is True
     assert payload["itsm_summary"]["suggestions_number"] == 7
+    assert payload["documentation_summary"]["status"] == "200"
+    assert payload["documentation_summary"]["error"] == ""
+    assert payload["documentation_summary"]["query"] == "place-search"
+    assert payload["documentation_summary"]["pages_fetched"] == 5
+    assert payload["documentation_summary"]["relevant_pages"] == 2
     assert payload["llm_summary"]["status"] == "503"
     assert payload["llm_summary"]["error"] == "LLM failed | LLM retry failed"
     assert payload["llm_summary"]["tokens_in"] == 333

@@ -5,7 +5,7 @@
 - **Title:** Using an LLM to discover related incidents and Confluence service documentation
 - **Phase:** Phase 2
 - **Owner:** Spec Architect
-- **Status:** Draft
+- **Status:** Implemented
 - **Related documents:** `docs/requirements.md`, `docs/architechture.md`,
   `docs/specs/phase1/US-1.3-llm-enrichment.md`,
   `docs/specs/phase2/US-2.3-related-incident-context.md`
@@ -35,8 +35,10 @@ summarizes the returned documentation, and feeds that summarized context into th
     - relevant related incident identifiers for the specified issue based solely on the incident payload
     - a Confluence search string for service documentation lookup
 - Search Confluence only within the `CD Location Services` space
-- Retrieve matching documentation pages from Confluence, including subpages of the matched page tree, and summarize
-  their contents before the final enrichment call
+- Retrieve matching documentation pages from Confluence, including the page content in the initial search response by
+  using the appropriate expand parameter (for example, `body.storage.value`)
+- Run one LLM relevance-check call per returned page so that each page is assessed independently before the final
+  enrichment call
 - Pass the summarized documentation together with the discovered related incidents into the already existing LLM
   enrichment call
 - Return `relatedPages` at the incident level and per suggestion, using full Confluence URLs
@@ -52,16 +54,16 @@ summarizes the returned documentation, and feeds that summarized context into th
 
 ## 5) Acceptance Criteria
 
-| ID   | Given                                                                                    | When                            | Then                                                                                                                  |
-|------|------------------------------------------------------------------------------------------|---------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| CA-1 | A valid incident analysis request is received                                            | Context discovery runs          | The full non-sensitive incident payload is sent to a simple LLM prompt and a structured result is returned            |
-| CA-2 | The discovery LLM returns related incident identifiers and a documentation search string | The result is parsed            | The related incidents are normalized, deduplicated, and the search string is preserved for documentation lookup       |
-| CA-3 | Documentation lookup runs                                                                | The Confluence request is built | The request is restricted to the `CD Location Services` space only                                                    |
-| CA-4 | Confluence returns one or more matching pages or page trees                              | Documentation preparation runs  | The parent page and its subpages are summarized into bounded documentation context before the final enrichment call   |
-| CA-5 | The existing enrichment call runs                                                        | The final payload is built      | The payload includes the main incident, the discovered related incidents, and the summarized Confluence context       |
-| CA-6 | Context discovery or Confluence lookup fails                                             | The request continues           | The service still returns the incident analysis using any available context and does not fail the whole request       |
-| CA-7 | Discovery output is empty or partially malformed                                         | Parsing runs                    | Invalid identifiers are ignored and the service degrades gracefully without inventing related incidents               |
-| CA-8 | Documentation pages are available for the incident                                       | The response is built           | The incident response includes `relatedPages`, and each suggestion includes its own list of full Confluence page URLs |
+| ID   | Given                                                                                    | When                            | Then                                                                                                                          |
+|------|------------------------------------------------------------------------------------------|---------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| CA-1 | A valid incident analysis request is received                                            | Context discovery runs          | The full non-sensitive incident payload is sent to a simple LLM prompt and a structured result is returned                    |
+| CA-2 | The discovery LLM returns related incident identifiers and a documentation search string | The result is parsed            | The related incidents are normalized, deduplicated, and the search string is preserved for documentation lookup               |
+| CA-3 | Documentation lookup runs                                                                | The Confluence request is built | The request is restricted to the `CD Location Services` space only                                                            |
+| CA-4 | Confluence returns one or more matching pages or page trees                              | Documentation preparation runs  | The search response already includes page content, and each returned page is evaluated independently before filtering         |
+| CA-5 | The existing enrichment call runs                                                        | The final payload is built      | The payload includes the main incident, the discovered related incidents, and only the relevant summarized Confluence context |
+| CA-6 | Context discovery or relevance filtering fails                                           | The request continues           | The service still returns the incident analysis using any available context and does not fail the whole request               |
+| CA-7 | Discovery output is empty or partially malformed                                         | Parsing runs                    | Invalid identifiers are ignored and the service degrades gracefully without inventing related incidents                       |
+| CA-8 | Documentation pages are available for the incident                                       | The response is built           | The incident response includes `relatedPages`, and each suggestion includes its own list of full Confluence page URLs         |
 
 ## 6) Functional Design
 
@@ -80,9 +82,12 @@ summarizes the returned documentation, and feeds that summarized context into th
     2. Send the full non-sensitive incident context to a small discovery prompt.
     3. Parse the structured LLM output into related incident identifiers and one documentation search string.
     4. In parallel, fetch related incidents, same-title incidents, and fallback incidents when needed.
-    5. Search Confluence only in `CD Location Services`, then fetch the matched page tree including subpages.
-    6. Summarize the page tree into short, bounded context and keep the page URLs for the response.
-    7. Pass the main incident, discovered related incidents, and summarized Confluence documentation to the existing
+    5. Search Confluence only in `CD Location Services`, then fetch the matched page tree including subpages using one
+       content fetch per page root.
+    6. Run one LLM relevance check per page tree so pages are filtered independently without overloading a single
+       context.
+    7. Summarize only the relevant page trees into short, bounded context and keep the page URLs for the response.
+    8. Pass the main incident, discovered related incidents, and summarized Confluence documentation to the existing
        enrichment prompt.
 - Error path:
     - If discovery fails, continue with the incident payload and any other available context.
@@ -106,9 +111,9 @@ summarizes the returned documentation, and feeds that summarized context into th
     - no final summary generation in this step
 - Confluence access:
     - use the ATC-compatible Confluence REST API available for the deployment
-    - constrain all search and fetch operations to the `CD Location Services` space
-    - prefer the deployment-supported content/search endpoint pair that can return page metadata, page body, and child
-      page results
+    - constrain all search operations to the `CD Location Services` space
+    - use the search endpoint expand parameters so the response already includes the page body (`body.storage.value`)
+      together with metadata
 - Context handling:
     - deduplicate related incident identifiers before downstream use
     - keep documentation summaries short enough to fit the existing final enrichment prompt
@@ -129,8 +134,10 @@ The `CD Location Services` space restriction is fixed by the feature and does no
 ## 8) Token Efficiency Design
 
 - Use one compact discovery prompt instead of multiple manual heuristics.
-- Restrict Confluence searches to one space and a small result set, then summarize the parent page with its children.
-- Summarize page content before the existing enrichment prompt to avoid sending raw documentation text twice.
+- Restrict Confluence searches to one space and a small result set, and request content in the same search response.
+- Run one relevance-check LLM call per returned page to avoid sending a large page set in one context.
+- Summarize only the relevant page content before the existing enrichment prompt to avoid sending raw documentation text
+  twice.
 - Keep the discovery output structured so the second LLM call receives only the useful context.
 
 ## 9) Observability
@@ -140,8 +147,8 @@ The `CD Location Services` space restriction is fixed by the feature and does no
 - Trace the pipeline stages:
     - incident fetch
     - discovery prompt
-    - Confluence search
-    - Confluence page tree fetch
+    - Confluence search with body content
+    - per-page relevance check
     - documentation summary
     - final enrichment call
 
@@ -160,14 +167,15 @@ The `CD Location Services` space restriction is fixed by the feature and does no
 
 - Discovery prompt output parsing and identifier normalization
 - Confluence query builder space restriction
-- Documentation summarization bounds
+- Search response expansion includes page body content
+- Per-page relevance checks and documentation summarization bounds
 - Context merge into the final enrichment payload
 - Graceful degradation when discovery or Confluence lookup fails
 
 ### Integration tests
 
 - End-to-end request with discovery output and summarized Confluence context
-- Request where discovery succeeds but Confluence returns no matches or no subpages
+- Request where discovery succeeds but Confluence returns no matches
 - Request where discovery fails and the service still returns the available incident analysis
 
 ## 12) Implementation Notes
@@ -185,6 +193,7 @@ The `CD Location Services` space restriction is fixed by the feature and does no
 - The full incident payload is sent to a discovery LLM prompt.
 - The discovery output returns related incidents and a Confluence search string.
 - Documentation is searched only in `CD Location Services`.
-- Returned documentation is summarized before the existing enrichment call.
+- The Confluence search response already includes page content via expand parameters.
+- Only relevant returned pages are summarized before the existing enrichment call.
 - Final summary/suggestions use the richer combined context.
 - Fallback behavior remains graceful when either discovery or Confluence lookup fails.

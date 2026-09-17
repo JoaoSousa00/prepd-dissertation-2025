@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime
 from typing import Iterable, List, Optional
 
-from src.domain.confluence import ConfluenceSourceAdapter, RelatedPage
+from src.domain.documentation import DocumentationSourceAdapter, RelatedPage
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident, IncidentDetails, ResolutionSuggestion
 from src.domain.llm import DiscoveryResult, LlmGateway, LlmGatewayError
@@ -23,7 +23,7 @@ class IncidentDetailsService:
         self,
         incident_fetching_service: IncidentFetchingService,
         llm_gateway: Optional[LlmGateway] = None,
-        confluence_source: Optional[ConfluenceSourceAdapter] = None,
+        confluence_source: Optional[DocumentationSourceAdapter] = None,
     ):
         self._incident_fetching_service = incident_fetching_service
         self._llm_gateway = llm_gateway
@@ -169,30 +169,43 @@ class IncidentDetailsService:
                 "related_pages": [],
             }
         try:
+            context = get_current_request_context()
+            if context and search_query:
+                context.record_documentation_query(search_query)
+            
+            # Single call to search - returns pages with body.storage.value already included
             matched_pages = self._confluence_source.search_pages(search_query, limit=25)
-            flattened: list[RelatedPage] = []
-            for page in matched_pages:
-                tree = self._confluence_source.fetch_page_tree(page.id)
-                if tree is None:
-                    continue
-                flattened.extend(self._flatten_confluence_tree(tree))
-            related_pages = self._dedupe_related_pages(flattened)
-            if not related_pages:
+            if context:
+                context.record_documentation_status(200)
+                context.record_documentation_pages_fetched(len(matched_pages))
+                context.record_documentation_relevant_pages(len(matched_pages))
+            
+            if not matched_pages:
                 return {
                     "documentation_context": "No Confluence documentation context was available for this incident.",
                     "related_pages_context": "No relevant Confluence pages were found.",
                     "related_pages": [],
                 }
+            
             documentation_context = "\n".join(
-                f"- {page.title}: {page.url}" for page in related_pages[:10]
+                f"- {page.title}: {page.url}" for page in matched_pages[:10]
             )
             return {
                 "documentation_context": documentation_context,
-                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in related_pages),
-                "related_pages": related_pages,
+                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in matched_pages),
+                "related_pages": matched_pages,
             }
         except Exception as exc:  # pragma: no cover - defensive fallback for missing external access
             logger.warning("Confluence lookup failed for query %r: %s", search_query, exc)
+            context = get_current_request_context()
+            if context and search_query:
+                context.record_documentation_query(search_query)
+                # Extract status code from error message if available
+                status_code = self._extract_status_code_from_error(str(exc))
+                if status_code:
+                    context.record_documentation_error(str(exc), status_code)
+                else:
+                    context.record_documentation_error(str(exc))
             return {
                 "documentation_context": "No Confluence documentation context was available because the lookup failed.",
                 "related_pages_context": "No relevant Confluence pages were found.",
@@ -200,13 +213,16 @@ class IncidentDetailsService:
             }
 
     @staticmethod
-    def _flatten_confluence_tree(page: object) -> list[RelatedPage]:
-        if page is None:
-            return []
-        pages: list[RelatedPage] = [RelatedPage(title=getattr(page, "title", ""), url=getattr(page, "url", ""))]
-        for child in getattr(page, "children", []) or []:
-            pages.extend(IncidentDetailsService._flatten_confluence_tree(child))
-        return [p for p in pages if p.title and p.url]
+    def _extract_status_code_from_error(error_message: str) -> Optional[int]:
+        """Extract HTTP status code from error message like 'status 429'."""
+        import re
+        match = re.search(r'status\s+(\d{3})', error_message, re.IGNORECASE)
+        if match:
+            try:
+                return int(match.group(1))
+            except (ValueError, IndexError):
+                pass
+        return None
 
     @staticmethod
     def _dedupe_related_pages(pages: list[RelatedPage]) -> list[RelatedPage]:

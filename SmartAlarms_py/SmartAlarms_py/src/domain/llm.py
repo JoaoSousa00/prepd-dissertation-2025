@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Protocol, runtime_checkable
 
-from src.domain.confluence import RelatedPage
+from src.domain.documentation import RelatedPage
 
 
 @dataclass(frozen=True)

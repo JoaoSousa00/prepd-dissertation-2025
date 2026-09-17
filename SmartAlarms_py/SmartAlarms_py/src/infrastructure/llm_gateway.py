@@ -7,7 +7,7 @@ from typing import Optional
 
 import httpx2 as httpx
 
-from src.domain.confluence import RelatedPage
+from src.domain.documentation import RelatedPage
 from src.domain.llm import (
     DiscoveryResult,
     IncidentEnrichment,
@@ -693,6 +693,74 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 f"LLM prompt template is empty: {prompt_path}"
             )
         return template
+    def check_documentation_relevance(
+        self,
+        incident_id: str,
+        incident_description: str,
+        page_title: str,
+        page_body: str,
+        max_tokens: Optional[int] = None,
+    ) -> dict:
+        """Check if a documentation page is relevant and extract key content."""
+        if not self._is_enabled():
+            return {"is_relevant": False, "extracted_content": ""}
+        
+        prompt_template = self._load_prompt_template("documentation_relevance_prompt.txt")
+        prompt_text = prompt_template.format(
+            incident_description=incident_description[:1000],  # Limit incident context
+            page_title=page_title,
+            page_body=page_body[:3000],  # Limit page body to avoid token explosion
+        )
+        
+        response = self.call_llm(
+            incident_id=incident_id,
+            prompt=prompt_text,
+            max_tokens=max_tokens or 500,  # Relevance check needs small context
+        )
+        
+        return self._parse_relevance_response(response)
+    
+    def _parse_relevance_response(self, response: dict) -> dict:
+        """Parse LLM response for documentation relevance check."""
+        try:
+            if response.get("status") == "disabled":
+                return {"is_relevant": False, "extracted_content": ""}
+            
+            # Extract JSON from response choices
+            choices = response.get("choices", [])
+            if not choices:
+                return {"is_relevant": False, "extracted_content": ""}
+            
+            content = ""
+            for choice in choices:
+                msg = choice.get("message") or {}
+                content += msg.get("content", "")
+            
+            if not content:
+                return {"is_relevant": False, "extracted_content": ""}
+            
+            # Extract JSON from content
+            import json
+            try:
+                # Try to find JSON object in content
+                json_match = re.search(r'\{[^{}]*"is_relevant"[^{}]*\}', content, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group())
+                else:
+                    data = json.loads(content)
+                
+                return {
+                    "is_relevant": data.get("is_relevant", False),
+                    "extracted_content": data.get("extracted_content", "") if data.get("is_relevant") else "",
+                }
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse relevance response: {content[:200]}")
+                return {"is_relevant": False, "extracted_content": ""}
+        except Exception as exc:
+            logger.error(f"Error parsing relevance response: {exc}")
+            return {"is_relevant": False, "extracted_content": ""}
+
+
     
     def _parse_llm_response(self, response: dict) -> IncidentEnrichment:
         """Parse LLM response into IncidentEnrichment."""

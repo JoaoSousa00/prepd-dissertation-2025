@@ -44,6 +44,8 @@ class RequestLogContext:
     itsm_errors: list[str] = field(default_factory=list)
     llm_status_codes: list[int] = field(default_factory=list)
     llm_errors: list[str] = field(default_factory=list)
+    documentation_status_codes: list[int] = field(default_factory=list)
+    documentation_errors: list[str] = field(default_factory=list)
     fetched_related_incidents: list[str] = field(default_factory=list)
     fetched_incidents_by_title: list[str] = field(default_factory=list)
     total_incidents_title: int = 0
@@ -57,6 +59,9 @@ class RequestLogContext:
     llm_tokens_in: int = 0
     llm_tokens_out: int = 0
     llm_cost_usd: float = 0.0
+    documentation_query: Optional[str] = None
+    documentation_pages_fetched: int = 0
+    documentation_relevant_pages: int = 0
 
     @property
     def itsm_status(self) -> Optional[int]:
@@ -71,12 +76,22 @@ class RequestLogContext:
         return _effective_status(self.llm_status_codes)
 
     @property
+    def documentation_status(self) -> Optional[int]:
+        if not self.documentation_status_codes:
+            return None
+        return _effective_status(self.documentation_status_codes)
+
+    @property
     def itsm_error(self) -> str:
         return _join_failures(self.itsm_errors)
 
     @property
     def llm_error(self) -> str:
         return _join_failures(self.llm_errors)
+
+    @property
+    def documentation_error(self) -> str:
+        return _join_failures(self.documentation_errors)
 
     def record_itsm_status(self, status_code: Optional[int]) -> None:
         if status_code is None:
@@ -99,6 +114,17 @@ class RequestLogContext:
             self.llm_errors.append(message.strip())
         if status_code is not None:
             self.record_llm_status(status_code)
+
+    def record_documentation_status(self, status_code: Optional[int]) -> None:
+        if status_code is None:
+            return
+        self.documentation_status_codes.append(int(status_code))
+
+    def record_documentation_error(self, message: Optional[str], status_code: Optional[int] = None) -> None:
+        if message and message.strip():
+            self.documentation_errors.append(message.strip())
+        if status_code is not None:
+            self.record_documentation_status(status_code)
 
     def record_fetched_related_incident(self, incident_id: Optional[str]) -> None:
         if incident_id and incident_id.strip() and incident_id.strip() not in self.fetched_related_incidents:
@@ -128,6 +154,16 @@ class RequestLogContext:
         if cost_usd is not None:
             self.llm_cost_usd += float(cost_usd)
 
+    def record_documentation_query(self, query: Optional[str]) -> None:
+        if query and query.strip():
+            self.documentation_query = query.strip()
+
+    def record_documentation_pages_fetched(self, count: int) -> None:
+        self.documentation_pages_fetched = max(0, int(count))
+
+    def record_documentation_relevant_pages(self, count: int) -> None:
+        self.documentation_relevant_pages = max(0, int(count))
+
     def build_summary_payload(self) -> dict:
         return {
             "request_id": self.request_id,
@@ -143,6 +179,13 @@ class RequestLogContext:
                 "total_incidents_fallback": int(self.total_incidents_fallback),
                 "fallback_kept_incidents": int(self.fallback_kept_incidents),
                 "suggestions_number": int(self.suggestions_number), },
+            "documentation_summary": {
+                "status": str(self.documentation_status) if self.documentation_status is not None else "",
+                "error": self.documentation_error,
+                "query": self.documentation_query or "",
+                "pages_fetched": int(self.documentation_pages_fetched),
+                "relevant_pages": int(self.documentation_relevant_pages),
+            },
             "llm_summary": {
                 "status": str(self.llm_status) if self.llm_status is not None else "",
                 "error": self.llm_error,

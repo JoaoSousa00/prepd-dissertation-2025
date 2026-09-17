@@ -1,0 +1,22 @@
+You are evaluating whether a documentation page is relevant to an incident and extracting key information.
+
+INCIDENT CONTEXT:
+{incident_description}
+
+DOCUMENTATION PAGE TO EVALUATE:
+Title: {page_title}
+Content: {page_body}
+
+TASK:
+1. Determine if this page is relevant to the incident (true/false).
+2. If relevant, extract the key points using caveman summarization:
+   - Keep technical details and specifics (links, commands, exact error messages)
+   - Use bullet points for clarity
+   - Preserve important context that could help resolve the incident
+   - Do NOT over-summarize; keep enough detail to be useful
+
+Respond ONLY with valid JSON (no markdown, no code blocks):
+{{
+  "is_relevant": true or false,
+  "extracted_content": "..." (only if is_relevant=true; if false, use empty string)
+}}
