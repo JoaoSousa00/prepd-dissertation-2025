@@ -1,12 +1,14 @@
 # Validation tests
 
-This folder contains the benchmark validation assets and the tests that exercise them.
+This folder contains the benchmark validation dataset, report template, and tests.
 
 ## Contents
 
 - `golden_reference.*`: expected benchmark outputs
-- `sample_service_response.*`: sample service response used as benchmark input for the validation tests
 - `iteration_template.*`: per-run output template with ROUGE, estimated cost, latency, Top-K, and related-incident correlation/precision
+
+Each `reference_mitigation_suggestions` entry contains separate `investigation` and
+`mitigation` fields. Top-K accuracy compares only the mitigation text.
 
 ## Run
 
@@ -16,17 +18,34 @@ From the project root:
 pytest tests/validation
 ```
 
-To generate a validation report from the offline CLI:
+Start the local service, then generate a validation report by requesting every incident ID in the
+golden reference ten times:
 
 ```bash
-python -m tests.validation.cli \
+uvicorn src.main:app --host 127.0.0.1 --port 8080
+```
+
+In a second terminal:
+
+```bash
+python3 -m tests.validation.cli \
   --references tests/validation/golden_reference.json \
-  --outputs tests/validation/sample_service_response.json \
   --output /tmp/validation_report.json
 ```
 
-If you need the ROUGE dependency locally, install the project requirements first:
+Use `--repetitions` to change the number of calls made for each incident and `--service-url` if the
+local service uses another address or port:
 
 ```bash
-pip install -r requirements.txt
+python3 -m tests.validation.cli \
+  --references tests/validation/golden_reference.json \
+  --service-url http://127.0.0.1:8000/incident/details \
+  --repetitions 10 \
+  --output /tmp/validation_report.json
 ```
+
+The report contains one aggregated case per incident. Each case records its total and successful
+call counts, average quality and telemetry metrics, and any failed-request details.
+
+The CLI prints the incident ID before each request and its outcome afterward. Requests are processed
+sequentially, so a slow incident delays the next one.

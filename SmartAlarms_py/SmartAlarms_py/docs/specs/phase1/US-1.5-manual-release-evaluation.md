@@ -24,8 +24,9 @@ evaluation should be run through a dedicated offline script or CLI.
 
 ### In scope
 
-- Manual execution of a fixed benchmark dataset against a selected release/configuration through an offline script or CLI
-- Capture of per-incident outputs and per-request measurements
+- Manual execution of a fixed benchmark dataset against a selected local release/configuration through a CLI
+- Configurable repeated local-service calls for every benchmark incident
+- Capture of per-incident aggregated outputs and per-request measurements
 - Computation of ROUGE for the natural-language summary, Top-K accuracy for mitigation suggestions, and precision for
   related-incident references against benchmark outputs
 - Release-level comparison using ROUGE, mitigation Top-K accuracy, related-incident precision, LLM token usage,
@@ -46,11 +47,12 @@ evaluation should be run through a dedicated offline script or CLI.
 
 | ID   | Given                                                                     | When                                                | Then                                                                                                                                                                                 |
 |------|---------------------------------------------------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CA-1 | A benchmark dataset with incident IDs and reference outputs exists        | A researcher runs a manual evaluation for a release | Each benchmark incident is executed, its generated outputs are compared against the benchmark references, and ROUGE, Top-K accuracy, precision, token usage, estimated cost, and latency are recorded |
-| CA-2 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the runs                    | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset                                                              |
-| CA-3 | Some benchmark incidents fail or return incomplete metric data            | The manual run completes                            | Failures are recorded per incident and the remaining benchmark cases still contribute to the release comparison                                                                      |
-| CA-4 | Per-incident raw results are available                                    | The researcher analyzes release performance         | The primary comparison is done at release level, while per-incident records remain available for diagnosis of outliers and regressions                                               |
-| CA-5 | A benchmark case has no related incidents in either the reference or output | The evaluator computes the related-incident precision | The score is recorded as `1.0` because both sides are empty and the case is a valid no-correlation outcome                                                                             |
+| CA-1 | A benchmark dataset with incident IDs and reference outputs exists        | A researcher runs the validation CLI against the local service | The CLI requests `GET /incident/details` for every benchmark incident ID without requiring a pre-captured response file |
+| CA-2 | A positive repetition count is supplied or the default is used | A researcher runs the validation CLI | Every benchmark incident is requested that many times, with a default of ten calls per incident |
+| CA-3 | Repeated responses exist for a benchmark incident | The report is written | The report contains one aggregate record for that incident with average ROUGE, Top-K accuracy, related-incident precision, token usage, cost, latency, and the call counts |
+| CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the aggregate incident record and successful calls continue to contribute to its averages |
+| CA-5 | A benchmark case has no related incidents in either the reference or output | The evaluator computes the related-incident precision | The score is recorded as `1.0` because both sides are empty and the case is a valid no-correlation outcome |
+| CA-6 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the reports | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset |
 
 ## 6) Functional Design
 
@@ -59,9 +61,9 @@ evaluation should be run through a dedicated offline script or CLI.
 - Inputs:
     - fixed benchmark dataset containing incident identifiers and reference outputs
     - release metadata (`release_label`, model)
-    - raw request results from the analysis service, including runtime telemetry from US-1.4
+    - local incident-details endpoint URL and configurable repetition count
 - Outputs:
-    - per-incident evaluation records
+    - one aggregated per-incident evaluation record, including call counts and metric averages
     - per-run aggregated comparison records
 - Happy path:
     - Researcher selects a release/configuration and runs the benchmark dataset manually.
@@ -72,14 +74,15 @@ evaluation should be run through a dedicated offline script or CLI.
     - The flow records per-incident quality metrics and request telemetry.
     - The run produces aggregated values per release to support decision-making.
 - Validation benchmark rules:
-    - Validation inputs are file-based fixtures under `tests/validation/`, not live API calls.
-    - The benchmark accepts a service-response-shaped payload with `incidents[]`, and reads model metadata from
-      `llmUsage.model` when available.
+    - The golden-reference file contains benchmark incident IDs and expected outputs; it is the only validation input file.
+    - The CLI calls the local `GET /incident/details` endpoint separately for each incident ID and repetition, then reads
+      the returned `incidents[]` payload.
+    - Model metadata is read from `llmUsage.model` in the first successful service response when available.
     - If `run_id` is not supplied, a UTC timestamp in the form `YYYYMMDDTHHMMSSZ` is generated automatically.
     - The related-incident precision metric treats an empty reference set and an empty generated set as a perfect
       match (`1.0`) so valid no-correlation cases are not penalized.
 - Error path:
-    - Individual incident failures are logged as part of the run result.
+    - Individual request failures are recorded in the aggregate incident result without preventing remaining requests.
     - Missing references skip only the affected benchmark metrics.
     - A partially completed run remains analyzable as long as missing cases are explicit.
 
@@ -90,12 +93,11 @@ evaluation should be run through a dedicated offline script or CLI.
 - Benchmark dataset minimum structure:
     - `incident_id`
     - reference summary
-    - reference mitigation suggestion(s)
+    - reference mitigation suggestion(s), each with separate investigation and mitigation text
     - reference related-incident set (may be empty)
     - optional notes for evaluator context
 - Test assets minimum structure:
     - `tests/validation/golden_reference.json` with the benchmark expected outputs
-    - `tests/validation/sample_service_response.json` with a representative service payload containing `incidents[]`
     - `tests/validation/iteration_template.json` for per-run output and benchmark metrics
       (`ROUGE`, estimated cost, latency, `Top-K`, and related-incident correlation/precision)
     - `tests/validation/README.md` with instructions for running the validation suite
@@ -116,6 +118,7 @@ evaluation should be run through a dedicated offline script or CLI.
     - `tokens_total`
     - estimated cost
     - latency
+    - total and successful call counts
     - execution status/error notes
 
 ## 8) Token Efficiency Design
@@ -128,7 +131,7 @@ evaluation should be run through a dedicated offline script or CLI.
 
 - Track each benchmark request with release label, dataset version, incident ID, model, token usage, estimated cost,
   and latency.
-- Preserve both per-incident raw values and aggregated release-level summaries.
+- Preserve per-incident call counts, failed-call details, and averaged metrics alongside aggregated release-level summaries.
 - Make metric gaps and failed benchmark cases explicit in the recorded output.
 - Keep ROUGE, mitigation Top-K accuracy, and related-incident precision as benchmark artifacts only, not normal
   live-response fields.
@@ -147,7 +150,7 @@ evaluation should be run through a dedicated offline script or CLI.
 ### Validation tests
 
 - Aggregation logic for release-level averages or summary statistics.
-- Mapping of per-incident request outputs into benchmark result records.
+- Mapping repeated local-service responses into one per-incident aggregate result.
 - Handling of partial failures and missing references.
 - ROUGE computation for summaries using `rouge-score`.
 - Top-K accuracy computation for mitigation suggestions.
@@ -155,8 +158,8 @@ evaluation should be run through a dedicated offline script or CLI.
 - Loading of golden references from a validation fixture file.
 - Writing of per-iteration result templates for validation runs.
 - Validation README describing how to execute the benchmark/validation suite.
-- CLI-based offline execution that writes a JSON validation report to a chosen output path.
-- Metadata extraction from the service response payload, including model name and timestamp-based run IDs.
+- CLI-based local-service execution that writes a JSON validation report to a chosen output path.
+- Configurable repeated requests, response model metadata extraction, and timestamp-based run IDs.
 
 ### Integration tests
 
@@ -166,7 +169,7 @@ evaluation should be run through a dedicated offline script or CLI.
 
 - Planned files/modules:
     - benchmark dataset definition under project evaluation assets
-    - release evaluation script or CLI for offline benchmark runs
+    - release evaluation CLI for repeated local-service benchmark runs
     - aggregation/reporting module for benchmark runs
     - `tests/validation/` fixture file for golden references
     - `tests/validation/` template file for per-iteration benchmark results

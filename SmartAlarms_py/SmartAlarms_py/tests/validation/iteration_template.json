@@ -2,7 +2,6 @@
   "run_id": "",
   "release_label": "",
   "dataset_version": "",
-  "incident_id": null,
   "model_name": "",
   "configuration_notes": "",
   "metrics": {
@@ -18,5 +17,26 @@
     "latency_ms": null
   },
   "manual_notes": "",
-  "status": ""
+  "status": "",
+  "cases": [
+    {
+      "incident_id": "",
+      "status": "",
+      "call_count": 0,
+      "successful_call_count": 0,
+      "rouge": {
+        "precision": null,
+        "recall": null,
+        "f1": null
+      },
+      "top_k_accuracy": null,
+      "related_incident_precision": null,
+      "tokens_in": null,
+      "tokens_out": null,
+      "tokens_total": null,
+      "cost_USD": null,
+      "latency_ms": null,
+      "error_notes": ""
+    }
+  ]
 }
