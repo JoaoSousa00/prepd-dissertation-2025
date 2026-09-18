@@ -8,8 +8,13 @@ import pytest
 from tests.validation.benchmark import (
     BenchmarkCaseReference,
     BenchmarkCaseOutput,
+    BenchmarkJudgeDecision,
+    BenchmarkJudgeError,
+    BenchmarkJudgeUsage,
     BenchmarkRunMetadata,
     BenchmarkResolutionSuggestion,
+    BenchmarkSuggestionMatch,
+    BenchmarkSummaryJudgment,
     collect_benchmark_outputs,
     evaluate_benchmark_run,
     load_golden_reference,
@@ -19,6 +24,65 @@ from tests.validation.cli import main as validation_main
 
 
 FIXTURE_DIR = Path(__file__).resolve().parent
+
+
+class _MatchingJudge:
+    model_name = "judge-model"
+
+    def evaluate(self, reference, output):
+        matches = []
+        for reference_index, reference_suggestion in enumerate(
+            reference.reference_mitigation_suggestions,
+            start=1,
+        ):
+            generated_rank = next(
+                (
+                    index
+                    for index, generated_suggestion in enumerate(
+                        output.generated_mitigation_suggestions,
+                        start=1,
+                    )
+                    if generated_suggestion == reference_suggestion
+                ),
+                None,
+            )
+            matches.append(
+                BenchmarkSuggestionMatch(
+                    reference_index=reference_index,
+                    generated_rank=generated_rank,
+                    score=5 if generated_rank is not None else 1,
+                    reason="Equivalent." if generated_rank is not None else "Not equivalent.",
+                )
+            )
+        return BenchmarkJudgeDecision(
+            summary=BenchmarkSummaryJudgment(score=5, reason="Equivalent."),
+            suggestion_matches=matches,
+            usage=BenchmarkJudgeUsage(
+                model_name=self.model_name,
+                tokens_in=20,
+                tokens_out=10,
+                tokens_total=30,
+                estimated_cost=0.001,
+                latency_ms=100,
+            ),
+        )
+
+
+class _RankedJudge:
+    model_name = "judge-model"
+
+    def __init__(self, summary_score, matches):
+        self._summary_score = summary_score
+        self._matches = matches
+
+    def evaluate(self, _reference, _output):
+        return BenchmarkJudgeDecision(
+            summary=BenchmarkSummaryJudgment(
+                score=self._summary_score,
+                reason="Semantic evaluation.",
+            ),
+            suggestion_matches=self._matches,
+        )
 
 
 def _service_incident(reference, call_number):
@@ -81,7 +145,7 @@ def test_related_incident_precision_is_one_when_both_sides_are_empty():
     assert _compute_precision([], []) == pytest.approx(1.0)
 
 
-def test_evaluate_benchmark_run_uses_only_mitigation_for_top_k_accuracy():
+def test_evaluate_benchmark_run_records_semantic_suggestion_rank():
     reference = BenchmarkCaseReference(
         incident_id="INC000000000001",
         reference_summary="Session Store job failed.",
@@ -94,11 +158,11 @@ def test_evaluate_benchmark_run_uses_only_mitigation_for_top_k_accuracy():
     )
     output = BenchmarkCaseOutput(
         incident_id=reference.incident_id,
-        generated_summary=reference.reference_summary,
+        generated_summary="The Session Store task failed.",
         generated_mitigation_suggestions=[
             BenchmarkResolutionSuggestion(
-                investigation="Check CloudWatch alarms.",
-                mitigation="Retry the Session Store job.",
+                investigation="Review Session Store execution logs.",
+                mitigation="Restart the failed Session Store task.",
             )
         ],
     )
@@ -109,9 +173,50 @@ def test_evaluate_benchmark_run_uses_only_mitigation_for_top_k_accuracy():
         model_name="provider-returned-model",
     )
 
-    evaluation = evaluate_benchmark_run([reference], [output], metadata, top_k=1)
+    judge = _RankedJudge(
+        summary_score=4,
+        matches=[
+            BenchmarkSuggestionMatch(
+                reference_index=1,
+                generated_rank=1,
+                score=4,
+                reason="Same operational action.",
+            )
+        ],
+    )
+    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge, top_k=1)
 
+    assert evaluation.metrics["summary_score"] == pytest.approx(4.0)
     assert evaluation.metrics["top_k_accuracy"] == pytest.approx(1.0)
+    assert evaluation.cases[0].suggestion_matches[0].generated_rank == 1
+
+
+def test_evaluate_benchmark_run_excludes_partial_suggestions_from_top_k():
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Session Store job failed.",
+        reference_mitigation_suggestions=[
+            BenchmarkResolutionSuggestion(mitigation="Retry the Session Store job.")
+        ],
+    )
+    output = BenchmarkCaseOutput(incident_id=reference.incident_id)
+    metadata = BenchmarkRunMetadata("run", "local", "dataset", "service-model")
+    judge = _RankedJudge(
+        summary_score=3,
+        matches=[
+            BenchmarkSuggestionMatch(
+                reference_index=1,
+                generated_rank=None,
+                score=3,
+                reason="Important mitigation detail is missing.",
+            )
+        ],
+    )
+
+    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge, top_k=3)
+
+    assert evaluation.metrics["summary_score"] == pytest.approx(3.0)
+    assert evaluation.metrics["top_k_accuracy"] == pytest.approx(0.0)
 
 
 def test_evaluate_benchmark_run_computes_all_validation_metrics():
@@ -124,13 +229,20 @@ def test_evaluate_benchmark_run_computes_all_validation_metrics():
     )
     outputs = [_successful_output(reference, 1) for reference in references]
 
-    evaluation = evaluate_benchmark_run(references, outputs, metadata, top_k=1)
+    evaluation = evaluate_benchmark_run(
+        references,
+        outputs,
+        metadata,
+        judge=_MatchingJudge(),
+        top_k=1,
+    )
 
-    assert evaluation.metrics["rouge"]["f1"] == pytest.approx(1.0)
+    assert evaluation.metrics["summary_score"] == pytest.approx(5.0)
     assert evaluation.metrics["top_k_accuracy"] == pytest.approx(1.0)
     assert evaluation.metrics["related_incident_precision"] == pytest.approx(1.0)
     assert evaluation.metrics["estimated_cost"] == pytest.approx(0.01)
     assert evaluation.metrics["latency_ms"] == pytest.approx(1000)
+    assert evaluation.metrics["judge_estimated_cost"] == pytest.approx(0.001)
     assert len(evaluation.cases) == 4
     assert evaluation.cases[0].status == "success"
 
@@ -198,7 +310,7 @@ def test_render_iteration_template_aggregates_repeated_calls_by_incident():
     ]
 
     report = render_iteration_template(
-        evaluate_benchmark_run(references, outputs, metadata, top_k=1)
+        evaluate_benchmark_run(references, outputs, metadata, judge=_MatchingJudge(), top_k=1)
     )
     first_case = next(
         case for case in report["cases"] if case["incident_id"] == first_reference.incident_id
@@ -211,7 +323,8 @@ def test_render_iteration_template_aggregates_repeated_calls_by_incident():
     assert first_case["status"] == "partial_failure"
     assert first_case["call_count"] == 3
     assert first_case["successful_call_count"] == 2
-    assert first_case["rouge"]["f1"] == pytest.approx(1.0)
+    assert first_case["summary_score"] == pytest.approx(5.0)
+    assert first_case["judge_decisions"][0]["suggestion_matches"][0]["generated_rank"] == 1
     assert first_case["tokens_in"] == pytest.approx(200)
     assert first_case["cost_USD"] == pytest.approx(0.02)
     assert first_case["latency_ms"] == pytest.approx(2000)
@@ -240,7 +353,7 @@ def test_collect_benchmark_outputs_records_failures_and_continues():
         )
 
     report = render_iteration_template(
-        evaluate_benchmark_run([reference], outputs, metadata, top_k=1)
+        evaluate_benchmark_run([reference], outputs, metadata, judge=_MatchingJudge(), top_k=1)
     )
     case = report["cases"][0]
 
@@ -252,10 +365,15 @@ def test_collect_benchmark_outputs_records_failures_and_continues():
     assert case["error_notes"].startswith("HTTPStatusError:")
 
 
-def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path):
+def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path, monkeypatch):
     references = load_golden_reference(FIXTURE_DIR / "golden_reference.json")
     output_path = tmp_path / "validation_report.json"
     calls = Counter()
+    dotenv_calls = []
+    monkeypatch.setattr(
+        "tests.validation.cli.load_dotenv",
+        lambda: dotenv_calls.append(True),
+    )
 
     def handler(request):
         incident_id = request.url.params["incidentIds"]
@@ -279,6 +397,7 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path):
                 "1",
             ],
             client=client,
+            judge=_MatchingJudge(),
         )
 
     report = json.loads(output_path.read_text(encoding="utf-8"))
@@ -290,7 +409,41 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path):
     assert calls == Counter({reference.incident_id: 10 for reference in references})
     assert len(report["cases"]) == len(references)
     assert all(case["call_count"] == 10 for case in report["cases"])
-    assert all(case["rouge"]["f1"] == pytest.approx(1.0) for case in report["cases"])
+    assert report["judge_model_name"] == "judge-model"
+    assert all(case["summary_score"] == pytest.approx(5.0) for case in report["cases"])
+    assert dotenv_calls == [True]
+
+
+def test_evaluate_benchmark_run_records_judge_failures_without_losing_service_telemetry():
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Session Store job failed.",
+    )
+    output = _successful_output(reference, 1)
+    metadata = BenchmarkRunMetadata("run", "local", "dataset", "service-model")
+
+    class _FailingJudge:
+        model_name = "judge-model"
+
+        def evaluate(self, _reference, _output):
+            raise BenchmarkJudgeError("Invalid judge response.")
+
+    report = render_iteration_template(
+        evaluate_benchmark_run(
+            [reference],
+            [output],
+            metadata,
+            judge=_FailingJudge(),
+            top_k=1,
+        )
+    )
+
+    case = report["cases"][0]
+    assert case["status"] == "judge_failed"
+    assert case["successful_call_count"] == 1
+    assert case["summary_score"] is None
+    assert case["tokens_in"] == pytest.approx(100)
+    assert case["error_notes"] == "Invalid judge response."
 
 
 def test_collect_benchmark_outputs_requires_positive_repetitions():

@@ -275,6 +275,7 @@ def test_fetch_incident_details_passes_sanitized_main_incident_context_to_llm():
     assert "priority: 3 - Moderate" in context
     assert "impact: 2 - Medium" in context
     assert "urgency: 2 - Medium" in context
+    assert "- Current assignment group: Ops" in context
     assert "assignment_group" in context
     assert "ci_item" in context
     assert "caller_id" not in context
@@ -297,7 +298,13 @@ def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_
         same_title_incidents=[
             BaseIncident(id="INC0001", number="INC0001", short_description="API latency spike", resolved_at="2026-09-05T10:00:00Z"),
             BaseIncident(id="INC1001", number="INC1001", short_description="API latency spike", resolved_at="2026-09-05T08:00:00Z"),
-            BaseIncident(id="INC1002", number="INC1002", short_description="API latency spike", resolved_at="2026-09-05T11:00:00Z"),
+            BaseIncident(
+                id="INC1002",
+                number="INC1002",
+                short_description="API latency spike",
+                resolved_at="2026-09-05T11:00:00Z",
+                raw={"assignment_group": {"name": "Platform Reliability"}},
+            ),
             BaseIncident(id="INC1003", number="INC1003", short_description="API latency spike", resolved_at="2026-09-04T11:00:00Z"),
         ],
     )
@@ -318,6 +325,7 @@ def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_
     same_title_context = gateway.kwargs["same_title_incident_context"]
     assert "Incident INC0001" not in same_title_context
     assert "Incident INC1002" in same_title_context
+    assert "assignment_group.name=Platform Reliability" in same_title_context
 
 
 def test_fetch_incident_details_excludes_comments_and_work_notes_from_prompt_context_when_disabled(monkeypatch):

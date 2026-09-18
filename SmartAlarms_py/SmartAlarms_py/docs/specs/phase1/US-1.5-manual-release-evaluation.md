@@ -27,9 +27,9 @@ evaluation should be run through a dedicated offline script or CLI.
 - Manual execution of a fixed benchmark dataset against a selected local release/configuration through a CLI
 - Configurable repeated local-service calls for every benchmark incident
 - Capture of per-incident aggregated outputs and per-request measurements
-- Computation of ROUGE for the natural-language summary, Top-K accuracy for mitigation suggestions, and precision for
-  related-incident references against benchmark outputs
-- Release-level comparison using ROUGE, mitigation Top-K accuracy, related-incident precision, LLM token usage,
+- Computation of a 1-5 LLM-judged semantic score for the natural-language summary, semantic Top-K accuracy and rank
+  for mitigation suggestions, and precision for related-incident references against benchmark outputs
+- Release-level comparison using summary semantic score, mitigation semantic Top-K accuracy, related-incident precision, LLM token usage,
   estimated monetary cost, and latency
 - Recording release metadata such as release label and model, with automatic run identifiers generated as UTC timestamps
   when no explicit run ID is supplied
@@ -49,7 +49,7 @@ evaluation should be run through a dedicated offline script or CLI.
 |------|---------------------------------------------------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | CA-1 | A benchmark dataset with incident IDs and reference outputs exists        | A researcher runs the validation CLI against the local service | The CLI requests `GET /incident/details` for every benchmark incident ID without requiring a pre-captured response file |
 | CA-2 | A positive repetition count is supplied or the default is used | A researcher runs the validation CLI | Every benchmark incident is requested that many times, with a default of ten calls per incident |
-| CA-3 | Repeated responses exist for a benchmark incident | The report is written | The report contains one aggregate record for that incident with average ROUGE, Top-K accuracy, related-incident precision, token usage, cost, latency, and the call counts |
+| CA-3 | Repeated responses exist for a benchmark incident | The report is written | The report contains one aggregate record for that incident with average 1-5 summary score, semantic Top-K accuracy, related-incident precision, token usage, cost, latency, judge telemetry, and the call counts |
 | CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the aggregate incident record and successful calls continue to contribute to its averages |
 | CA-5 | A benchmark case has no related incidents in either the reference or output | The evaluator computes the related-incident precision | The score is recorded as `1.0` because both sides are empty and the case is a valid no-correlation outcome |
 | CA-6 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the reports | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset |
@@ -69,8 +69,10 @@ evaluation should be run through a dedicated offline script or CLI.
     - Researcher selects a release/configuration and runs the benchmark dataset manually.
     - Each incident request returns generated outputs plus usage and latency metadata.
     - The evaluation flow matches each generated output to its benchmark references.
-    - The evaluation flow computes ROUGE for the summary, Top-K accuracy for mitigation suggestions, and precision
-      for related-incident references outside the live request response.
+    - The evaluation flow invokes a deterministic LLM judge to score summary semantic equivalence from 1 to 5 and
+      suggestion equivalence from 1 to 5. Suggestion scores of 4 or 5 are semantic matches; their generated
+      1-based rank determines Top-K accuracy. The flow computes exact-ID precision for related incidents outside
+      the live request response.
     - The flow records per-incident quality metrics and request telemetry.
     - The run produces aggregated values per release to support decision-making.
 - Validation benchmark rules:
@@ -81,6 +83,8 @@ evaluation should be run through a dedicated offline script or CLI.
     - If `run_id` is not supplied, a UTC timestamp in the form `YYYYMMDDTHHMMSSZ` is generated automatically.
     - The related-incident precision metric treats an empty reference set and an empty generated set as a perfect
       match (`1.0`) so valid no-correlation cases are not penalized.
+    - The report records the judge model, decision, reason, usage, cost, and latency separately from the evaluated
+      service telemetry.
 - Error path:
     - Individual request failures are recorded in the aggregate incident result without preventing remaining requests.
     - Missing references skip only the affected benchmark metrics.
@@ -99,7 +103,8 @@ evaluation should be run through a dedicated offline script or CLI.
 - Test assets minimum structure:
     - `tests/validation/golden_reference.json` with the benchmark expected outputs
     - `tests/validation/iteration_template.json` for per-run output and benchmark metrics
-      (`ROUGE`, estimated cost, latency, `Top-K`, and related-incident correlation/precision)
+      (summary score, service and judge cost/latency, semantic `Top-K`, generated suggestion ranks, and
+      related-incident correlation/precision)
     - `tests/validation/README.md` with instructions for running the validation suite
     - free-text area for manual notes
 - Run metadata minimum structure:
@@ -107,17 +112,19 @@ evaluation should be run through a dedicated offline script or CLI.
     - `release_label`
     - `dataset_version`
     - `model_name` (derived from the service payload when available)
+    - `judge_model_name`
     - configuration notes
 - Per-incident result minimum structure:
     - `incident_id`
-    - summary ROUGE metrics
-    - mitigation Top-K accuracy metrics
+    - summary semantic score (1-5) and judge reason
+    - mitigation semantic Top-K accuracy and per-reference generated rank
     - related-incident precision metrics
     - `tokens_in`
     - `tokens_out`
     - `tokens_total`
     - estimated cost
     - latency
+    - judge model, token usage, estimated cost, latency, and decisions
     - total and successful call counts
     - execution status/error notes
 
@@ -133,7 +140,7 @@ evaluation should be run through a dedicated offline script or CLI.
   and latency.
 - Preserve per-incident call counts, failed-call details, and averaged metrics alongside aggregated release-level summaries.
 - Make metric gaps and failed benchmark cases explicit in the recorded output.
-- Keep ROUGE, mitigation Top-K accuracy, and related-incident precision as benchmark artifacts only, not normal
+- Keep summary semantic score, mitigation semantic Top-K accuracy, and related-incident precision as benchmark artifacts only, not normal
   live-response fields.
 
 ## 10) Risks and Mitigations
@@ -152,8 +159,8 @@ evaluation should be run through a dedicated offline script or CLI.
 - Aggregation logic for release-level averages or summary statistics.
 - Mapping repeated local-service responses into one per-incident aggregate result.
 - Handling of partial failures and missing references.
-- ROUGE computation for summaries using `rouge-score`.
-- Top-K accuracy computation for mitigation suggestions.
+- LLM-judged 1-5 semantic summary scoring, including the full scoring rubric.
+- LLM-judged semantic Top-K and generated rank computation for mitigation suggestions, including partial matches.
 - Precision computation for related-incident references, including the empty/empty edge case.
 - Loading of golden references from a validation fixture file.
 - Writing of per-iteration result templates for validation runs.
@@ -176,11 +183,12 @@ evaluation should be run through a dedicated offline script or CLI.
     - `tests/validation/README.md` for execution instructions
 - Analysis rule:
     - Record data per incident/request.
-    - Compute ROUGE only for the summary, Top-K accuracy for mitigation suggestions, and precision for related-
+    - Compute a 1-5 semantic summary score, semantic Top-K accuracy for mitigation suggestions, and precision for related-
       incident references in the benchmark evaluation flow against fixed references.
     - Choose the preferred solution by comparing aggregated results per release/configuration on the same benchmark
       dataset.
-    - Use `rouge-score` in the test suite to validate ROUGE-based summary evaluation against the golden reference.
+    - Use a versioned, deterministic (`temperature=0`) LLM judge prompt and preserve every judge decision in the
+      generated report.
 
 ## 13) Definition of Done
 

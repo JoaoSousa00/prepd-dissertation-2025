@@ -143,6 +143,7 @@ The `CD Location Services` space restriction is fixed by the feature and does no
 ## 9) Observability
 
 - Record discovery LLM duration and Confluence search duration.
+- Record the discovery prompt input and the raw structured LLM output on the Langfuse generation span.
 - Track discovered related incident count and summarized documentation count.
 - Trace the pipeline stages:
     - incident fetch

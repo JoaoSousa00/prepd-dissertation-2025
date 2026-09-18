@@ -21,16 +21,16 @@ Instructions:
 2. Focus on the operational issue, expected impact, and what is useful for the support or development team to understand quickly.
 3. Do not include low-value administrative metadata such as state, priority, impact, urgency, or assignment team in the summary.
 4. Ground any mitigation or investigation suggestion in the historical evidence and Confluence context provided above.
-5. Treat the Confluence documentation as a helpful indicator, not a guaranteed source of truth. It may be outdated, incomplete, or only partially relevant, so validate it against the incident facts before using it as evidence.
-6. Every suggestion must contain exactly these three parts in order:
+5. Before generating generic mitigation suggestions, assess whether the historical incidents show that this issue should be redirected or reassigned. A redirect is supported when a relevant historical incident has a different assignment_group.name from the current incident and/or its work_notes or comments state that it was sent to another team. When clearly supported, make redirecting to the identified team the first suggestion and cite the supporting incident number(s).
+6. Treat the Confluence documentation as a helpful indicator, not a guaranteed source of truth. It may be outdated, incomplete, or only partially relevant, so validate it against the incident facts before using it as evidence.
+7. Every suggestion must contain exactly these three parts in order:
    a) Investigation suggestion
    b) Mitigation suggestion
    c) Suggested resolution note for the developer to adapt when closing the incident
-7. Return at least 3 mitigation suggestions whenever possible.
-8. If historical related incidents are not sufficient to produce 3 fully evidence-backed suggestions, complete the remaining suggestions with meaningful best-practice reasoning based on the current incident details.
-9. For each suggestion, explicitly label confidence as either "evidence-based" (supported by historical incidents) or "reasoned fallback" (derived from current-incident analysis due to insufficient history).
-10. Every suggestion must explicitly state the source incident number(s) that support it. For reasoned fallback suggestions with no supporting historical incident, use "Sources: current_incident_analysis".
-11. If the historical incidents suggest redirecting or reassigning to another team, you may include that as a valid suggestion only when clearly supported by the provided evidence and still cite the source incident numbers.
+8. Return at least 3 mitigation suggestions whenever possible.
+9. If historical related incidents are not sufficient to produce 3 fully evidence-backed suggestions, complete the remaining suggestions with meaningful best-practice reasoning based on the current incident details.
+10. For each suggestion, explicitly label confidence as either "evidence-based" (supported by historical incidents) or "reasoned fallback" (derived from current-incident analysis due to insufficient history).
+11. Every suggestion must explicitly state the source incident number(s) that support it. For reasoned fallback suggestions with no supporting historical incident, use "Sources: current_incident_analysis".
 12. Prioritize the most recent relevant closed incidents with meaningful resolution notes when deriving mitigation and investigation guidance.
 13. Never invent incident references or include the original incident ID ({incident_id}) in any related_incidents list.
 14. Return valid JSON with the following shape:

@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Protocol, Sequence
 import json
 
 import httpx2 as httpx
-from rouge_score import rouge_scorer
 
 
 DEFAULT_LOCAL_SERVICE_URL = "http://127.0.0.1:8080/incident/details"
@@ -17,6 +16,58 @@ ProgressCallback = Callable[[str, int, int, str], None]
 class BenchmarkResolutionSuggestion:
     investigation: str = ""
     mitigation: str = ""
+
+
+class BenchmarkJudgeError(RuntimeError):
+    """Raised when a benchmark judgment cannot be produced or validated."""
+
+
+@dataclass(frozen=True)
+class BenchmarkJudgeUsage:
+    model_name: str
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+    tokens_total: Optional[int] = None
+    estimated_cost: Optional[float] = None
+    latency_ms: Optional[float] = None
+
+    @classmethod
+    def from_llm_usage(
+        cls,
+        *,
+        model_name: str,
+        usage: Any,
+        latency_ms: float,
+    ) -> "BenchmarkJudgeUsage":
+        return cls(
+            model_name=model_name,
+            tokens_in=getattr(usage, "tokens_in", None),
+            tokens_out=getattr(usage, "tokens_out", None),
+            tokens_total=getattr(usage, "tokens_total", None),
+            estimated_cost=getattr(usage, "estimated_cost", None),
+            latency_ms=latency_ms,
+        )
+
+
+@dataclass(frozen=True)
+class BenchmarkSummaryJudgment:
+    score: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class BenchmarkSuggestionMatch:
+    reference_index: int
+    generated_rank: Optional[int]
+    score: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class BenchmarkJudgeDecision:
+    summary: BenchmarkSummaryJudgment
+    suggestion_matches: List[BenchmarkSuggestionMatch] = field(default_factory=list)
+    usage: Optional[BenchmarkJudgeUsage] = None
 
 
 @dataclass(frozen=True)
@@ -53,15 +104,29 @@ class BenchmarkRunMetadata:
     release_label: str
     dataset_version: str
     model_name: str
+    judge_model_name: str = ""
     configuration_notes: str = ""
     manual_notes: str = ""
+
+
+class BenchmarkJudge(Protocol):
+    """Port for semantic benchmark assessment."""
+
+    @property
+    def model_name(self) -> str: ...
+
+    def evaluate(
+        self,
+        reference: BenchmarkCaseReference,
+        output: BenchmarkCaseOutput,
+    ) -> BenchmarkJudgeDecision: ...
 
 
 @dataclass(frozen=True)
 class BenchmarkCaseResult:
     incident_id: str
     status: str
-    rouge: Optional[Dict[str, float]]
+    summary_score: Optional[float]
     top_k_accuracy: Optional[float]
     related_incident_precision: Optional[float]
     tokens_in: Optional[int]
@@ -69,6 +134,9 @@ class BenchmarkCaseResult:
     tokens_total: Optional[int]
     estimated_cost: Optional[float]
     latency_ms: Optional[float]
+    summary_judgment: Optional[BenchmarkSummaryJudgment] = None
+    suggestion_matches: List[BenchmarkSuggestionMatch] = field(default_factory=list)
+    judge_usage: Optional[BenchmarkJudgeUsage] = None
     error_notes: str = ""
 
 
@@ -78,7 +146,7 @@ class AggregatedBenchmarkCaseResult:
     status: str
     call_count: int
     successful_call_count: int
-    rouge: Optional[Dict[str, float]]
+    summary_score: Optional[float]
     top_k_accuracy: Optional[float]
     related_incident_precision: Optional[float]
     tokens_in: Optional[float]
@@ -86,6 +154,12 @@ class AggregatedBenchmarkCaseResult:
     tokens_total: Optional[float]
     estimated_cost: Optional[float]
     latency_ms: Optional[float]
+    judge_tokens_in: Optional[float]
+    judge_tokens_out: Optional[float]
+    judge_tokens_total: Optional[float]
+    judge_estimated_cost: Optional[float]
+    judge_latency_ms: Optional[float]
+    judge_decisions: List[BenchmarkJudgeDecision] = field(default_factory=list)
     error_notes: str = ""
 
 
@@ -355,6 +429,7 @@ def evaluate_benchmark_run(
     references: Sequence[BenchmarkCaseReference],
     outputs: Sequence[BenchmarkCaseOutput],
     metadata: BenchmarkRunMetadata,
+    judge: BenchmarkJudge,
     top_k: int = 3,
 ) -> BenchmarkEvaluationResult:
     reference_map = {reference.incident_id: reference for reference in references}
@@ -370,7 +445,7 @@ def evaluate_benchmark_run(
                 BenchmarkCaseResult(
                     incident_id=incident_id,
                     status="missing_output",
-                    rouge=None,
+                    summary_score=None,
                     top_k_accuracy=None,
                     related_incident_precision=None,
                     tokens_in=None,
@@ -389,7 +464,7 @@ def evaluate_benchmark_run(
                     BenchmarkCaseResult(
                         incident_id=incident_id,
                         status=output.status,
-                        rouge=None,
+                        summary_score=None,
                         top_k_accuracy=None,
                         related_incident_precision=None,
                         tokens_in=output.tokens_in,
@@ -402,12 +477,27 @@ def evaluate_benchmark_run(
                 )
                 continue
 
-            rouge = _compute_rouge(reference.reference_summary, output.generated_summary)
-            top_k_accuracy = _compute_top_k_accuracy(
-                _mitigations(reference.reference_mitigation_suggestions),
-                _mitigations(output.generated_mitigation_suggestions),
-                top_k=top_k,
-            )
+            try:
+                judgment = judge.evaluate(reference, output)
+            except BenchmarkJudgeError as exc:
+                case_results.append(
+                    BenchmarkCaseResult(
+                        incident_id=incident_id,
+                        status="judge_failed",
+                        summary_score=None,
+                        top_k_accuracy=None,
+                        related_incident_precision=None,
+                        tokens_in=output.tokens_in,
+                        tokens_out=output.tokens_out,
+                        tokens_total=output.tokens_total,
+                        estimated_cost=output.estimated_cost,
+                        latency_ms=output.latency_ms,
+                        error_notes=str(exc),
+                    )
+                )
+                continue
+
+            top_k_accuracy = _compute_top_k_accuracy(judgment.suggestion_matches, top_k=top_k)
             related_precision = _compute_precision(
                 reference.reference_related_incidents,
                 output.generated_related_incidents,
@@ -416,7 +506,7 @@ def evaluate_benchmark_run(
                 BenchmarkCaseResult(
                     incident_id=incident_id,
                     status=output.status,
-                    rouge=rouge,
+                    summary_score=judgment.summary.score,
                     top_k_accuracy=top_k_accuracy,
                     related_incident_precision=related_precision,
                     tokens_in=output.tokens_in,
@@ -424,6 +514,9 @@ def evaluate_benchmark_run(
                     tokens_total=output.tokens_total,
                     estimated_cost=output.estimated_cost,
                     latency_ms=output.latency_ms,
+                    summary_judgment=judgment.summary,
+                    suggestion_matches=judgment.suggestion_matches,
+                    judge_usage=judgment.usage,
                     error_notes=output.error_notes,
                 )
             )
@@ -434,7 +527,7 @@ def evaluate_benchmark_run(
                 BenchmarkCaseResult(
                     incident_id=incident_id,
                     status="unexpected_output",
-                    rouge=None,
+                    summary_score=None,
                     top_k_accuracy=None,
                     related_incident_precision=None,
                     tokens_in=output.tokens_in,
@@ -466,14 +559,20 @@ def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, An
         "release_label": result.metadata.release_label,
         "dataset_version": result.metadata.dataset_version,
         "model_name": result.metadata.model_name,
+        "judge_model_name": result.metadata.judge_model_name,
         "configuration_notes": result.metadata.configuration_notes,
         "metrics": {
-            "rouge": result.metrics.get("rouge"),
+            "summary_score": result.metrics.get("summary_score"),
             "top_k_accuracy": result.metrics.get("top_k_accuracy"),
             "related_incident_precision": result.metrics.get("related_incident_precision"),
             "related_incident_correlation": result.metrics.get("related_incident_precision"),
             "cost_USD": result.metrics.get("estimated_cost"),
             "latency_ms": result.metrics.get("latency_ms"),
+            "judge_tokens_in": result.metrics.get("judge_tokens_in"),
+            "judge_tokens_out": result.metrics.get("judge_tokens_out"),
+            "judge_tokens_total": result.metrics.get("judge_tokens_total"),
+            "judge_cost_USD": result.metrics.get("judge_estimated_cost"),
+            "judge_latency_ms": result.metrics.get("judge_latency_ms"),
         },
         "manual_notes": result.metadata.manual_notes,
         "status": "complete" if result.cases else "empty",
@@ -490,15 +589,18 @@ def aggregate_benchmark_case_results(
 
     aggregated_cases = []
     for incident_id, incident_cases in cases_by_incident.items():
-        successful_cases = [case for case in incident_cases if case.status == "success"]
+        successful_cases = [
+            case for case in incident_cases if case.status in {"success", "judge_failed"}
+        ]
+        evaluated_cases = [case for case in incident_cases if case.status == "success"]
         call_count = len(incident_cases)
         successful_call_count = len(successful_cases)
-        if successful_call_count == call_count:
-            status = "success"
-        elif successful_call_count:
-            status = "partial_failure"
+        if successful_call_count < call_count:
+            status = "partial_failure" if successful_call_count else "request_failed"
+        elif len(evaluated_cases) < call_count:
+            status = "judge_failed"
         else:
-            status = "request_failed"
+            status = "success"
 
         error_notes = _combine_error_notes(
             case.error_notes for case in incident_cases if case.error_notes
@@ -509,49 +611,71 @@ def aggregate_benchmark_case_results(
                 status=status,
                 call_count=call_count,
                 successful_call_count=successful_call_count,
-                rouge=_aggregate_rouge(
-                    [case.rouge for case in successful_cases if case.rouge is not None]
-                ),
-                top_k_accuracy=_mean(case.top_k_accuracy for case in successful_cases),
+                summary_score=_mean(case.summary_score for case in evaluated_cases),
+                top_k_accuracy=_mean(case.top_k_accuracy for case in evaluated_cases),
                 related_incident_precision=_mean(
-                    case.related_incident_precision for case in successful_cases
+                    case.related_incident_precision for case in evaluated_cases
                 ),
                 tokens_in=_mean(case.tokens_in for case in successful_cases),
                 tokens_out=_mean(case.tokens_out for case in successful_cases),
                 tokens_total=_mean(case.tokens_total for case in successful_cases),
                 estimated_cost=_mean(case.estimated_cost for case in successful_cases),
                 latency_ms=_mean(case.latency_ms for case in successful_cases),
+                judge_tokens_in=_mean(
+                    case.judge_usage.tokens_in
+                    for case in evaluated_cases
+                    if case.judge_usage is not None
+                ),
+                judge_tokens_out=_mean(
+                    case.judge_usage.tokens_out
+                    for case in evaluated_cases
+                    if case.judge_usage is not None
+                ),
+                judge_tokens_total=_mean(
+                    case.judge_usage.tokens_total
+                    for case in evaluated_cases
+                    if case.judge_usage is not None
+                ),
+                judge_estimated_cost=_mean(
+                    case.judge_usage.estimated_cost
+                    for case in evaluated_cases
+                    if case.judge_usage is not None
+                ),
+                judge_latency_ms=_mean(
+                    case.judge_usage.latency_ms
+                    for case in evaluated_cases
+                    if case.judge_usage is not None
+                ),
+                judge_decisions=[
+                    BenchmarkJudgeDecision(
+                        summary=case.summary_judgment,
+                        suggestion_matches=case.suggestion_matches,
+                        usage=case.judge_usage,
+                    )
+                    for case in evaluated_cases
+                    if case.summary_judgment is not None
+                ],
                 error_notes=error_notes,
             )
         )
     return aggregated_cases
 
 
-def _compute_rouge(reference: str, generated: str) -> Dict[str, float]:
-    scorer = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
-    scores = scorer.score(reference, generated)
-    return {
-        "precision": _mean(score.precision for score in scores.values()),
-        "recall": _mean(score.recall for score in scores.values()),
-        "f1": _mean(score.fmeasure for score in scores.values()),
-    }
-
-
 def _compute_top_k_accuracy(
-    reference_suggestions: Sequence[str],
-    generated_suggestions: Sequence[str],
+    suggestion_matches: Sequence[BenchmarkSuggestionMatch],
     top_k: int,
 ) -> float:
-    if not reference_suggestions:
+    if top_k < 1:
+        raise ValueError("top_k must be at least 1")
+    if not suggestion_matches:
         return 0.0
-    top_predictions = list(generated_suggestions[:top_k])
-    return 1.0 if any(suggestion in reference_suggestions for suggestion in top_predictions) else 0.0
-
-
-def _mitigations(
-    suggestions: Sequence[BenchmarkResolutionSuggestion],
-) -> List[str]:
-    return [suggestion.mitigation for suggestion in suggestions if suggestion.mitigation]
+    return sum(
+        1
+        for match in suggestion_matches
+        if match.score >= 4
+        and match.generated_rank is not None
+        and match.generated_rank <= top_k
+    ) / len(suggestion_matches)
 
 
 def _compute_precision(reference_items: Sequence[str], generated_items: Sequence[str]) -> float:
@@ -568,30 +692,50 @@ def _compute_precision(reference_items: Sequence[str], generated_items: Sequence
 
 
 def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str, Optional[float]]:
-    rouge_values = [case.rouge for case in case_results if case.rouge is not None]
+    summary_scores = [case.summary_score for case in case_results if case.summary_score is not None]
     top_k_values = [case.top_k_accuracy for case in case_results if case.top_k_accuracy is not None]
     precision_values = [
         case.related_incident_precision for case in case_results if case.related_incident_precision is not None
     ]
     cost_values = [case.estimated_cost for case in case_results if case.estimated_cost is not None]
     latency_values = [case.latency_ms for case in case_results if case.latency_ms is not None]
+    judge_tokens_in = [
+        case.judge_usage.tokens_in
+        for case in case_results
+        if case.judge_usage is not None and case.judge_usage.tokens_in is not None
+    ]
+    judge_tokens_out = [
+        case.judge_usage.tokens_out
+        for case in case_results
+        if case.judge_usage is not None and case.judge_usage.tokens_out is not None
+    ]
+    judge_tokens_total = [
+        case.judge_usage.tokens_total
+        for case in case_results
+        if case.judge_usage is not None and case.judge_usage.tokens_total is not None
+    ]
+    judge_cost_values = [
+        case.judge_usage.estimated_cost
+        for case in case_results
+        if case.judge_usage is not None and case.judge_usage.estimated_cost is not None
+    ]
+    judge_latency_values = [
+        case.judge_usage.latency_ms
+        for case in case_results
+        if case.judge_usage is not None and case.judge_usage.latency_ms is not None
+    ]
 
     return {
-        "rouge": _aggregate_rouge(rouge_values),
+        "summary_score": _mean(summary_scores),
         "top_k_accuracy": _mean(top_k_values),
         "related_incident_precision": _mean(precision_values),
         "estimated_cost": _mean(cost_values),
         "latency_ms": _mean(latency_values),
-    }
-
-
-def _aggregate_rouge(rouge_values: Sequence[Mapping[str, float]]) -> Optional[Dict[str, float]]:
-    if not rouge_values:
-        return None
-    return {
-        "precision": _mean(value["precision"] for value in rouge_values),
-        "recall": _mean(value["recall"] for value in rouge_values),
-        "f1": _mean(value["f1"] for value in rouge_values),
+        "judge_tokens_in": _mean(judge_tokens_in),
+        "judge_tokens_out": _mean(judge_tokens_out),
+        "judge_tokens_total": _mean(judge_tokens_total),
+        "judge_estimated_cost": _mean(judge_cost_values),
+        "judge_latency_ms": _mean(judge_latency_values),
     }
 
 

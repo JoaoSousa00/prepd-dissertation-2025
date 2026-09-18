@@ -448,6 +448,9 @@ class IncidentDetailsService:
         payload.setdefault("work_notes", incident.work_notes)
 
         lines = ["Main incident fields:"]
+        assignment_group = IncidentDetailsService._extract_assignment_group(incident)
+        if assignment_group:
+            lines.append(f"- Current assignment group: {assignment_group}")
         for key, value in payload.items():
             if key in excluded_keys or value in (None, "", [], {}):
                 continue
@@ -503,6 +506,9 @@ class IncidentDetailsService:
                 summary.append(f"hold_reason={incident.hold_reason}")
             if incident.close_code:
                 summary.append(f"close_code={incident.close_code}")
+            assignment_group = IncidentDetailsService._extract_assignment_group(incident)
+            if assignment_group:
+                summary.append(f"assignment_group.name={assignment_group}")
             if include_comments and incident.comments:
                 summary.append(f"comments={'; '.join(incident.comments[:2])}")
             if include_work_notes and incident.work_notes:

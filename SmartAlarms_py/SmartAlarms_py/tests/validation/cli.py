@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 from typing import Optional, Sequence
 
+from dotenv import load_dotenv
 import httpx2 as httpx
 from tests.validation.benchmark import (
+    BenchmarkJudge,
     DEFAULT_LOCAL_SERVICE_URL,
     collect_benchmark_outputs,
     evaluate_benchmark_run,
@@ -15,6 +17,7 @@ from tests.validation.benchmark import (
     load_golden_reference_metadata,
     render_iteration_template,
 )
+from tests.validation.llm_judge import GaiaLlmBenchmarkJudge
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -51,16 +54,25 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None, *, client: Optional[httpx.Client] = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    client: Optional[httpx.Client] = None,
+    judge: Optional[BenchmarkJudge] = None,
+) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.repetitions < 1:
         parser.error("--repetitions must be at least 1")
     if args.timeout_seconds <= 0:
         parser.error("--timeout-seconds must be greater than 0")
+    if args.top_k < 1:
+        parser.error("--top-k must be at least 1")
 
+    load_dotenv()
     references = load_golden_reference(Path(args.references))
     reference_metadata = load_golden_reference_metadata(Path(args.references))
+    benchmark_judge = judge or GaiaLlmBenchmarkJudge()
     metadata, outputs = collect_benchmark_outputs(
         references,
         service_url=args.service_url,
@@ -74,8 +86,15 @@ def main(argv: Sequence[str] | None = None, *, client: Optional[httpx.Client] = 
         release_label=args.release_label,
         dataset_version=args.dataset_version
         or reference_metadata.get("dataset_version", metadata.dataset_version),
+        judge_model_name=benchmark_judge.model_name,
     )
-    evaluation = evaluate_benchmark_run(references, outputs, metadata, top_k=args.top_k)
+    evaluation = evaluate_benchmark_run(
+        references,
+        outputs,
+        metadata,
+        judge=benchmark_judge,
+        top_k=args.top_k,
+    )
     report = render_iteration_template(evaluation)
 
     output_path = Path(args.output)

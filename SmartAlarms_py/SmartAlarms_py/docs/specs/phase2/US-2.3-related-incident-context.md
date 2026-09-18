@@ -48,6 +48,7 @@ documentation lookup.
     - incident number
     - state
     - description
+    - assignment group name
     - close notes
     - closed at
     - comments
@@ -130,6 +131,8 @@ documentation lookup.
         - current incident context
         - explicitly referenced related incidents
         - same-title historical incidents
+    - Label the current incident assignment group separately at the beginning of its context when available, so the LLM
+      can compare it directly with historical `assignment_group.name` values for reassignment evidence.
     - Instruct the LLM that same-title historical incidents are candidate precedent, especially when they are recently
       closed and contain meaningful resolution notes.
     - Instruct the LLM to produce:
@@ -173,8 +176,9 @@ documentation lookup.
         - investigation suggestion
         - mitigation suggestion
         - suggested resolution note text for the developer to adapt when solving the incident
-    - If historical incidents show the issue is commonly transferred or redirected, the LLM may suggest reassignment to
-      another team, but it must cite the supporting incident number or numbers.
+    - Before generating generic mitigation suggestions, the LLM must assess whether historical evidence supports
+      reassignment or redirection. When clearly supported by assignment-group ownership and/or transfer notes, it must
+      make redirecting to the identified team the first suggestion and cite the supporting incident number or numbers.
 - Output-shaping rule:
     - The software engineer must ensure the prompt and response parser preserve enough structure to keep source
       attribution attached to each suggestion.
@@ -196,7 +200,8 @@ documentation lookup.
     - Main incident mapping expands beyond the minimal US-1.2 base model, but still must not expose `caller_id`,
       `assigned_to`, `resolved_by`, or `attachments` to domain or LLM payloads.
     - Related-incident mapping is intentionally narrower than the main incident mapping and is limited to the fields
-      listed in scope.
+      listed in scope. It includes `assignment_group.name` when available so the LLM can assess historical reassignment
+      evidence, while still excluding personal assignee and resolver details.
 - Merge rules:
     - Deduplicate by incident number after combining:
         - explicitly referenced related incidents
@@ -205,6 +210,8 @@ documentation lookup.
 - Prompt-context rules:
     - Same-title incidents should carry enough metadata for the prompt builder to favor the latest relevant closed
       tickets, especially those with meaningful `close_notes`.
+    - Historical related and same-title incident context must include `assignment_group.name` when present, so the LLM
+      can compare historical team ownership when evaluating a grounded reassignment suggestion.
     - Related incident provenance must remain available to the prompt builder so suggestion citations can be traced back
       to supporting incidents.
 - Request construction for same-title lookup:
@@ -284,12 +291,14 @@ historical context. They are server-side configuration flags only and must not b
 ### Unit tests
 
 - Main incident mapping preserves non-sensitive fields and excludes the US-1.2 restricted fields.
+- Main incident context exposes the current assignment group as a dedicated labelled field when available.
 - Incident-number extraction from each discovery field (`parent_incident`, `description`, `close_notes`, `comments`,
   `work_notes`, `hold_reason`).
 - Deduplication and canonical normalization of incident numbers.
 - Same-title lookup request construction with configured limit.
 - Same-title recency filtering sorts by `resolved_at` descending and keeps the configured recent-limit subset.
 - Related-incident mapping for the required field subset.
+- Historical incident context includes `assignment_group.name` when it is present in the ITSM payload.
 - Merge behavior that keeps one incident record with multiple provenance sources.
 - Related-incident context building when comments or work notes are disabled by configuration.
 - Prompt rendering that clearly separates main incident, referenced related incidents, and same-title incidents.

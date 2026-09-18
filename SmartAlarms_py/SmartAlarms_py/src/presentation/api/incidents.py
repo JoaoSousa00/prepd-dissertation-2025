@@ -132,7 +132,6 @@ async def get_incident_details(
                         confidence=suggestion.confidence,
                         investigation=suggestion.investigation,
                         mitigation=suggestion.mitigation,
-                        resolutionNote=suggestion.resolution_note,
                         relatedIncidents=suggestion.related_incidents,
                         relatedPages=[RelatedPageData(title=page.title, url=page.url) for page in suggestion.related_pages],
                     )

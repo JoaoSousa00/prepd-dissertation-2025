@@ -165,11 +165,40 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         """Backward-compatible internal alias for the enabled-state check."""
         return self.is_enabled()
 
-    def call_llm(self, *, incident_id: str, prompt: str, max_tokens: int) -> dict:
+    def call_llm(
+        self,
+        *,
+        incident_id: str,
+        prompt: str,
+        max_tokens: int,
+        temperature: Optional[float] = None,
+    ) -> dict:
         """Compatibility wrapper used by documentation relevance checks."""
-        token = self._get_access_token()
-        response, _ = self._call_llm(prompt=prompt, token=token, max_tokens=max_tokens)
+        response, _ = self.complete_prompt(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
         return response
+
+    def complete_prompt(
+        self,
+        *,
+        prompt: str,
+        max_tokens: int,
+        temperature: Optional[float] = None,
+    ) -> tuple[dict, Optional[LlmUsage]]:
+        """Run a generic completion and return its provider usage metadata."""
+        if not self._settings.gateway_enabled:
+            raise LlmGatewayDisabledError("LLM gateway is disabled")
+        token = self._get_access_token()
+        response, _ = self._call_llm(
+            prompt=prompt,
+            token=token,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response, self._parse_usage(response)
     
     def discover_related_context(
         self,
@@ -221,8 +250,25 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                         cost_usd=usage.estimated_cost,
                     )
                 if span is not None:
+                    llm_content = self._extract_message_content(
+                        (response.get("choices") or [{}])[0].get("message", {}).get("content")
+                    )
                     span.set_attribute("gen_ai.request.model", self._settings.model)
                     span.set_attribute("gen_ai.prompt", prompt)
+                    span.set_attribute(
+                        "langfuse.observation.input",
+                        json.dumps(
+                            {
+                                "incident_id": incident_id,
+                                "short_description": short_description,
+                                "description": description,
+                                "main_incident_context": main_incident_context,
+                            },
+                            ensure_ascii=True,
+                        ),
+                    )
+                    span.set_attribute("langfuse.observation.output", llm_content)
+                    span.set_attribute("gen_ai.completion", llm_content)
                     span.set_attribute("retry_count", retry_count)
                     span.set_attribute("related_incident_count", len(discovery.related_incidents))
                     span.set_attribute("confluence_search_query", discovery.confluence_search_query)
@@ -496,7 +542,13 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                 "Invalid authentication response from LLM gateway"
             ) from exc
     
-    def _call_llm(self, prompt: str, token: str, max_tokens: int) -> tuple[dict, int]:
+    def _call_llm(
+        self,
+        prompt: str,
+        token: str,
+        max_tokens: int,
+        temperature: Optional[float] = None,
+    ) -> tuple[dict, int]:
         """Call LLM gateway with retry logic."""
         context = get_current_request_context()
         endpoint = f"{self._settings.endpoint.rstrip('/')}/chat/completions"
@@ -512,6 +564,8 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             ],
             "max_tokens": max_tokens,
         }
+        if temperature is not None:
+            request_body["temperature"] = temperature
 
         for attempt in range(self._settings.max_retries):
             started_at = time.perf_counter()
@@ -984,10 +1038,16 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             logger.warning("Discovery response is not valid JSON: %s", content[:500])
             return DiscoveryResult()
 
+        if not isinstance(data, dict):
+            logger.warning("Discovery response JSON must be an object: %s", content[:500])
+            return DiscoveryResult()
+
         related_incidents = self._as_incident_id_list(
             data.get("related_incidents", data.get("relatedIncidents"))
         )
-        search_query = "place search"
+        service_name = self._as_optional_string(data.get("service_name"))
+        legacy_query = self._as_optional_string(data.get("confluence_search_query"))
+        search_query = self._normalize_service_query(service_name or legacy_query or "")
         return DiscoveryResult(
             related_incidents=related_incidents,
             confluence_search_query=search_query,

@@ -807,7 +807,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
                 "message": {
                     "content": json.dumps({
                         "related_incidents": ["INC004", "INC005", "INC004"],
-                        "confluence_search_query": "billing api timeout queue",
+                        "service_name": "billing api",
                     })
                 }
             }]
@@ -816,7 +816,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         discovery = adapter._parse_discovery_response(response)
 
         assert discovery.related_incidents == ["INC004", "INC005"]
-        assert discovery.confluence_search_query == "place search"
+        assert discovery.confluence_search_query == "billing api"
 
     def test_parse_discovery_response_prioritizes_service_name(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
@@ -836,7 +836,7 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
         discovery = adapter._parse_discovery_response(response)
 
         assert discovery.related_incidents == ["INC004"]
-        assert discovery.confluence_search_query == "place search"
+        assert discovery.confluence_search_query == "places-public"
 
     def test_parse_discovery_response_extracts_service_like_token(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
@@ -854,7 +854,23 @@ class TestGaiaLlmGatewayAdapterResponseParsing:
 
         discovery = adapter._parse_discovery_response(response)
 
-        assert discovery.confluence_search_query == "place search"
+        assert discovery.confluence_search_query == "places-public"
+
+    def test_parse_discovery_response_returns_empty_query_when_service_is_missing(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        response = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({"related_incidents": ["INC004"]})
+                }
+            }]
+        }
+
+        discovery = adapter._parse_discovery_response(response)
+
+        assert discovery.related_incidents == ["INC004"]
+        assert discovery.confluence_search_query == ""
 
 
 class TestGaiaLlmGatewayAdapterRetries:
@@ -1084,6 +1100,64 @@ class TestGaiaLlmGatewayAdapterTracing:
         assert captured_attributes["gen_ai.usage.output_tokens"] == 7
         assert captured_attributes["gen_ai.usage.total_tokens"] == 19
         assert captured_attributes["gen_ai.usage.cost"] == 0.0021
+
+    def test_discover_related_context_sets_langfuse_generation_input_and_output(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+        captured_attributes: dict[str, object] = {}
+
+        class DummySpan:
+            def set_attribute(self, key, value):
+                captured_attributes[key] = value
+
+            def set_status(self, *_args, **_kwargs):
+                return None
+
+            def record_exception(self, *_args, **_kwargs):
+                return None
+
+        @contextmanager
+        def fake_start_span(span_name, **_kwargs):
+            captured_attributes.update(_kwargs.get("attributes", {}))
+            yield DummySpan()
+
+        response_content = json.dumps(
+            {
+                "related_incidents": ["INC002"],
+                "service_name": "places-public",
+            }
+        )
+        with patch("src.infrastructure.llm_gateway.start_span", side_effect=fake_start_span):
+            with patch.object(adapter, "_get_access_token", return_value="token"):
+                with patch.object(
+                    adapter,
+                    "_call_llm",
+                    return_value=(
+                        {
+                            "choices": [{"message": {"content": response_content}}],
+                            "usage": {
+                                "prompt_tokens": 12,
+                                "completion_tokens": 7,
+                                "total_tokens": 19,
+                            },
+                        },
+                        0,
+                    ),
+                ):
+                    discovery = adapter.discover_related_context(
+                        "INC001",
+                        "Place Search failure",
+                        "The places-public endpoint returned errors.",
+                    )
+
+        assert discovery.confluence_search_query == "places-public"
+        assert json.loads(captured_attributes["langfuse.observation.input"]) == {
+            "incident_id": "INC001",
+            "short_description": "Place Search failure",
+            "description": "The places-public endpoint returned errors.",
+            "main_incident_context": None,
+        }
+        assert captured_attributes["langfuse.observation.output"] == response_content
+        assert captured_attributes["gen_ai.completion"] == response_content
 
 
 class TestCertResolution:

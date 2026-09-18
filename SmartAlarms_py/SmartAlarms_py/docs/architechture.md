@@ -18,7 +18,8 @@ Development should be organized into 2 phases, iteratively and in a comparable w
 * **Phase 1**: basic service that communicates directly with required components (ITSM, LLM), keeping the flow simple with direct integrations and minimal architectural complexity;
 * **Phase 2**: more robust service with log analysis, with structured metrics, rich logging, exception handling, ability to handle multiple requests in parallel, and optional connection to ITSM and other components through MCP.
 
-**Evaluation Metrics**: In both phases, collect lexical similarity metrics (**BLEU**, **METEOR**, **ROUGE**) over LLM outputs (summaries and suggestions) to enable comparison and validation of improvements between phases.
+**Evaluation Metrics**: Benchmark evaluation uses a deterministic LLM-as-a-judge for semantic summary and suggestion
+comparison, together with exact-ID precision for related incidents, so valid paraphrases are not penalized.
 
 ---
 
