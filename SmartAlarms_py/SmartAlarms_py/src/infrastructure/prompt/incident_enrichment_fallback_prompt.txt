@@ -13,11 +13,8 @@ Explicitly referenced related incidents from the main incident:
 Recent team incidents from the same assignment group (not a same-title match, and not proven to be related to this incident):
 {same_title_incident_context}
 
-Confluence documentation context (summarized pages from the CD Location Services space):
-{confluence_documentation_context}
-
-Confluence page references used for this analysis:
-{confluence_related_pages_context}
+Relevant Confluence documentation used for this analysis. Each entry identifies its source page and summarized content:
+{confluence_context}
 
 These incidents are recent and may help explain the operational pattern behind this issue, but they are not necessarily the same incident title or the same root cause. Use them as contextual signals only, not as confirmed related-incident evidence.
 

@@ -13,11 +13,8 @@ Explicitly referenced related incidents from the main incident:
 Same-title historical incidents (same short_description as the main incident):
 {same_title_incident_context}
 
-Confluence documentation context (summarized pages from the CD Location Services space):
-{confluence_documentation_context}
-
-Confluence page references used for this analysis:
-{confluence_related_pages_context}
+Relevant Confluence documentation used for this analysis. Each entry identifies its source page and summarized content:
+{confluence_context}
 
 Instructions:
 1. Produce a concise, formal, human-readable summary in 1-2 sentences.

@@ -4,53 +4,77 @@
       "id": "INC000111017580",
       "shortDescription": "CloudWatch EMEA PROD Place-Search-emea-prod-4xx-errors-translations-public-low\nnull",
       "description": "CloudWatch EMEA PROD Place-Search-emea-prod-4xx-errors-translations-public-low\nnull\nWarning alert [Alert000006910263] .\nCreated on [663636559450].\nMetric name is [Place-Search-emea-prod-4xx-errors-translations-public-low] of type [CloudWatch] from data source [AWS].\n\nTotal impacted services by the CI: [Location Services global] is 1.",
-      "summary": "AWS CloudWatch raised a warning for increased 4xx client errors on the EMEA production Place-Search translations/public endpoint, indicating client request issues or recent config/deploy changes may be causing validation, authorization, or routing failures. Impact currently noted for Location Services (global).",
+      "summary": "The Place Search translations public low alarm was triggered by elevated 4xx responses associated with the API key \"los-MobileApp-ChargingTariffsCompositeService\"; the correlated API Gateway alarm recovered and remained stable. Historical recurrence shows similar translations-endpoint failures, including 400 and 429 responses from this caller and a more recent occurrence involving the \"pcmcs-charging\" API key.",
+      "relatedIncidents": [
+        "INC000111017340",
+        "INC000111194980",
+        "INC000111230726",
+        "INC000110880719"
+      ],
+      "relatedPages": [
+        {
+          "title": "LOS Service Performance Report - places-baseline",
+          "url": "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=6173017257"
+        },
+        {
+          "title": "Place Search Collaboration",
+          "url": "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=7980615737"
+        }
+      ],
       "resolutionSuggestions": [
         {
-          "suggestion": "Break down 4xx errors by status code and route to pinpoint the source: analyze CloudWatch metrics and access logs for translations/public, segment by 400/401/403/404/429, and identify top offending clients, user agents, and paths.",
-          "relatedIncidents": []
+          "confidence": "evidence-based",
+          "investigation": "Inspect Place Search/API Gateway request logs for the translations endpoint during the alert window, grouped by API key and HTTP status, with priority on \"los-MobileApp-ChargingTariffsCompositeService\"; confirm whether the recovered 4xx burst was predominantly invalid requests (400-class) or quota/throttling responses (429). Sources: INC000111017340, INC000111194980, INC000110880719.",
+          "mitigation": "Engage the owner of \"los-MobileApp-ChargingTariffsCompositeService\" with request examples and status-code breakdown, then correct malformed translations requests and/or apply client-side request shaping appropriate to the observed failure type. Historical records explicitly identify this key and previously observed 400/429 responses for /translations. Sources: INC000111017340, INC000111194980, INC000110880719.",
+          "resolutionNote": "Validated that the translations-endpoint 4xx alarm was associated with API key \"los-MobileApp-ChargingTariffsCompositeService\"; reviewed the status-code/request pattern with the caller owner, applied or agreed corrective action as applicable, and confirmed the alarm recovered and remained stable. Sources: INC000111017340, INC000111194980, INC000110880719.",
+          "relatedIncidents": [
+            "INC000111017340",
+            "INC000111194980",
+            "INC000110880719"
+          ],
+          "relatedPages": []
         },
         {
-          "suggestion": "Verify recent deployments and configuration changes in EMEA (service, API Gateway/ALB routes, WAF rules); if a spike aligns with a change, roll back or hotfix and re-run canaries.",
-          "relatedIncidents": []
+          "confidence": "evidence-based",
+          "investigation": "Check whether 429 responses contributed to the alert and compare request rate, concurrency, retry behavior, and request fan-out for the affected API key against the period before recovery. Sources: INC000110880719, INC000110767041.",
+          "mitigation": "If throttling is confirmed, have the consuming client reduce burstiness through bounded retries with exponential backoff and jitter, concurrency limits, and avoidance of duplicate translations calls; validate any quota or backend-capacity change separately before applying it. Sources: INC000110880719, INC000110767041.",
+          "resolutionNote": "Analysis found that translations requests from the affected client included throttling-related responses; client request pacing/retry behavior was reviewed and corrective action was applied or tracked with the consuming team. The CloudWatch alarm subsequently recovered and remained stable. Sources: INC000110880719, INC000110767041.",
+          "relatedIncidents": [
+            "INC000110880719",
+            "INC000110767041"
+          ],
+          "relatedPages": [
+            {
+              "title": "LOS Service Performance Report - places-baseline",
+              "url": "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=6173017257"
+            }
+          ]
         },
         {
-          "suggestion": "Check authentication/authorization paths if 401/403 increased: validate IAM policies, authorizers (Cognito/OAuth/JWT), and ensure the translations/public endpoint hasn’t inadvertently been gated by new auth or WAF rules.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Inspect request validation and schema handling at the application layer: confirm supported locales, required query parameters, and input formats; improve validation and return informative errors to clients, and adjust server-side defaults where safe.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Assess routing and mapping templates: ensure API Gateway/ALB routing to translations/public is correct, no recent stage variable/mapping/template changes are causing 404s or misrouted requests.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Evaluate rate limiting and throttling if 429s are present: adjust API Gateway/ALB limits, coordinate client-side retry/backoff, and consider per-tenant quotas or caching for high-frequency queries.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Review WAF/edge configurations for false positives: look for new or tightened rules blocking legitimate requests (e.g., locale parameters, query patterns), and whitelist known-good patterns or clients as needed.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Set up targeted synthetic checks and dashboards for translations/public across common locales and inputs; create alarms per 4xx code to detect regressions early.",
-          "relatedIncidents": []
-        },
-        {
-          "suggestion": "Engage top client integrators: share observed error patterns, provide request guidelines, and coordinate test cases; consider temporary feature flags or fallbacks (e.g., default locale) where appropriate and safe.",
-          "relatedIncidents": []
+          "confidence": "evidence-based",
+          "investigation": "Extend the review beyond the initially identified key to determine whether other consumers contributed to the translations 4xx metric, specifically checking for \"pcmcs-charging\" and correlating the metric with the parent API Gateway 4xx alarm. Sources: INC000111017340, INC000111230726.",
+          "mitigation": "Maintain per-API-key and per-status-code triage for translations alarms so a caller-specific 4xx burst can be routed to the responsible consumer quickly; use the Place Search collaboration process for cross-team prioritization when a caller-side fix requires coordination. Sources: INC000111017340, INC000111230726.",
+          "resolutionNote": "Correlated the translations 4xx metric with API Gateway errors and reviewed contributing API keys, including the affected caller(s). The responsible consumer team was engaged where needed, and the alarm recovered with no continuing elevated error rate. Sources: INC000111017340, INC000111230726.",
+          "relatedIncidents": [
+            "INC000111017340",
+            "INC000111230726"
+          ],
+          "relatedPages": [
+            {
+              "title": "Place Search Collaboration",
+              "url": "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=7980615737"
+            }
+          ]
         }
       ],
       "llmUsage": {
-        "model": "openai/gpt-5",
-        "tokensIn": 246,
-        "tokensOut": 2543,
-        "tokensTotal": 2789,
-        "cost_USD": 0.0283125
+        "model": "openai/gpt-5.6-terra",
+        "tokensIn": 33331,
+        "tokensOut": 6844,
+        "tokensTotal": 40175,
+        "cost_USD": 0.1218553
       },
-      "requestLatencyMs": 30894.249000004493
+      "requestLatencyMs": 104669.97529200034
     },
     {
       "id": "INC000111048388",
@@ -98,7 +122,7 @@
         }
       ],
       "llmUsage": {
-        "model": "openai/gpt-5",
+        "model": "openai/gpt-5.6-terra",
         "tokensIn": 1516,
         "tokensOut": 3652,
         "tokensTotal": 5168,

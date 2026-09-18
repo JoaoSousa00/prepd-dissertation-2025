@@ -104,8 +104,7 @@ class LlmGateway(Protocol):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
-        confluence_documentation_context: Optional[str] = None,
-        confluence_related_pages_context: Optional[str] = None,
+        confluence_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content.

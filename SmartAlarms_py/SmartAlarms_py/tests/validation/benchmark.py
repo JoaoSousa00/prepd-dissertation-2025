@@ -101,8 +101,8 @@ def load_benchmark_outputs(path: Path | str) -> tuple[BenchmarkRunMetadata, List
 def _build_metadata(payload: Mapping[str, Any] | None) -> BenchmarkRunMetadata:
     payload = payload or {}
     incidents = payload.get("incidents", []) if isinstance(payload, Mapping) else []
-    model_name = payload.get("model_name")
-    if not model_name and isinstance(incidents, Sequence):
+    model_name = None
+    if isinstance(incidents, Sequence):
         for incident in incidents:
             if not isinstance(incident, Mapping):
                 continue
@@ -111,6 +111,8 @@ def _build_metadata(payload: Mapping[str, Any] | None) -> BenchmarkRunMetadata:
             if candidate:
                 model_name = candidate
                 break
+    if not model_name:
+        model_name = payload.get("model_name")
 
     run_id = payload.get("run_id")
     if not run_id:

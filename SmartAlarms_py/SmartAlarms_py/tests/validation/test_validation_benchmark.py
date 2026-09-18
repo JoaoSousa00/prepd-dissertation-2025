@@ -53,17 +53,42 @@ def test_render_iteration_template_includes_all_required_sections():
     references = load_golden_reference(FIXTURE_DIR / "golden_reference.json")
     metadata, outputs = load_benchmark_outputs(FIXTURE_DIR / "sample_service_response.json")
     evaluation = evaluate_benchmark_run(references, outputs, metadata, top_k=1)
+    service_response = json.loads(
+        (FIXTURE_DIR / "sample_service_response.json").read_text(encoding="utf-8")
+    )
 
     template = render_iteration_template(evaluation)
 
     assert template["run_id"].endswith("Z")
     assert "incident_id" in template
-    assert template["model_name"] == "openai/gpt-5"
+    assert template["model_name"] == service_response["incidents"][0]["llmUsage"]["model"]
     assert template["metrics"]["top_k_accuracy"] == pytest.approx(1.0)
     assert template["metrics"]["related_incident_correlation"] == pytest.approx(1.0)
     assert template["metrics"]["cost_USD"] == pytest.approx(0.0352883)
     assert template["manual_notes"] == ""
     assert template["cases"]
+
+
+def test_load_benchmark_outputs_prefers_model_returned_by_service(tmp_path):
+    service_response_path = tmp_path / "service_response.json"
+    service_response_path.write_text(
+        json.dumps(
+            {
+                "model_name": "configured-model",
+                "incidents": [
+                    {
+                        "id": "INC000000000001",
+                        "llmUsage": {"model": "provider-returned-model"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    metadata, _ = load_benchmark_outputs(service_response_path)
+
+    assert metadata.model_name == "provider-returned-model"
 
 
 def test_evaluate_benchmark_run_records_missing_outputs():

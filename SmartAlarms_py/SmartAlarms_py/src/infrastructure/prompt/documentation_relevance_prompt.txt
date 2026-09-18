@@ -9,7 +9,8 @@ Content: {page_body}
 
 TASK:
 1. Determine if this page is relevant to the incident (true/false).
-2. If relevant, extract the key points using caveman summarization:
+2. The page is only relevant if it contains information that could help resolve the incident, such as troubleshooting steps, error explanations, configuration guidance or if the affected feature is mentioned.
+3. If relevant, extract the key points using caveman summarization:
    - Keep technical details and specifics (links, commands, exact error messages)
    - Use bullet points for clarity
    - Preserve important context that could help resolve the incident

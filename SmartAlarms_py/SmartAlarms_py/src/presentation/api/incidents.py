@@ -96,10 +96,22 @@ async def get_incident_details(
             context.summary_completed = False
         return create_unauthorized_response(str(exc))
 
+    llm_model = None
+    gateway = getattr(incident_details_service, "_llm_gateway", None)
+    if gateway is not None:
+        settings = getattr(gateway, "_settings", None)
+        if settings is not None and getattr(settings, "model", None):
+            llm_model = settings.model
+    if llm_model is None:
+        for incident in incident_details:
+            if incident.llm_usage is not None and incident.llm_usage.model:
+                llm_model = incident.llm_usage.model
+                break
+
     aggregate_usage = None
     if context is not None and (context.llm_tokens_in or context.llm_tokens_out or context.llm_cost_usd):
         aggregate_usage = LlmUsageData(
-            model="aggregate-request",
+            model=llm_model,
             tokensIn=context.llm_tokens_in,
             tokensOut=context.llm_tokens_out,
             tokensTotal=context.llm_tokens_in + context.llm_tokens_out,

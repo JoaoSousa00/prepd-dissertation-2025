@@ -261,6 +261,26 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
         assert "N/A" in prompt
         assert "No additional main-incident context was provided." in prompt
 
+    def test_build_prompt_keeps_each_confluence_summary_with_its_page_title(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        prompt = adapter._build_prompt(
+            incident_id="INC001",
+            short_description="API latency",
+            description="API responses are slow",
+            confluence_context=(
+                "Page title: API Runbook\nSummarized content: Check upstream latency.\n"
+                "Page title: Database Guide\nSummarized content: Review connection pool saturation."
+            ),
+        )
+
+        assert "Page title: API Runbook\nSummarized content: Check upstream latency." in prompt
+        assert (
+            "Page title: Database Guide\nSummarized content: Review connection pool saturation."
+            in prompt
+        )
+        assert "Confluence page references used for this analysis:" not in prompt
+
     def test_build_prompt_uses_template_file(self, llm_settings, tmp_path):
         prompt_file = tmp_path / "incident_enrichment_prompt.txt"
         prompt_file.write_text(

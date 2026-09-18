@@ -250,8 +250,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
-        confluence_documentation_context: Optional[str] = None,
-        confluence_related_pages_context: Optional[str] = None,
+        confluence_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> IncidentEnrichment:
         """Enrich an incident with LLM-generated content."""
@@ -288,8 +287,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
                     main_incident_context,
                     related_incident_context,
                     same_title_incident_context,
-                    confluence_documentation_context=confluence_documentation_context,
-                    confluence_related_pages_context=confluence_related_pages_context,
+                    confluence_context=confluence_context,
                     use_fallback_prompt=use_fallback_prompt,
                 )
                 requested_max_tokens = max_tokens or self._settings.default_max_tokens
@@ -674,8 +672,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
         main_incident_context: Optional[str] = None,
         related_incident_context: Optional[str] = None,
         same_title_incident_context: Optional[str] = None,
-        confluence_documentation_context: Optional[str] = None,
-        confluence_related_pages_context: Optional[str] = None,
+        confluence_context: Optional[str] = None,
         use_fallback_prompt: bool = False,
     ) -> str:
         """Build a prompt for LLM enrichment."""
@@ -687,8 +684,7 @@ class GaiaLlmGatewayAdapter(LlmGateway):
             main_incident_context=main_incident_context or "No additional main-incident context was provided.",
             related_incident_context=related_incident_context or "No explicitly referenced related incidents were found.",
             same_title_incident_context=same_title_incident_context or "No same-title historical incidents were found.",
-            confluence_documentation_context=confluence_documentation_context or "No Confluence documentation context was available.",
-            confluence_related_pages_context=confluence_related_pages_context or "No relevant Confluence pages were found.",
+            confluence_context=confluence_context or "No relevant Confluence documentation was available.",
         )
 
     def _build_discovery_prompt(

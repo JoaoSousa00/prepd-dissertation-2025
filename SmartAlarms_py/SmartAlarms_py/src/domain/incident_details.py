@@ -63,8 +63,7 @@ class IncidentDetailsService:
             related_context = self._build_context_snapshot(incident)
             main_incident_context = self._build_main_incident_context(incident)
             discovery_result: Optional[DiscoveryResult] = None
-            confluence_documentation_context = None
-            confluence_related_pages_context = None
+            confluence_context = None
             if self._llm_gateway is not None:
                 discover_related_context = getattr(self._llm_gateway, "discover_related_context", None)
                 if callable(discover_related_context):
@@ -82,9 +81,10 @@ class IncidentDetailsService:
                                 + ", ".join(discovery_result.related_incidents)
                             )
                         if self._confluence_source is not None and discovery_result.confluence_search_query:
-                            confluence_context = self._collect_confluence_context(discovery_result.confluence_search_query)
-                            confluence_documentation_context = confluence_context["documentation_context"]
-                            confluence_related_pages_context = confluence_context["related_pages_context"]
+                            collected_confluence_context = self._collect_confluence_context(
+                                discovery_result.confluence_search_query
+                            )
+                            confluence_context = collected_confluence_context["documentation_context"]
                     except (LlmGatewayError, TypeError):
                         discovery_result = None
 
@@ -97,8 +97,7 @@ class IncidentDetailsService:
                             main_incident_context=main_incident_context,
                             related_incident_context=related_context["related_incident_context"],
                             same_title_incident_context=related_context["same_title_incident_context"],
-                            confluence_documentation_context=confluence_documentation_context,
-                            confluence_related_pages_context=confluence_related_pages_context,
+                            confluence_context=confluence_context,
                             use_fallback_prompt=bool(context and context.fallback_triggered),
                         )
                     except TypeError:
@@ -165,7 +164,6 @@ class IncidentDetailsService:
         if self._confluence_source is None:
             return {
                 "documentation_context": "No Confluence documentation context was available.",
-                "related_pages_context": "No relevant Confluence pages were found.",
                 "related_pages": [],
             }
         try:
@@ -197,7 +195,8 @@ class IncidentDetailsService:
                     relevant_pages.append(RelatedPage(title=title, url=url))
                     extracted = str(result.get("extracted_content") or "").strip()
                     relevant_details.append(
-                        f"- {title}: {url}\n  {extracted}" if extracted else f"- {title}: {url}"
+                        f"Page title: {title}\nSummarized content: "
+                        f"{extracted or 'No summarized content was available.'}"
                     )
             if context:
                 context.record_documentation_relevant_pages(len(relevant_pages))
@@ -205,14 +204,12 @@ class IncidentDetailsService:
             if not relevant_pages:
                 return {
                     "documentation_context": "No Confluence documentation context was available for this incident.",
-                    "related_pages_context": "No relevant Confluence pages were found.",
                     "related_pages": [],
                 }
 
-            documentation_context = "\n".join(relevant_details[:10])
+            documentation_context = "\n\n".join(relevant_details[:10])
             return {
                 "documentation_context": documentation_context,
-                "related_pages_context": "\n".join(f"- {page.title}: {page.url}" for page in relevant_pages),
                 "related_pages": relevant_pages,
             }
         except Exception as exc:  # pragma: no cover - defensive fallback for missing external access
@@ -227,7 +224,6 @@ class IncidentDetailsService:
                     context.record_documentation_error(str(exc))
             return {
                 "documentation_context": "No Confluence documentation context was available because the lookup failed.",
-                "related_pages_context": "No relevant Confluence pages were found.",
                 "related_pages": [],
             }
 
