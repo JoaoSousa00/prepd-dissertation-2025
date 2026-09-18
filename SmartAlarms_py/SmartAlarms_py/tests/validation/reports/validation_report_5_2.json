@@ -1,0 +1,99 @@
+{
+  "run_id": "20260918T144613Z",
+  "release_label": "local",
+  "dataset_version": "phase1-validation-v3",
+  "model_name": "openai/gpt-5.6-terra",
+  "configuration_notes": "",
+  "metrics": {
+    "rouge": {
+      "precision": 0.10781003284680242,
+      "recall": 0.6301823176823177,
+      "f1": 0.18271493192271598
+    },
+    "top_k_accuracy": 0.0,
+    "related_incident_precision": 0.3,
+    "related_incident_correlation": 0.3,
+    "cost_USD": 0.12170777500000002,
+    "latency_ms": 104608.87831224863
+  },
+  "manual_notes": "",
+  "status": "complete",
+  "cases": [
+    {
+      "incident_id": "INC000111017580",
+      "status": "success",
+      "call_count": 1,
+      "successful_call_count": 1,
+      "rouge": {
+        "precision": 0.07164502164502164,
+        "recall": 0.5119047619047619,
+        "f1": 0.1256720430107527
+      },
+      "top_k_accuracy": 0.0,
+      "related_incident_precision": 0.2,
+      "tokens_in": 32379.0,
+      "tokens_out": 7030.0,
+      "tokens_total": 39409.0,
+      "latency_ms": 110426.4258330004,
+      "error_notes": "",
+      "cost_USD": 0.12219250000000001
+    },
+    {
+      "incident_id": "INC000110969970",
+      "status": "success",
+      "call_count": 1,
+      "successful_call_count": 1,
+      "rouge": {
+        "precision": 0.07716346153846154,
+        "recall": 0.6428571428571429,
+        "f1": 0.13775805518039744
+      },
+      "top_k_accuracy": 0.0,
+      "related_incident_precision": 0.0,
+      "tokens_in": 38148.0,
+      "tokens_out": 6321.0,
+      "tokens_total": 44469.0,
+      "latency_ms": 105943.71883299755,
+      "error_notes": "",
+      "cost_USD": 0.12809360000000003
+    },
+    {
+      "incident_id": "INC000111250397",
+      "status": "success",
+      "call_count": 1,
+      "successful_call_count": 1,
+      "rouge": {
+        "precision": 0.1511545919266702,
+        "recall": 0.7954545454545454,
+        "f1": 0.25400400400400397
+      },
+      "top_k_accuracy": 0.0,
+      "related_incident_precision": 0.0,
+      "tokens_in": 37477.0,
+      "tokens_out": 6355.0,
+      "tokens_total": 43832.0,
+      "latency_ms": 101072.08299999911,
+      "error_notes": "",
+      "cost_USD": 0.1266227
+    },
+    {
+      "incident_id": "INC000111254019",
+      "status": "success",
+      "call_count": 1,
+      "successful_call_count": 1,
+      "rouge": {
+        "precision": 0.1312770562770563,
+        "recall": 0.5705128205128206,
+        "f1": 0.21342562549570987
+      },
+      "top_k_accuracy": 1.0,
+      "related_incident_precision": 1.0,
+      "tokens_in": 29903.0,
+      "tokens_out": 6514.0,
+      "tokens_total": 36417.0,
+      "latency_ms": 100993.28558299749,
+      "error_notes": "",
+      "cost_USD": 0.10992230000000001
+    }
+  ]
+}

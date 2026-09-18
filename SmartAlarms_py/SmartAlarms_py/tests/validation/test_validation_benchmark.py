@@ -65,6 +65,7 @@ def test_load_golden_reference_reads_validation_dataset():
         "INC000111017580",
         "INC000110969970",
         "INC000111250397",
+        "INC000111254019",
     ]
     assert references[0].reference_mitigation_suggestions == [
         BenchmarkResolutionSuggestion(
@@ -130,7 +131,7 @@ def test_evaluate_benchmark_run_computes_all_validation_metrics():
     assert evaluation.metrics["related_incident_precision"] == pytest.approx(1.0)
     assert evaluation.metrics["estimated_cost"] == pytest.approx(0.01)
     assert evaluation.metrics["latency_ms"] == pytest.approx(1000)
-    assert len(evaluation.cases) == 3
+    assert len(evaluation.cases) == 4
     assert evaluation.cases[0].status == "success"
 
 
@@ -162,11 +163,11 @@ def test_collect_benchmark_outputs_calls_each_incident_for_every_repetition():
         )
 
     assert calls == Counter({reference.incident_id: 3 for reference in references})
-    assert len(outputs) == 9
+    assert len(outputs) == 12
     assert metadata.model_name == "provider-returned-model"
-    assert progress_events[0] == ("requesting", 1, 9, "INC000111017580")
-    assert progress_events[-1] == ("success", 9, 9, "INC000111250397")
-    assert len(progress_events) == 18
+    assert progress_events[0] == ("requesting", 1, 12, "INC000111017580")
+    assert progress_events[-1] == ("success", 12, 12, "INC000111254019")
+    assert len(progress_events) == 24
     assert outputs[0].generated_mitigation_suggestions == [
         BenchmarkResolutionSuggestion(
             investigation="Check requests from los-MobileApp-ChargingTariffsCompositeService to translations/public.",
@@ -183,7 +184,7 @@ def test_render_iteration_template_aggregates_repeated_calls_by_incident():
         dataset_version="dataset",
         model_name="provider-returned-model",
     )
-    first_reference, second_reference, _ = references
+    first_reference, second_reference, _, _ = references
     outputs = [
         _successful_output(first_reference, 1),
         BenchmarkCaseOutput(
@@ -206,7 +207,7 @@ def test_render_iteration_template_aggregates_repeated_calls_by_incident():
         case for case in report["cases"] if case["incident_id"] == second_reference.incident_id
     )
 
-    assert len(report["cases"]) == 3
+    assert len(report["cases"]) == 4
     assert first_case["status"] == "partial_failure"
     assert first_case["call_count"] == 3
     assert first_case["successful_call_count"] == 2
@@ -284,7 +285,7 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path):
 
     assert exit_code == 0
     assert report["run_id"].endswith("Z")
-    assert report["dataset_version"] == "phase1-validation-v2"
+    assert report["dataset_version"] == "phase1-validation-v3"
     assert report["model_name"] == "provider-returned-model"
     assert calls == Counter({reference.incident_id: 10 for reference in references})
     assert len(report["cases"]) == len(references)

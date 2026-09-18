@@ -1,5 +1,5 @@
 {
-  "dataset_version": "phase1-validation-v2",
+  "dataset_version": "phase1-validation-v3",
   "incidents": [
     {
       "incident_id": "INC000111017580",
@@ -38,6 +38,20 @@
       ],
       "reference_related_incidents": [],
       "notes": "Active incident; no resolution available."
+    },
+    {
+      "incident_id": "INC000111254019",
+      "reference_summary": "Cloudwatch detected that the EES25-Availability API-key usage exceeded 90% of the Netscaler rate limit for the defined touchpoint.",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Check EES25-Availability API-key usage, quota, and IFC threshold.",
+          "mitigation": "Adjust the IFC threshold if API-key usage is within approved capacity."
+        }
+      ],
+      "reference_related_incidents": [
+        "INC000111175746"
+      ],
+      "notes": "Previous incident was resolved by adjusting the IFC threshold."
     }
   ]
 }
