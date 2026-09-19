@@ -131,7 +131,7 @@ class BenchmarkCaseResult:
     incident_id: str
     status: str
     summary_score: Optional[float]
-    top_k_accuracy: Optional[float]
+    mrr: Optional[float]
     related_incident_precision: Optional[float]
     related_page_precision: Optional[float]
     tokens_in: Optional[int]
@@ -149,7 +149,7 @@ class BenchmarkCaseResult:
 @dataclass(frozen=True)
 class BenchmarkCaseAverage:
     summary_score: Optional[float]
-    top_k_accuracy: Optional[float]
+    mrr: Optional[float]
     related_incident_precision: Optional[float]
     related_page_precision: Optional[float]
     tokens_in: Optional[float]
@@ -515,7 +515,6 @@ def evaluate_benchmark_run(
     outputs: Sequence[BenchmarkCaseOutput],
     metadata: BenchmarkRunMetadata,
     judge: BenchmarkJudge,
-    top_k: int = 3,
 ) -> BenchmarkEvaluationResult:
     reference_map = {reference.incident_id: reference for reference in references}
     outputs_by_incident: Dict[str, List[BenchmarkCaseOutput]] = {}
@@ -531,7 +530,7 @@ def evaluate_benchmark_run(
                     incident_id=incident_id,
                     status="missing_output",
                     summary_score=None,
-                    top_k_accuracy=None,
+                    mrr=None,
                     related_incident_precision=None,
                     related_page_precision=None,
                     tokens_in=None,
@@ -551,7 +550,7 @@ def evaluate_benchmark_run(
                         incident_id=incident_id,
                         status=output.status,
                         summary_score=None,
-                        top_k_accuracy=None,
+                        mrr=None,
                         related_incident_precision=None,
                         related_page_precision=None,
                         tokens_in=output.tokens_in,
@@ -573,7 +572,7 @@ def evaluate_benchmark_run(
                         incident_id=incident_id,
                         status="judge_failed",
                         summary_score=None,
-                        top_k_accuracy=None,
+                        mrr=None,
                         related_incident_precision=None,
                         related_page_precision=None,
                         tokens_in=output.tokens_in,
@@ -587,7 +586,7 @@ def evaluate_benchmark_run(
                 )
                 continue
 
-            top_k_accuracy = _compute_top_k_accuracy(judgment.suggestion_matches, top_k=top_k)
+            mrr = _compute_mrr(judgment.suggestion_matches)
             related_precision = _compute_precision(
                 reference.reference_related_incidents,
                 output.generated_related_incidents,
@@ -601,7 +600,7 @@ def evaluate_benchmark_run(
                     incident_id=incident_id,
                     status=output.status,
                     summary_score=judgment.summary.score,
-                    top_k_accuracy=top_k_accuracy,
+                    mrr=mrr,
                     related_incident_precision=related_precision,
                     related_page_precision=related_page_precision,
                     tokens_in=output.tokens_in,
@@ -624,7 +623,7 @@ def evaluate_benchmark_run(
                     incident_id=incident_id,
                     status="unexpected_output",
                     summary_score=None,
-                    top_k_accuracy=None,
+                    mrr=None,
                     related_incident_precision=None,
                     related_page_precision=None,
                     tokens_in=output.tokens_in,
@@ -657,7 +656,7 @@ def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, An
         "configuration_notes": result.metadata.configuration_notes,
         "metrics": {
             "summary_score": result.metrics.get("summary_score"),
-            "top_k_accuracy": result.metrics.get("top_k_accuracy"),
+            "mrr": result.metrics.get("mrr"),
             "related_incident_precision": result.metrics.get("related_incident_precision"),
             "related_incident_correlation": result.metrics.get("related_incident_precision"),
             "related_page_precision": result.metrics.get("related_page_precision"),
@@ -750,7 +749,7 @@ def _render_case_result(call_number: int, result: BenchmarkCaseResult) -> Dict[s
         "call_number": call_number,
         "status": result.status,
         "summary_score": result.summary_score,
-        "top_k_accuracy": result.top_k_accuracy,
+        "mrr": result.mrr,
         "related_incident_precision": result.related_incident_precision,
         "related_page_precision": result.related_page_precision,
         "tokens_in": result.tokens_in,
@@ -768,7 +767,7 @@ def _render_case_average(average: Optional[BenchmarkCaseAverage]) -> Optional[Di
         return None
     return {
         "summary_score": average.summary_score,
-        "top_k_accuracy": average.top_k_accuracy,
+        "mrr": average.mrr,
         "related_incident_precision": average.related_incident_precision,
         "related_page_precision": average.related_page_precision,
         "tokens_in": average.tokens_in,
@@ -803,7 +802,7 @@ def _build_case_average(
 ) -> BenchmarkCaseAverage:
     return BenchmarkCaseAverage(
         summary_score=_mean(case.summary_score for case in evaluated_cases),
-        top_k_accuracy=_mean(case.top_k_accuracy for case in evaluated_cases),
+        mrr=_mean(case.mrr for case in evaluated_cases),
         related_incident_precision=_mean(
             case.related_incident_precision for case in evaluated_cases
         ),
@@ -843,21 +842,15 @@ def _build_case_average(
     )
 
 
-def _compute_top_k_accuracy(
-    suggestion_matches: Sequence[BenchmarkSuggestionMatch],
-    top_k: int,
-) -> float:
-    if top_k < 1:
-        raise ValueError("top_k must be at least 1")
-    if not suggestion_matches:
-        return 0.0
-    return sum(
-        1
+def _compute_mrr(suggestion_matches: Sequence[BenchmarkSuggestionMatch]) -> float:
+    matching_ranks = [
+        match.generated_rank
         for match in suggestion_matches
-        if match.score >= 4
-        and match.generated_rank is not None
-        and match.generated_rank <= top_k
-    ) / len(suggestion_matches)
+        if match.score >= 4 and match.generated_rank is not None
+    ]
+    if not matching_ranks:
+        return 0.0
+    return 1.0 / min(matching_ranks)
 
 
 def _compute_precision(reference_items: Sequence[str], generated_items: Sequence[str]) -> float:
@@ -875,7 +868,7 @@ def _compute_precision(reference_items: Sequence[str], generated_items: Sequence
 
 def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str, Optional[float]]:
     summary_scores = [case.summary_score for case in case_results if case.summary_score is not None]
-    top_k_values = [case.top_k_accuracy for case in case_results if case.top_k_accuracy is not None]
+    mrr_values = [case.mrr for case in case_results if case.mrr is not None]
     precision_values = [
         case.related_incident_precision for case in case_results if case.related_incident_precision is not None
     ]
@@ -912,7 +905,7 @@ def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str,
 
     return {
         "summary_score": _mean(summary_scores),
-        "top_k_accuracy": _mean(top_k_values),
+        "mrr": _mean(mrr_values),
         "related_incident_precision": _mean(precision_values),
         "related_page_precision": _mean(page_precision_values),
         "estimated_cost": _mean(cost_values),

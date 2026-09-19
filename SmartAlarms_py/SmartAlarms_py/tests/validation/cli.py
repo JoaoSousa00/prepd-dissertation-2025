@@ -24,7 +24,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run repeated local-service benchmark validation.")
     parser.add_argument("--references", required=True, help="Path to the golden reference JSON file.")
     parser.add_argument("--output", required=True, help="Where to write the validation report JSON.")
-    parser.add_argument("--top-k", type=int, default=3, help="Top-K value for mitigation accuracy.")
     parser.add_argument(
         "--service-url",
         default=DEFAULT_LOCAL_SERVICE_URL,
@@ -74,9 +73,6 @@ def main(
         parser.error("--max-concurrency must be at least 1")
     if args.timeout_seconds <= 0:
         parser.error("--timeout-seconds must be greater than 0")
-    if args.top_k < 1:
-        parser.error("--top-k must be at least 1")
-
     load_dotenv()
     references = load_golden_reference(Path(args.references))
     reference_metadata = load_golden_reference_metadata(Path(args.references))
@@ -102,7 +98,6 @@ def main(
         outputs,
         metadata,
         judge=benchmark_judge,
-        top_k=args.top_k,
     )
     report = render_iteration_template(evaluation)
 

@@ -7,7 +7,7 @@
   "configuration_notes": "",
   "metrics": {
     "summary_score": null,
-    "top_k_accuracy": null,
+    "mrr": null,
     "related_incident_precision": null,
     "related_incident_correlation": null,
     "related_page_precision": null,
@@ -32,7 +32,7 @@
           "call_number": 1,
           "status": "",
           "summary_score": null,
-          "top_k_accuracy": null,
+          "mrr": null,
           "related_incident_precision": null,
           "related_page_precision": null,
           "tokens_in": null,
@@ -46,7 +46,7 @@
       ],
       "average": {
         "summary_score": null,
-        "top_k_accuracy": null,
+        "mrr": null,
         "related_incident_precision": null,
         "related_page_precision": null,
         "tokens_in": null,

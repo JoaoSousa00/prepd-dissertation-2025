@@ -135,7 +135,12 @@ def test_load_golden_reference_reads_validation_dataset():
     assert references
     assert all(reference.incident_id.startswith("INC") for reference in references)
     assert all(isinstance(reference.reference_summary, str) for reference in references)
-    assert all(reference.reference_related_pages == [] for reference in references)
+    assert any(reference.reference_related_pages for reference in references)
+    assert all(
+        isinstance(page_url, str)
+        for reference in references
+        for page_url in reference.reference_related_pages
+    )
     assert all(
         isinstance(suggestion, BenchmarkResolutionSuggestion)
         for reference in references
@@ -222,14 +227,14 @@ def test_evaluate_benchmark_run_records_semantic_suggestion_rank():
             )
         ],
     )
-    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge, top_k=1)
+    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge)
 
     assert evaluation.metrics["summary_score"] == pytest.approx(4.0)
-    assert evaluation.metrics["top_k_accuracy"] == pytest.approx(1.0)
+    assert evaluation.metrics["mrr"] == pytest.approx(1.0)
     assert evaluation.cases[0].suggestion_matches[0].generated_rank == 1
 
 
-def test_evaluate_benchmark_run_excludes_partial_suggestions_from_top_k():
+def test_evaluate_benchmark_run_uses_reciprocal_rank_of_first_semantic_match():
     reference = BenchmarkCaseReference(
         incident_id="INC000000000001",
         reference_summary="Session Store job failed.",
@@ -244,17 +249,44 @@ def test_evaluate_benchmark_run_excludes_partial_suggestions_from_top_k():
         matches=[
             BenchmarkSuggestionMatch(
                 reference_index=1,
-                generated_rank=None,
+                generated_rank=2,
+                score=5,
+                reason="Same mitigation appears second.",
+            )
+        ],
+    )
+
+    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge)
+
+    assert evaluation.metrics["summary_score"] == pytest.approx(3.0)
+    assert evaluation.metrics["mrr"] == pytest.approx(0.5)
+
+
+def test_evaluate_benchmark_run_excludes_partial_suggestions_from_mrr():
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Session Store job failed.",
+        reference_mitigation_suggestions=[
+            BenchmarkResolutionSuggestion(mitigation="Retry the Session Store job.")
+        ],
+    )
+    output = BenchmarkCaseOutput(incident_id=reference.incident_id)
+    metadata = BenchmarkRunMetadata("run", "local", "dataset", "service-model")
+    judge = _RankedJudge(
+        summary_score=3,
+        matches=[
+            BenchmarkSuggestionMatch(
+                reference_index=1,
+                generated_rank=1,
                 score=3,
                 reason="Important mitigation detail is missing.",
             )
         ],
     )
 
-    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge, top_k=3)
+    evaluation = evaluate_benchmark_run([reference], [output], metadata, judge=judge)
 
-    assert evaluation.metrics["summary_score"] == pytest.approx(3.0)
-    assert evaluation.metrics["top_k_accuracy"] == pytest.approx(0.0)
+    assert evaluation.metrics["mrr"] == pytest.approx(0.0)
 
 
 def test_evaluate_benchmark_run_computes_all_validation_metrics():
@@ -284,11 +316,10 @@ def test_evaluate_benchmark_run_computes_all_validation_metrics():
         outputs,
         metadata,
         judge=_MatchingJudge(),
-        top_k=1,
     )
 
     assert evaluation.metrics["summary_score"] == pytest.approx(5.0)
-    assert evaluation.metrics["top_k_accuracy"] == pytest.approx(1.0)
+    assert evaluation.metrics["mrr"] == pytest.approx(1.0)
     assert evaluation.metrics["related_incident_precision"] == pytest.approx(1.0)
     assert evaluation.metrics["related_page_precision"] == pytest.approx(1.0)
     assert evaluation.metrics["estimated_cost"] == pytest.approx(0.01)
@@ -424,7 +455,7 @@ def test_render_iteration_template_keeps_repeated_call_results_and_average_by_in
     ]
 
     report = render_iteration_template(
-        evaluate_benchmark_run(references, outputs, metadata, judge=_MatchingJudge(), top_k=1)
+        evaluate_benchmark_run(references, outputs, metadata, judge=_MatchingJudge())
     )
     first_case = next(
         case for case in report["cases"] if case["incident_id"] == first_reference.incident_id
@@ -472,7 +503,7 @@ def test_collect_benchmark_outputs_records_failures_and_continues():
         )
 
     report = render_iteration_template(
-        evaluate_benchmark_run([reference], outputs, metadata, judge=_MatchingJudge(), top_k=1)
+        evaluate_benchmark_run([reference], outputs, metadata, judge=_MatchingJudge())
     )
     case = report["cases"][0]
 
@@ -512,8 +543,6 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path, mo
                 "http://validation.local/incident/details",
                 "--output",
                 str(output_path),
-                "--top-k",
-                "1",
             ],
             client=client,
             judge=_MatchingJudge(),
@@ -529,6 +558,13 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path, mo
     assert len(report["cases"]) == len(references)
     assert all(case["call_count"] == 10 for case in report["cases"])
     assert report["judge_model_name"] == "judge-model"
+    assert report["metrics"]["mrr"] == pytest.approx(1.0)
+    assert "top_k_accuracy" not in report["metrics"]
+    assert all(
+        result["mrr"] == pytest.approx(1.0)
+        for case in report["cases"]
+        for result in case["results"]
+    )
     assert all(case["average"]["summary_score"] == pytest.approx(5.0) for case in report["cases"])
     assert dotenv_calls == [True]
 
@@ -553,7 +589,6 @@ def test_evaluate_benchmark_run_records_judge_failures_without_losing_service_te
             [output],
             metadata,
             judge=_FailingJudge(),
-            top_k=1,
         )
     )
 

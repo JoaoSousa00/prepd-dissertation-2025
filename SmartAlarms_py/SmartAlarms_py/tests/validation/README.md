@@ -5,13 +5,14 @@ This folder contains the benchmark validation dataset, report template, and test
 ## Contents
 
 - `golden_reference.*`: expected benchmark outputs
-- `iteration_template.*`: per-run output template with semantic summary score, suggestion rank,
+- `iteration_template.*`: per-run output template with semantic summary score, MRR, suggestion rank,
   service telemetry, LLM-judge telemetry, and related-incident precision
 
 Each `reference_mitigation_suggestions` entry contains separate `investigation` and `mitigation`
 fields. The LLM judge scores the summary from 1 (irrelevant) to 5 (fully equivalent). It evaluates
-each reference suggestion against the generated list, records its 1-based `generated_rank`, and
-counts scores 4 or 5 as a semantic Top-K match. Related incidents use exact-ID precision.
+each reference suggestion against the generated list and records its 1-based `generated_rank`.
+MRR is the reciprocal rank of the first suggestion with a score of 4 or 5, or `0.0` when none
+is semantically equivalent. Related incidents use exact-ID precision.
 
 ## Run
 
