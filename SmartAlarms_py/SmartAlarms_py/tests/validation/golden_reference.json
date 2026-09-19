@@ -14,7 +14,7 @@
         "INC000111049826",
         "INC000110874888"
       ],
-      "reference_related_pages": [],
+      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=2239070952"],
       "notes": "Manual: Charging stations not found on route"
     },
     {
@@ -80,22 +80,27 @@
         }
       ],
       "reference_related_incidents": ["INC000111222687"],
-      "reference_related_pages": [],
+      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8764277287"],
       "notes": "Automatic: UA job failed, with related page"
     },
     {
       "incident_id": "INC000106628604",
-      "reference_summary": "",
+      "reference_summary": "In KR PROD, Places history endpoint is returning 5XX errors.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "",
-          "mitigation": ""
+          "investigation": "Confirm that errors are related with search history service.",
+          "mitigation": "Redirect to the corresponding team (HAWK)."
         }
       ],
       "reference_related_incidents": [
+        "INC000108007136",
+        "INC000107831199",
+        "INC000106903352",
+        "INC000106479179",
+        "INC000106733219"
       ],
-      "reference_related_pages": [],
-      "notes": "Automatic: "
+      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=6173017257"],
+      "notes": "Automatic: 5XX errors history, should be redirected"
     },
     {
       "incident_id": "INC000111254019",
@@ -110,7 +115,7 @@
         "INC000111175746"
       ],
       "reference_related_pages": [],
-      "notes": "Previous incident was resolved by adjusting the IFC threshold."
+      "notes": "Automatic: Previous incident was resolved by adjusting the IFC threshold (without confluence project)"
     }
   ]
 }

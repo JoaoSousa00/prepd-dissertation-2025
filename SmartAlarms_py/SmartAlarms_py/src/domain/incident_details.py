@@ -64,6 +64,7 @@ class IncidentDetailsService:
             main_incident_context = self._build_main_incident_context(incident)
             discovery_result: Optional[DiscoveryResult] = None
             confluence_context = None
+            confluence_pages: list[RelatedPage] = []
             if self._llm_gateway is not None:
                 discover_related_context = getattr(self._llm_gateway, "discover_related_context", None)
                 if callable(discover_related_context):
@@ -85,6 +86,11 @@ class IncidentDetailsService:
                                 discovery_result.confluence_search_query
                             )
                             confluence_context = collected_confluence_context["documentation_context"]
+                            confluence_pages = [
+                                page
+                                for page in collected_confluence_context["related_pages"]
+                                if isinstance(page, RelatedPage)
+                            ]
                     except (LlmGatewayError, TypeError):
                         discovery_result = None
 
@@ -126,7 +132,10 @@ class IncidentDetailsService:
                             mitigation=suggestion.mitigation,
                             resolution_note=suggestion.resolution_note,
                             related_incidents=suggestion.related_incidents,
-                            related_pages=suggestion.related_pages,
+                            related_pages=self._filter_attributed_pages(
+                                suggestion.related_pages,
+                                confluence_pages,
+                            ),
                         )
                         for suggestion in enrichment.mitigation_suggestions
                     ]
@@ -195,7 +204,7 @@ class IncidentDetailsService:
                     relevant_pages.append(RelatedPage(title=title, url=url))
                     extracted = str(result.get("extracted_content") or "").strip()
                     relevant_details.append(
-                        f"Page title: {title}\nSummarized content: "
+                        f"Page title: {title}\nPage URL: {url}\nSummarized content: "
                         f"{extracted or 'No summarized content was available.'}"
                     )
             if context:
@@ -207,10 +216,11 @@ class IncidentDetailsService:
                     "related_pages": [],
                 }
 
-            documentation_context = "\n\n".join(relevant_details[:10])
+            prompt_pages = relevant_pages[:10]
+            documentation_context = "\n\n".join(relevant_details[: len(prompt_pages)])
             return {
                 "documentation_context": documentation_context,
-                "related_pages": relevant_pages,
+                "related_pages": prompt_pages,
             }
         except Exception as exc:  # pragma: no cover - defensive fallback for missing external access
             logger.warning("Confluence lookup failed for query %r: %s", search_query, exc)
@@ -238,6 +248,18 @@ class IncidentDetailsService:
             except (ValueError, IndexError):
                 pass
         return None
+
+    @staticmethod
+    def _filter_attributed_pages(
+        pages: list[RelatedPage],
+        allowed_pages: list[RelatedPage],
+    ) -> list[RelatedPage]:
+        allowed_by_identity = {(page.title, page.url): page for page in allowed_pages}
+        return [
+            allowed_by_identity[(page.title, page.url)]
+            for page in pages
+            if (page.title, page.url) in allowed_by_identity
+        ]
 
     @staticmethod
     def _dedupe_related_pages(pages: list[RelatedPage]) -> list[RelatedPage]:

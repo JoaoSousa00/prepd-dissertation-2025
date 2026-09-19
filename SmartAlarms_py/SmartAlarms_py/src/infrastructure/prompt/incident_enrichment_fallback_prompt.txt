@@ -35,13 +35,11 @@ Instructions:
 11. Every suggestion must explicitly state the source incident number(s) that support it. For reasoned fallback suggestions with no supporting historical incident, use "Sources: current_incident_analysis".
 12. Prioritize the most recent relevant closed incidents with meaningful resolution notes when deriving mitigation and investigation guidance.
 13. Never invent incident references or include the original incident ID ({incident_id}) in any related_incidents list.
-14. Return valid JSON with the following shape:
+14. For each mitigation suggestion, add a related_pages entry only for Confluence pages whose summarized content was actually used as evidence for that suggestion. Copy the page title and URL exactly from the Confluence documentation context. Do not invent, modify, or include unused pages. Use an empty array when no Confluence page was used.
+15. Return valid JSON with the following shape:
     {{
       "summary": "...",
       "related_incidents": ["INC000123", "INC000456"],
-      "related_pages": [
-        {{"title": "Page title", "url": "https://..."}}
-      ],
       "mitigation_suggestions": [
         {{
           "Confidence": "evidence-based|reasoned fallback",

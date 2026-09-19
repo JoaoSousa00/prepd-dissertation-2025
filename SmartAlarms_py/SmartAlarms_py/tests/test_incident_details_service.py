@@ -1,8 +1,9 @@
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import BaseIncident
-from src.domain.documentation import RelatedPage
+from src.domain.documentation import DocumentationPage, RelatedPage
 from src.domain.llm import (
+    DiscoveryResult,
     IncidentEnrichment,
     LlmGatewayUnavailableError,
     LlmSummary,
@@ -129,6 +130,12 @@ def test_fetch_incident_details_with_llm_adds_enrichment_fields():
 
 def test_incident_related_pages_are_aggregated_from_suggestion_related_pages_only():
     class RelatedPagesGateway:
+        def discover_related_context(self, **kwargs):
+            return DiscoveryResult(confluence_search_query="place search")
+
+        def check_documentation_relevance(self, **kwargs):
+            return {"is_relevant": True, "extracted_content": "Relevant operational guidance."}
+
         def enrich_incident(self, incident_id, short_description, description, max_tokens=None, **kwargs):
             return IncidentEnrichment(
                 summary=LlmSummary(text=f"Summary for {incident_id}"),
@@ -144,6 +151,7 @@ def test_incident_related_pages_are_aggregated_from_suggestion_related_pages_onl
                         related_pages=[
                             RelatedPage(title="Runbook A", url="https://example.com/a"),
                             RelatedPage(title="Runbook B", url="https://example.com/b"),
+                            RelatedPage(title="Invented page", url="https://example.com/invented"),
                         ],
                     ),
                     MitigationSuggestion(
@@ -158,6 +166,23 @@ def test_incident_related_pages_are_aggregated_from_suggestion_related_pages_onl
                 ],
             )
 
+    class DocumentationSource:
+        def search_pages(self, search_query, limit=None):
+            return [
+                DocumentationPage(
+                    id="a",
+                    title="Runbook A",
+                    url="https://example.com/a",
+                    body="Runbook A content",
+                ),
+                DocumentationPage(
+                    id="b",
+                    title="Runbook B",
+                    url="https://example.com/b",
+                    body="Runbook B content",
+                ),
+            ]
+
     service = IncidentDetailsService(
         incident_fetching_service=IncidentFetchingService(
             FakeIncidentSource(
@@ -171,11 +196,16 @@ def test_incident_related_pages_are_aggregated_from_suggestion_related_pages_onl
             )
         ),
         llm_gateway=RelatedPagesGateway(),
+        confluence_source=DocumentationSource(),
     )
 
     details = service.fetch_incident_details(["INC0001"])
 
     assert [page.title for page in details[0].related_pages] == ["Runbook A", "Runbook B"]
+    assert [page.title for page in details[0].resolution_suggestions[0].related_pages] == [
+        "Runbook A",
+        "Runbook B",
+    ]
 
 
 def test_fetch_incident_details_with_failing_llm_returns_base_data():
@@ -282,6 +312,86 @@ def test_fetch_incident_details_passes_sanitized_main_incident_context_to_llm():
     assert "assigned_to" not in context
     assert "resolved_by" not in context
     assert "attachments" not in context
+
+
+def test_fetch_incident_details_passes_page_urls_for_suggestion_attribution():
+    class DocumentationAwareGateway(CapturingLlmGateway):
+        def discover_related_context(self, **kwargs):
+            return DiscoveryResult(confluence_search_query="place search")
+
+        def check_documentation_relevance(self, **kwargs):
+            return {
+                "is_relevant": True,
+                "extracted_content": "Use this runbook to validate service latency.",
+            }
+
+    class DocumentationSource:
+        def search_pages(self, search_query, limit=None):
+            assert search_query == "place search"
+            assert limit == 25
+            return [
+                DocumentationPage(
+                    id="123",
+                    title="Place Search Runbook",
+                    url="https://confluence.example/pages/123",
+                    body="Runbook content",
+                )
+            ]
+
+    gateway = DocumentationAwareGateway()
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(
+            FakeIncidentSource(
+                incidents={
+                    "INC0001": BaseIncident(
+                        id="INC0001",
+                        short_description="API latency spike",
+                        description="Requests slowed down during load peak.",
+                    )
+                }
+            )
+        ),
+        llm_gateway=gateway,
+        confluence_source=DocumentationSource(),
+    )
+
+    service.fetch_incident_details(["INC0001"])
+
+    assert gateway.kwargs["confluence_context"] == (
+        "Page title: Place Search Runbook\n"
+        "Page URL: https://confluence.example/pages/123\n"
+        "Summarized content: Use this runbook to validate service latency."
+    )
+
+
+def test_confluence_page_allowlist_matches_the_pages_sent_to_the_llm():
+    class RelevantDocumentationGateway:
+        def check_documentation_relevance(self, **kwargs):
+            return {"is_relevant": True, "extracted_content": "Relevant operational guidance."}
+
+    class DocumentationSource:
+        def search_pages(self, search_query, limit=None):
+            return [
+                DocumentationPage(
+                    id=str(index),
+                    title=f"Runbook {index}",
+                    url=f"https://confluence.example/pages/{index}",
+                    body="Runbook content",
+                )
+                for index in range(1, 12)
+            ]
+
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(FakeIncidentSource()),
+        llm_gateway=RelevantDocumentationGateway(),
+        confluence_source=DocumentationSource(),
+    )
+
+    context = service._collect_confluence_context("place search")
+
+    assert len(context["related_pages"]) == 10
+    assert "Page URL: https://confluence.example/pages/10" in context["documentation_context"]
+    assert "Page URL: https://confluence.example/pages/11" not in context["documentation_context"]
 
 
 def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_at_filter(monkeypatch):

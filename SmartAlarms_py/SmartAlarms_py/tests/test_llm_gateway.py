@@ -285,24 +285,43 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
         assert "N/A" in prompt
         assert "No additional main-incident context was provided." in prompt
 
-    def test_build_prompt_keeps_each_confluence_summary_with_its_page_title(self, llm_settings):
+    def test_build_prompt_keeps_each_confluence_summary_with_its_page_reference(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
 
+        confluence_context = (
+            "Page title: API Runbook\nPage URL: https://example.test/runbook\n"
+            "Summarized content: Check upstream latency.\n"
+            "Page title: Database Guide\nPage URL: https://example.test/database\n"
+            "Summarized content: Review connection pool saturation."
+        )
         prompt = adapter._build_prompt(
             incident_id="INC001",
             short_description="API latency",
             description="API responses are slow",
-            confluence_context=(
-                "Page title: API Runbook\nSummarized content: Check upstream latency.\n"
-                "Page title: Database Guide\nSummarized content: Review connection pool saturation."
-            ),
+            confluence_context=confluence_context,
+        )
+        fallback_prompt = adapter._build_prompt(
+            incident_id="INC001",
+            short_description="API latency",
+            description="API responses are slow",
+            confluence_context=confluence_context,
+            use_fallback_prompt=True,
         )
 
-        assert "Page title: API Runbook\nSummarized content: Check upstream latency." in prompt
         assert (
-            "Page title: Database Guide\nSummarized content: Review connection pool saturation."
+            "Page title: API Runbook\nPage URL: https://example.test/runbook\n"
+            "Summarized content: Check upstream latency."
+        ) in prompt
+        assert (
+            "Page title: Database Guide\nPage URL: https://example.test/database\n"
+            "Summarized content: Review connection pool saturation."
             in prompt
         )
+        page_attribution_instruction = (
+            "Copy the page title and URL exactly from the Confluence documentation context."
+        )
+        assert page_attribution_instruction in prompt
+        assert page_attribution_instruction in fallback_prompt
         assert "Confluence page references used for this analysis:" not in prompt
 
     def test_build_prompt_uses_template_file(self, llm_settings, tmp_path):

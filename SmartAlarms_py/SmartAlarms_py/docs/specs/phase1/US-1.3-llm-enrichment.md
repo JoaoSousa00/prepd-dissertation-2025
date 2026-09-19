@@ -51,6 +51,7 @@ the same response.
 | CA-5 | A prompt template is required for enrichment                            | The enrichment step runs              | The prompt is loaded from a file inside `src/infrastructure/prompt/` and receives the fetched incident information                 |
 | CA-6 | The LLM is unavailable or fails for a request                           | The endpoint processes the request    | The service still returns base incident data through the existing contract, with enrichment fields absent/empty per contract rules |
 | CA-7 | The incident context includes Hub and Environment values | The LLM generates the incident summary | The summary includes the affected Hub and Environment when available, without inventing unavailable values |
+| CA-8 | Relevant Confluence pages are provided to the LLM | The LLM generates mitigation suggestions | Each suggestion references only the supplied pages whose summarized content it used as evidence, preserving their exact title and URL; suggestions with no page evidence return an empty list |
 
 ## 6) Functional Design
 
@@ -64,6 +65,10 @@ the same response.
     - Infrastructure LLM adapter loads the basic prompt from `src/infrastructure/prompt/`, injects incident information,
       calls the LLM, and parses outputs. The summary instruction includes the affected Hub and Environment when those
       values are present in the incident context.
+    - Each relevant Confluence context entry includes the source page title, URL, and summarized content. The LLM may
+      associate a page only with a mitigation suggestion that uses its summarized content as evidence, preserving the
+      exact supplied title and URL. The domain filters page attributions against the supplied pages before returning
+      them in the API response.
     - Domain merges summary, mitigation suggestions, and related references into incident output.
 - Error path: if LLM fails, preserve base incident data and return without blocking the endpoint response.
 
