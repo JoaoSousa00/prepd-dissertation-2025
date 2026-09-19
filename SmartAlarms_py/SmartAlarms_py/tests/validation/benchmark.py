@@ -141,11 +141,7 @@ class BenchmarkCaseResult:
 
 
 @dataclass(frozen=True)
-class AggregatedBenchmarkCaseResult:
-    incident_id: str
-    status: str
-    call_count: int
-    successful_call_count: int
+class BenchmarkCaseAverage:
     summary_score: Optional[float]
     top_k_accuracy: Optional[float]
     related_incident_precision: Optional[float]
@@ -159,7 +155,16 @@ class AggregatedBenchmarkCaseResult:
     judge_tokens_total: Optional[float]
     judge_estimated_cost: Optional[float]
     judge_latency_ms: Optional[float]
-    judge_decisions: List[BenchmarkJudgeDecision] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AggregatedBenchmarkCaseResult:
+    incident_id: str
+    status: str
+    call_count: int
+    successful_call_count: int
+    results: List[BenchmarkCaseResult] = field(default_factory=list)
+    average: Optional[BenchmarkCaseAverage] = None
     error_notes: str = ""
 
 
@@ -548,11 +553,7 @@ def evaluate_benchmark_run(
 
 def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, Any]:
     aggregated_cases = aggregate_benchmark_case_results(result.cases)
-    cases = []
-    for case in aggregated_cases:
-        case_dict = asdict(case)
-        case_dict["cost_USD"] = case_dict.pop("estimated_cost")
-        cases.append(case_dict)
+    cases = [_render_aggregated_case(case) for case in aggregated_cases]
 
     return {
         "run_id": result.metadata.run_id,
@@ -611,54 +612,128 @@ def aggregate_benchmark_case_results(
                 status=status,
                 call_count=call_count,
                 successful_call_count=successful_call_count,
-                summary_score=_mean(case.summary_score for case in evaluated_cases),
-                top_k_accuracy=_mean(case.top_k_accuracy for case in evaluated_cases),
-                related_incident_precision=_mean(
-                    case.related_incident_precision for case in evaluated_cases
-                ),
-                tokens_in=_mean(case.tokens_in for case in successful_cases),
-                tokens_out=_mean(case.tokens_out for case in successful_cases),
-                tokens_total=_mean(case.tokens_total for case in successful_cases),
-                estimated_cost=_mean(case.estimated_cost for case in successful_cases),
-                latency_ms=_mean(case.latency_ms for case in successful_cases),
-                judge_tokens_in=_mean(
-                    case.judge_usage.tokens_in
-                    for case in evaluated_cases
-                    if case.judge_usage is not None
-                ),
-                judge_tokens_out=_mean(
-                    case.judge_usage.tokens_out
-                    for case in evaluated_cases
-                    if case.judge_usage is not None
-                ),
-                judge_tokens_total=_mean(
-                    case.judge_usage.tokens_total
-                    for case in evaluated_cases
-                    if case.judge_usage is not None
-                ),
-                judge_estimated_cost=_mean(
-                    case.judge_usage.estimated_cost
-                    for case in evaluated_cases
-                    if case.judge_usage is not None
-                ),
-                judge_latency_ms=_mean(
-                    case.judge_usage.latency_ms
-                    for case in evaluated_cases
-                    if case.judge_usage is not None
-                ),
-                judge_decisions=[
-                    BenchmarkJudgeDecision(
-                        summary=case.summary_judgment,
-                        suggestion_matches=case.suggestion_matches,
-                        usage=case.judge_usage,
-                    )
-                    for case in evaluated_cases
-                    if case.summary_judgment is not None
-                ],
+                results=incident_cases,
+                average=_build_case_average(successful_cases, evaluated_cases),
                 error_notes=error_notes,
             )
         )
     return aggregated_cases
+
+
+def _render_aggregated_case(case: AggregatedBenchmarkCaseResult) -> Dict[str, Any]:
+    return {
+        "incident_id": case.incident_id,
+        "status": case.status,
+        "call_count": case.call_count,
+        "successful_call_count": case.successful_call_count,
+        "results": [
+            _render_case_result(call_number, result)
+            for call_number, result in enumerate(case.results, start=1)
+        ],
+        "average": _render_case_average(case.average),
+        "error_notes": case.error_notes,
+    }
+
+
+def _render_case_result(call_number: int, result: BenchmarkCaseResult) -> Dict[str, Any]:
+    judge_decision = None
+    if result.summary_judgment is not None:
+        judge_decision = {
+            "summary": asdict(result.summary_judgment),
+            "suggestion_matches": [asdict(match) for match in result.suggestion_matches],
+            "usage": _render_judge_usage(result.judge_usage),
+        }
+
+    return {
+        "call_number": call_number,
+        "status": result.status,
+        "summary_score": result.summary_score,
+        "top_k_accuracy": result.top_k_accuracy,
+        "related_incident_precision": result.related_incident_precision,
+        "tokens_in": result.tokens_in,
+        "tokens_out": result.tokens_out,
+        "tokens_total": result.tokens_total,
+        "cost_USD": result.estimated_cost,
+        "latency_ms": result.latency_ms,
+        "judge_decision": judge_decision,
+        "error_notes": result.error_notes,
+    }
+
+
+def _render_case_average(average: Optional[BenchmarkCaseAverage]) -> Optional[Dict[str, Optional[float]]]:
+    if average is None:
+        return None
+    return {
+        "summary_score": average.summary_score,
+        "top_k_accuracy": average.top_k_accuracy,
+        "related_incident_precision": average.related_incident_precision,
+        "tokens_in": average.tokens_in,
+        "tokens_out": average.tokens_out,
+        "tokens_total": average.tokens_total,
+        "cost_USD": average.estimated_cost,
+        "latency_ms": average.latency_ms,
+        "judge_tokens_in": average.judge_tokens_in,
+        "judge_tokens_out": average.judge_tokens_out,
+        "judge_tokens_total": average.judge_tokens_total,
+        "judge_cost_USD": average.judge_estimated_cost,
+        "judge_latency_ms": average.judge_latency_ms,
+    }
+
+
+def _render_judge_usage(usage: Optional[BenchmarkJudgeUsage]) -> Optional[Dict[str, Any]]:
+    if usage is None:
+        return None
+    return {
+        "model_name": usage.model_name,
+        "tokens_in": usage.tokens_in,
+        "tokens_out": usage.tokens_out,
+        "tokens_total": usage.tokens_total,
+        "cost_USD": usage.estimated_cost,
+        "latency_ms": usage.latency_ms,
+    }
+
+
+def _build_case_average(
+    successful_cases: Sequence[BenchmarkCaseResult],
+    evaluated_cases: Sequence[BenchmarkCaseResult],
+) -> BenchmarkCaseAverage:
+    return BenchmarkCaseAverage(
+        summary_score=_mean(case.summary_score for case in evaluated_cases),
+        top_k_accuracy=_mean(case.top_k_accuracy for case in evaluated_cases),
+        related_incident_precision=_mean(
+            case.related_incident_precision for case in evaluated_cases
+        ),
+        tokens_in=_mean(case.tokens_in for case in successful_cases),
+        tokens_out=_mean(case.tokens_out for case in successful_cases),
+        tokens_total=_mean(case.tokens_total for case in successful_cases),
+        estimated_cost=_mean(case.estimated_cost for case in successful_cases),
+        latency_ms=_mean(case.latency_ms for case in successful_cases),
+        judge_tokens_in=_mean(
+            case.judge_usage.tokens_in
+            for case in evaluated_cases
+            if case.judge_usage is not None
+        ),
+        judge_tokens_out=_mean(
+            case.judge_usage.tokens_out
+            for case in evaluated_cases
+            if case.judge_usage is not None
+        ),
+        judge_tokens_total=_mean(
+            case.judge_usage.tokens_total
+            for case in evaluated_cases
+            if case.judge_usage is not None
+        ),
+        judge_estimated_cost=_mean(
+            case.judge_usage.estimated_cost
+            for case in evaluated_cases
+            if case.judge_usage is not None
+        ),
+        judge_latency_ms=_mean(
+            case.judge_usage.latency_ms
+            for case in evaluated_cases
+            if case.judge_usage is not None
+        ),
+    )
 
 
 def _compute_top_k_accuracy(

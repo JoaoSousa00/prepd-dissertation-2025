@@ -49,8 +49,8 @@ evaluation should be run through a dedicated offline script or CLI.
 |------|---------------------------------------------------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | CA-1 | A benchmark dataset with incident IDs and reference outputs exists        | A researcher runs the validation CLI against the local service | The CLI requests `GET /incident/details` for every benchmark incident ID without requiring a pre-captured response file |
 | CA-2 | A positive repetition count is supplied or the default is used | A researcher runs the validation CLI | Every benchmark incident is requested that many times, with a default of ten calls per incident |
-| CA-3 | Repeated responses exist for a benchmark incident | The report is written | The report contains one aggregate record for that incident with average 1-5 summary score, semantic Top-K accuracy, related-incident precision, token usage, cost, latency, judge telemetry, and the call counts |
-| CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the aggregate incident record and successful calls continue to contribute to its averages |
+| CA-3 | Repeated responses exist for a benchmark incident | The report is written | The incident record preserves each call result in execution order and finishes with averages for summary score, semantic Top-K accuracy, related-incident precision, token usage, cost, latency, and judge telemetry |
+| CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the incident's individual results and successful calls continue to contribute to its averages |
 | CA-5 | A benchmark case has no related incidents in either the reference or output | The evaluator computes the related-incident precision | The score is recorded as `1.0` because both sides are empty and the case is a valid no-correlation outcome |
 | CA-6 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the reports | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset |
 
@@ -63,7 +63,7 @@ evaluation should be run through a dedicated offline script or CLI.
     - release metadata (`release_label`, model)
     - local incident-details endpoint URL and configurable repetition count
 - Outputs:
-    - one aggregated per-incident evaluation record, including call counts and metric averages
+    - one per-incident evaluation record with all individual call results followed by metric averages
     - per-run aggregated comparison records
 - Happy path:
     - Researcher selects a release/configuration and runs the benchmark dataset manually.

@@ -50,6 +50,7 @@ the same response.
 | CA-4 | The LLM can identify related incidents from provided context            | The enrichment is returned            | Related incident references are included when available; if unavailable, the response does not fabricate references                |
 | CA-5 | A prompt template is required for enrichment                            | The enrichment step runs              | The prompt is loaded from a file inside `src/infrastructure/prompt/` and receives the fetched incident information                 |
 | CA-6 | The LLM is unavailable or fails for a request                           | The endpoint processes the request    | The service still returns base incident data through the existing contract, with enrichment fields absent/empty per contract rules |
+| CA-7 | The incident context includes Hub and Environment values | The LLM generates the incident summary | The summary includes the affected Hub and Environment when available, without inventing unavailable values |
 
 ## 6) Functional Design
 
@@ -61,7 +62,8 @@ the same response.
     - Domain defines and uses an LLM enrichment port/interface for each fetched incident.
     - Infrastructure provides the concrete LLM adapter implementation.
     - Infrastructure LLM adapter loads the basic prompt from `src/infrastructure/prompt/`, injects incident information,
-      calls the LLM, and parses outputs.
+      calls the LLM, and parses outputs. The summary instruction includes the affected Hub and Environment when those
+      values are present in the incident context.
     - Domain merges summary, mitigation suggestions, and related references into incident output.
 - Error path: if LLM fails, preserve base incident data and return without blocking the endpoint response.
 
@@ -127,6 +129,7 @@ list.
 
 - Prompt template loading from `src/infrastructure/prompt/`.
 - Prompt rendering with fetched incident data.
+- Prompt instruction to include Hub and Environment in summaries when present.
 - Merge of LLM outputs into incident response model.
 - Fallback behavior on LLM errors.
 

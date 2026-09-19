@@ -47,9 +47,11 @@ python3 -m tests.validation.cli \
   --output /tmp/validation_report.json
 ```
 
-The report contains one aggregated case per incident. Each case records its total and successful
-call counts, average quality and telemetry metrics, every judge decision, and any failure details.
-The service cost and latency remain separate from the judge cost and latency.
+The report contains one case per incident. Its `results` array preserves every call in execution
+order, including per-call metrics, judge decision, telemetry, and errors. Its final `average`
+object contains the quality and telemetry means across successful calls; failed calls remain in
+`results` but do not contribute quality metrics. Service cost and latency remain separate from
+judge cost and latency.
 
 The judge uses the configured GAIA credentials with `GAIA_JUDGE_MODEL` and deterministic
 `temperature=0`. Configure `LLM_JUDGE_MAX_TOKENS` when the default of 2000 output tokens is not

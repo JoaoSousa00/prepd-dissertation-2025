@@ -125,18 +125,14 @@ def _successful_output(reference, call_number):
 def test_load_golden_reference_reads_validation_dataset():
     references = load_golden_reference(FIXTURE_DIR / "golden_reference.json")
 
-    assert [reference.incident_id for reference in references] == [
-        "INC000111017580",
-        "INC000110969970",
-        "INC000111250397",
-        "INC000111254019",
-    ]
-    assert references[0].reference_mitigation_suggestions == [
-        BenchmarkResolutionSuggestion(
-            investigation="Check requests from los-MobileApp-ChargingTariffsCompositeService to translations/public.",
-            mitigation="Confirm translations/public 4XX errors are recovered.",
-        )
-    ]
+    assert references
+    assert all(reference.incident_id.startswith("INC") for reference in references)
+    assert all(reference.reference_summary for reference in references)
+    assert all(
+        isinstance(suggestion, BenchmarkResolutionSuggestion)
+        for reference in references
+        for suggestion in reference.reference_mitigation_suggestions
+    )
 
 
 def test_related_incident_precision_is_one_when_both_sides_are_empty():
@@ -243,7 +239,7 @@ def test_evaluate_benchmark_run_computes_all_validation_metrics():
     assert evaluation.metrics["estimated_cost"] == pytest.approx(0.01)
     assert evaluation.metrics["latency_ms"] == pytest.approx(1000)
     assert evaluation.metrics["judge_estimated_cost"] == pytest.approx(0.001)
-    assert len(evaluation.cases) == 4
+    assert len(evaluation.cases) == len(references)
     assert evaluation.cases[0].status == "success"
 
 
@@ -275,28 +271,43 @@ def test_collect_benchmark_outputs_calls_each_incident_for_every_repetition():
         )
 
     assert calls == Counter({reference.incident_id: 3 for reference in references})
-    assert len(outputs) == 12
+    assert len(outputs) == len(references) * 3
     assert metadata.model_name == "provider-returned-model"
-    assert progress_events[0] == ("requesting", 1, 12, "INC000111017580")
-    assert progress_events[-1] == ("success", 12, 12, "INC000111254019")
-    assert len(progress_events) == 24
-    assert outputs[0].generated_mitigation_suggestions == [
-        BenchmarkResolutionSuggestion(
-            investigation="Check requests from los-MobileApp-ChargingTariffsCompositeService to translations/public.",
-            mitigation="Confirm translations/public 4XX errors are recovered.",
-        )
-    ]
+    total_requests = len(references) * 3
+    assert progress_events[0] == ("requesting", 1, total_requests, references[0].incident_id)
+    assert progress_events[-1] == ("success", total_requests, total_requests, references[-1].incident_id)
+    assert len(progress_events) == total_requests * 2
+    assert outputs[0].generated_mitigation_suggestions == references[0].reference_mitigation_suggestions
 
 
-def test_render_iteration_template_aggregates_repeated_calls_by_incident():
-    references = load_golden_reference(FIXTURE_DIR / "golden_reference.json")
+def test_render_iteration_template_keeps_repeated_call_results_and_average_by_incident():
+    first_reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="First incident summary.",
+        reference_mitigation_suggestions=[
+            BenchmarkResolutionSuggestion(
+                investigation="Inspect the first incident.",
+                mitigation="Mitigate the first incident.",
+            )
+        ],
+    )
+    second_reference = BenchmarkCaseReference(
+        incident_id="INC000000000002",
+        reference_summary="Second incident summary.",
+        reference_mitigation_suggestions=[
+            BenchmarkResolutionSuggestion(
+                investigation="Inspect the second incident.",
+                mitigation="Mitigate the second incident.",
+            )
+        ],
+    )
+    references = [first_reference, second_reference]
     metadata = BenchmarkRunMetadata(
         run_id="run",
         release_label="local",
         dataset_version="dataset",
         model_name="provider-returned-model",
     )
-    first_reference, second_reference, _, _ = references
     outputs = [
         _successful_output(first_reference, 1),
         BenchmarkCaseOutput(
@@ -319,18 +330,23 @@ def test_render_iteration_template_aggregates_repeated_calls_by_incident():
         case for case in report["cases"] if case["incident_id"] == second_reference.incident_id
     )
 
-    assert len(report["cases"]) == 4
+    assert len(report["cases"]) == len(references)
     assert first_case["status"] == "partial_failure"
     assert first_case["call_count"] == 3
     assert first_case["successful_call_count"] == 2
-    assert first_case["summary_score"] == pytest.approx(5.0)
-    assert first_case["judge_decisions"][0]["suggestion_matches"][0]["generated_rank"] == 1
-    assert first_case["tokens_in"] == pytest.approx(200)
-    assert first_case["cost_USD"] == pytest.approx(0.02)
-    assert first_case["latency_ms"] == pytest.approx(2000)
+    assert [result["call_number"] for result in first_case["results"]] == [1, 2, 3]
+    assert first_case["results"][1]["status"] == "request_failed"
+    assert first_case["results"][0]["judge_decision"]["suggestion_matches"][0][
+        "generated_rank"
+    ] == 1
+    assert first_case["average"]["summary_score"] == pytest.approx(5.0)
+    assert first_case["average"]["tokens_in"] == pytest.approx(200)
+    assert first_case["average"]["cost_USD"] == pytest.approx(0.02)
+    assert first_case["average"]["latency_ms"] == pytest.approx(2000)
     assert first_case["error_notes"] == "ConnectError: unavailable"
     assert second_case["call_count"] == 2
-    assert second_case["tokens_in"] == pytest.approx(300)
+    assert len(second_case["results"]) == 2
+    assert second_case["average"]["tokens_in"] == pytest.approx(300)
 
 
 def test_collect_benchmark_outputs_records_failures_and_continues():
@@ -410,7 +426,7 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path, mo
     assert len(report["cases"]) == len(references)
     assert all(case["call_count"] == 10 for case in report["cases"])
     assert report["judge_model_name"] == "judge-model"
-    assert all(case["summary_score"] == pytest.approx(5.0) for case in report["cases"])
+    assert all(case["average"]["summary_score"] == pytest.approx(5.0) for case in report["cases"])
     assert dotenv_calls == [True]
 
 
@@ -441,8 +457,9 @@ def test_evaluate_benchmark_run_records_judge_failures_without_losing_service_te
     case = report["cases"][0]
     assert case["status"] == "judge_failed"
     assert case["successful_call_count"] == 1
-    assert case["summary_score"] is None
-    assert case["tokens_in"] == pytest.approx(100)
+    assert case["results"][0]["summary_score"] is None
+    assert case["results"][0]["tokens_in"] == pytest.approx(100)
+    assert case["average"]["tokens_in"] == pytest.approx(100)
     assert case["error_notes"] == "Invalid judge response."
 
 

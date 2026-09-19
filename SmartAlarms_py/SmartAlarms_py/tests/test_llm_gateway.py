@@ -247,6 +247,30 @@ class TestGaiaLlmGatewayAdapterPromptBuilding:
         assert "Incident INC003" in prompt
         assert "Return at least 3 mitigation suggestions whenever possible." in prompt
         assert "Sources: current_incident_analysis" in prompt
+
+    def test_build_prompt_requires_hub_and_environment_when_available(self, llm_settings):
+        adapter = GaiaLlmGatewayAdapter(settings=llm_settings)
+
+        standard_prompt = adapter._build_prompt(
+            incident_id="INC001",
+            short_description="API latency",
+            description="API responses are slow",
+            main_incident_context="Hub: EMEA\nEnvironment: PROD",
+        )
+        fallback_prompt = adapter._build_prompt(
+            incident_id="INC001",
+            short_description="API latency",
+            description="API responses are slow",
+            main_incident_context="Hub: EMEA\nEnvironment: PROD",
+            use_fallback_prompt=True,
+        )
+
+        instruction = (
+            "When available in the incident context, include the affected Hub and Environment "
+            "in the summary (for example, EMEA PROD)."
+        )
+        assert instruction in standard_prompt
+        assert instruction in fallback_prompt
     
     def test_build_prompt_with_missing_descriptions(self, llm_settings):
         adapter = GaiaLlmGatewayAdapter(settings=llm_settings)

@@ -2,6 +2,18 @@
   "dataset_version": "phase1-validation-v3",
   "incidents": [
     {
+      "incident_id": "INC000110969970",
+      "reference_summary": "Route-planning issue in PROD after the 06 Jul 2026 RSU update. The vehicle is online and can find individual charging stations, but for destinations over 100 km it generates no charging stops, risking an infeasible route and battery depletion. ACK and HU reset did not resolve the issue.",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Check EMEA PROD requests for routes over 100 km for that VIN and try to reproduce the issue. Check if the issue is isolated or affects more vehicles.",
+          "mitigation": "If the issue is not reproducible ask for more information from the customer. If is reproducible and it affects few cars, present the issue to the business owner so they can decide the next steps. If is reproducible and it affects a lot of cars, rollback the service to a previous stable version."
+        }
+      ],
+      "reference_related_incidents": [],
+      "notes": "Manual charging stations on the route"
+    },
+    {
       "incident_id": "INC000111017580",
       "reference_summary": "Translations/public 4XX errors from los-MobileApp-ChargingTariffsCompositeService",
       "reference_mitigation_suggestions": [
@@ -14,18 +26,6 @@
         "INC000111017340"
       ],
       "notes": "Resolved through the parent incident."
-    },
-    {
-      "incident_id": "INC000110969970",
-      "reference_summary": "Charging stops missing for routes over 100 km",
-      "reference_mitigation_suggestions": [
-        {
-          "investigation": "Check U11 AT EMEA PROD requests for routes over 100 km.",
-          "mitigation": "Request a cURL and customer feedback."
-        }
-      ],
-      "reference_related_incidents": [],
-      "notes": "Canceled after missing customer feedback."
     },
     {
       "incident_id": "INC000111250397",

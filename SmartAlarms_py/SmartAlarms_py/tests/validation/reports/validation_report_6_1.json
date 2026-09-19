@@ -1,0 +1,119 @@
+{
+  "run_id": "20260919T131026Z",
+  "release_label": "local",
+  "dataset_version": "phase1-validation-v3",
+  "model_name": "openai/gpt-5.6-terra",
+  "judge_model_name": "openai/gpt-5.6-terra",
+  "configuration_notes": "",
+  "metrics": {
+    "summary_score": 3.5,
+    "top_k_accuracy": 0.0,
+    "related_incident_precision": 0.5,
+    "related_incident_correlation": 0.5,
+    "cost_USD": 0.030718299999999997,
+    "latency_ms": 19313.493145499706,
+    "judge_tokens_in": 1014.5,
+    "judge_tokens_out": 265.5,
+    "judge_tokens_total": 1280.0,
+    "judge_cost_USD": 0.0057365,
+    "judge_latency_ms": 3984.6297710000727
+  },
+  "manual_notes": "",
+  "status": "complete",
+  "cases": [
+    {
+      "incident_id": "INC000110969970",
+      "status": "success",
+      "call_count": 2,
+      "successful_call_count": 2,
+      "results": [
+        {
+          "call_number": 1,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 1.0,
+          "tokens_in": 12193,
+          "tokens_out": 1022,
+          "tokens_total": 13215,
+          "cost_USD": 0.040315,
+          "latency_ms": 18231.731999998374,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Accurately captures the long-route charging-stop failure, connectivity, RSU timing, and failed resets; adds unverified backend-request detail."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Generated suggestions cover reproduction and escalation but omit EMEA PROD scope assessment and the required business-owner/rollback decision path."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 998,
+              "tokens_out": 276,
+              "tokens_total": 1274,
+              "cost_USD": 0.0058388,
+              "latency_ms": 4310.931291998713
+            }
+          },
+          "error_notes": ""
+        },
+        {
+          "call_number": 2,
+          "status": "success",
+          "summary_score": 3,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 0.0,
+          "tokens_in": 12193,
+          "tokens_out": 1396,
+          "tokens_total": 13589,
+          "cost_USD": 0.021121599999999997,
+          "latency_ms": 20395.254291001038,
+          "judge_decision": {
+            "summary": {
+              "score": 3,
+              "reason": "Captures the core long-distance charging-stop failure and connectivity, but omits the RSU-update timing and failed ACK/HU reset."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Request tracing and reproduction are partially aligned, but it omits fleet-scope assessment and the escalation/rollback mitigation paths."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 1031,
+              "tokens_out": 255,
+              "tokens_total": 1286,
+              "cost_USD": 0.0056342,
+              "latency_ms": 3658.328250001432
+            }
+          },
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": 3.5,
+        "top_k_accuracy": 0.0,
+        "related_incident_precision": 0.5,
+        "tokens_in": 12193.0,
+        "tokens_out": 1209.0,
+        "tokens_total": 13402.0,
+        "cost_USD": 0.030718299999999997,
+        "latency_ms": 19313.493145499706,
+        "judge_tokens_in": 1014.5,
+        "judge_tokens_out": 265.5,
+        "judge_tokens_total": 1280.0,
+        "judge_cost_USD": 0.0057365,
+        "judge_latency_ms": 3984.6297710000727
+      },
+      "error_notes": ""
+    }
+  ]
+}

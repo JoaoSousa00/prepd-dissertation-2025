@@ -26,20 +26,37 @@
       "status": "",
       "call_count": 0,
       "successful_call_count": 0,
-      "summary_score": null,
-      "top_k_accuracy": null,
-      "related_incident_precision": null,
-      "tokens_in": null,
-      "tokens_out": null,
-      "tokens_total": null,
-      "cost_USD": null,
-      "latency_ms": null,
-      "judge_tokens_in": null,
-      "judge_tokens_out": null,
-      "judge_tokens_total": null,
-      "judge_cost_USD": null,
-      "judge_latency_ms": null,
-      "judge_decisions": [],
+      "results": [
+        {
+          "call_number": 1,
+          "status": "",
+          "summary_score": null,
+          "top_k_accuracy": null,
+          "related_incident_precision": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "tokens_total": null,
+          "cost_USD": null,
+          "latency_ms": null,
+          "judge_decision": null,
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": null,
+        "top_k_accuracy": null,
+        "related_incident_precision": null,
+        "tokens_in": null,
+        "tokens_out": null,
+        "tokens_total": null,
+        "cost_USD": null,
+        "latency_ms": null,
+        "judge_tokens_in": null,
+        "judge_tokens_out": null,
+        "judge_tokens_total": null,
+        "judge_cost_USD": null,
+        "judge_latency_ms": null
+      },
       "error_notes": ""
     }
   ]
