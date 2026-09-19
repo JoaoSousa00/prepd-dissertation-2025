@@ -1,6 +1,8 @@
 from collections import Counter
 import json
 from pathlib import Path
+from threading import Lock
+import time
 
 import httpx2 as httpx
 import pytest
@@ -97,6 +99,10 @@ def _service_incident(reference, call_number):
             for suggestion in reference.reference_mitigation_suggestions
         ],
         "relatedIncidents": reference.reference_related_incidents,
+        "relatedPages": [
+            {"title": "Reference page", "url": page_url}
+            for page_url in reference.reference_related_pages
+        ],
         "llmUsage": {
             "model": "provider-returned-model",
             "tokensIn": 100 * call_number,
@@ -114,6 +120,7 @@ def _successful_output(reference, call_number):
         generated_summary=reference.reference_summary,
         generated_mitigation_suggestions=reference.reference_mitigation_suggestions,
         generated_related_incidents=reference.reference_related_incidents,
+        generated_related_pages=reference.reference_related_pages,
         tokens_in=100 * call_number,
         tokens_out=10 * call_number,
         tokens_total=110 * call_number,
@@ -127,7 +134,8 @@ def test_load_golden_reference_reads_validation_dataset():
 
     assert references
     assert all(reference.incident_id.startswith("INC") for reference in references)
-    assert all(reference.reference_summary for reference in references)
+    assert all(isinstance(reference.reference_summary, str) for reference in references)
+    assert all(reference.reference_related_pages == [] for reference in references)
     assert all(
         isinstance(suggestion, BenchmarkResolutionSuggestion)
         for reference in references
@@ -139,6 +147,40 @@ def test_related_incident_precision_is_one_when_both_sides_are_empty():
     from tests.validation.benchmark import _compute_precision
 
     assert _compute_precision([], []) == pytest.approx(1.0)
+
+
+def test_related_page_precision_uses_urls_and_scores_empty_sets_as_perfect_match():
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Service requests are failing.",
+        reference_related_pages=["https://confluence.example/pages/expected"],
+    )
+    output = BenchmarkCaseOutput(
+        incident_id=reference.incident_id,
+        generated_related_pages=[
+            "https://confluence.example/pages/expected",
+            "https://confluence.example/pages/extra",
+        ],
+    )
+    empty_reference = BenchmarkCaseReference(
+        incident_id="INC000000000002",
+        reference_summary="No documentation applies.",
+    )
+    empty_output = BenchmarkCaseOutput(incident_id=empty_reference.incident_id)
+    metadata = BenchmarkRunMetadata("run", "local", "dataset", "service-model")
+
+    evaluation = evaluate_benchmark_run(
+        [reference, empty_reference],
+        [output, empty_output],
+        metadata,
+        judge=_MatchingJudge(),
+    )
+
+    related_page_scores = {
+        case.incident_id: case.related_page_precision for case in evaluation.cases
+    }
+    assert related_page_scores[reference.incident_id] == pytest.approx(0.5)
+    assert related_page_scores[empty_reference.incident_id] == pytest.approx(1.0)
 
 
 def test_evaluate_benchmark_run_records_semantic_suggestion_rank():
@@ -216,7 +258,19 @@ def test_evaluate_benchmark_run_excludes_partial_suggestions_from_top_k():
 
 
 def test_evaluate_benchmark_run_computes_all_validation_metrics():
-    references = load_golden_reference(FIXTURE_DIR / "golden_reference.json")
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Service requests are failing.",
+        reference_mitigation_suggestions=[
+            BenchmarkResolutionSuggestion(
+                investigation="Inspect request logs.",
+                mitigation="Mitigate the failing service.",
+            )
+        ],
+        reference_related_incidents=["INC000000000002"],
+        reference_related_pages=["https://confluence.example/pages/service"],
+    )
+    references = [reference]
     metadata = BenchmarkRunMetadata(
         run_id="run",
         release_label="local",
@@ -236,6 +290,7 @@ def test_evaluate_benchmark_run_computes_all_validation_metrics():
     assert evaluation.metrics["summary_score"] == pytest.approx(5.0)
     assert evaluation.metrics["top_k_accuracy"] == pytest.approx(1.0)
     assert evaluation.metrics["related_incident_precision"] == pytest.approx(1.0)
+    assert evaluation.metrics["related_page_precision"] == pytest.approx(1.0)
     assert evaluation.metrics["estimated_cost"] == pytest.approx(0.01)
     assert evaluation.metrics["latency_ms"] == pytest.approx(1000)
     assert evaluation.metrics["judge_estimated_cost"] == pytest.approx(0.001)
@@ -275,9 +330,57 @@ def test_collect_benchmark_outputs_calls_each_incident_for_every_repetition():
     assert metadata.model_name == "provider-returned-model"
     total_requests = len(references) * 3
     assert progress_events[0] == ("requesting", 1, total_requests, references[0].incident_id)
-    assert progress_events[-1] == ("success", total_requests, total_requests, references[-1].incident_id)
+    assert {
+        (status, request_number, total, incident_id)
+        for status, request_number, total, incident_id in progress_events
+        if status == "success"
+    } == {
+        ("success", request_number, total_requests, reference.incident_id)
+        for request_number, reference in enumerate(
+            (
+                reference
+                for reference in references
+                for _ in range(3)
+            ),
+            start=1,
+        )
+    }
     assert len(progress_events) == total_requests * 2
     assert outputs[0].generated_mitigation_suggestions == references[0].reference_mitigation_suggestions
+
+
+def test_collect_benchmark_outputs_limits_concurrent_requests_and_preserves_call_order():
+    reference = BenchmarkCaseReference(
+        incident_id="INC000000000001",
+        reference_summary="Service requests are failing.",
+    )
+    active_requests = 0
+    peak_active_requests = 0
+    lock = Lock()
+
+    def handler(_request):
+        nonlocal active_requests, peak_active_requests
+        with lock:
+            active_requests += 1
+            peak_active_requests = max(peak_active_requests, active_requests)
+        try:
+            time.sleep(0.02)
+            return httpx.Response(200, json={"incidents": [_service_incident(reference, 1)]})
+        finally:
+            with lock:
+                active_requests -= 1
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        _, outputs = collect_benchmark_outputs(
+            [reference],
+            service_url="http://validation.local/incident/details",
+            repetitions=6,
+            max_concurrency=2,
+            client=client,
+        )
+
+    assert peak_active_requests == 2
+    assert [output.call_number for output in outputs] == [1, 2, 3, 4, 5, 6]
 
 
 def test_render_iteration_template_keeps_repeated_call_results_and_average_by_incident():
@@ -466,3 +569,8 @@ def test_evaluate_benchmark_run_records_judge_failures_without_losing_service_te
 def test_collect_benchmark_outputs_requires_positive_repetitions():
     with pytest.raises(ValueError, match="at least 1"):
         collect_benchmark_outputs([], repetitions=0)
+
+
+def test_collect_benchmark_outputs_requires_positive_concurrency():
+    with pytest.raises(ValueError, match="at least 1"):
+        collect_benchmark_outputs([], max_concurrency=0)

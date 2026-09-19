@@ -51,8 +51,9 @@ evaluation should be run through a dedicated offline script or CLI.
 | CA-2 | A positive repetition count is supplied or the default is used | A researcher runs the validation CLI | Every benchmark incident is requested that many times, with a default of ten calls per incident |
 | CA-3 | Repeated responses exist for a benchmark incident | The report is written | The incident record preserves each call result in execution order and finishes with averages for summary score, semantic Top-K accuracy, related-incident precision, token usage, cost, latency, and judge telemetry |
 | CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the incident's individual results and successful calls continue to contribute to its averages |
-| CA-5 | A benchmark case has no related incidents in either the reference or output | The evaluator computes the related-incident precision | The score is recorded as `1.0` because both sides are empty and the case is a valid no-correlation outcome |
+| CA-5 | A benchmark case has no related incidents or pages in either the reference or output | The evaluator computes related-item precision | The related-incident and related-page scores are each recorded as `1.0` when both sides are empty |
 | CA-6 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the reports | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset |
+| CA-7 | A validation run has many repeated requests | The researcher runs the CLI | Local-service requests execute concurrently with at most ten in flight by default, or the configured positive concurrency limit |
 
 ## 6) Functional Design
 
@@ -61,7 +62,7 @@ evaluation should be run through a dedicated offline script or CLI.
 - Inputs:
     - fixed benchmark dataset containing incident identifiers and reference outputs
     - release metadata (`release_label`, model)
-    - local incident-details endpoint URL and configurable repetition count
+    - local incident-details endpoint URL, configurable repetition count, and bounded request concurrency
 - Outputs:
     - one per-incident evaluation record with all individual call results followed by metric averages
     - per-run aggregated comparison records
@@ -79,6 +80,8 @@ evaluation should be run through a dedicated offline script or CLI.
     - The golden-reference file contains benchmark incident IDs and expected outputs; it is the only validation input file.
     - The CLI calls the local `GET /incident/details` endpoint separately for each incident ID and repetition, then reads
       the returned `incidents[]` payload.
+    - The CLI executes service requests in parallel, with `--max-concurrency` limiting in-flight requests to ten by
+      default; each incident's report results remain ordered by call number.
     - Model metadata is read from `llmUsage.model` in the first successful service response when available.
     - If `run_id` is not supplied, a UTC timestamp in the form `YYYYMMDDTHHMMSSZ` is generated automatically.
     - The related-incident precision metric treats an empty reference set and an empty generated set as a perfect
@@ -99,6 +102,7 @@ evaluation should be run through a dedicated offline script or CLI.
     - reference summary
     - reference mitigation suggestion(s), each with separate investigation and mitigation text
     - reference related-incident set (may be empty)
+    - reference related-page URLs under `reference_related_pages` (may be empty; strings or objects with `url`)
     - optional notes for evaluator context
 - Test assets minimum structure:
     - `tests/validation/golden_reference.json` with the benchmark expected outputs

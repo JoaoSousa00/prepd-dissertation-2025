@@ -36,14 +36,16 @@ python3 -m tests.validation.cli \
   --output /tmp/validation_report.json
 ```
 
-Use `--repetitions` to change the number of calls made for each incident and `--service-url` if the
-local service uses another address or port:
+Use `--repetitions` to change the number of calls made for each incident, `--max-concurrency` to
+set the maximum number of simultaneous requests (default: 10), and `--service-url` if the local
+service uses another address or port:
 
 ```bash
 python3 -m tests.validation.cli \
   --references tests/validation/golden_reference.json \
   --service-url http://127.0.0.1:8000/incident/details \
   --repetitions 10 \
+  --max-concurrency 10 \
   --output /tmp/validation_report.json
 ```
 
@@ -53,11 +55,19 @@ object contains the quality and telemetry means across successful calls; failed 
 `results` but do not contribute quality metrics. Service cost and latency remain separate from
 judge cost and latency.
 
+Related incident and related page precision compare returned identifiers against the golden
+reference. Pages use their URLs as identifiers. Both metrics score `1.0` when neither the
+reference nor the response contains related items.
+
+Add expected page URLs to each golden reference incident with `reference_related_pages`. Either
+plain URL strings or objects containing a `url` field are accepted.
+
 The judge uses the configured GAIA credentials with `GAIA_JUDGE_MODEL` and deterministic
 `temperature=0`. Configure `LLM_JUDGE_MAX_TOKENS` when the default of 2000 output tokens is not
 appropriate; GAIA accepts a maximum of 128000. The CLI loads the project `.env` file before it creates the judge. Copy
 `.env_template` to `.env` once and provide the real `GAIA_AUTH_ENDPOINT`, credentials, and
 certificate settings there; do not put credentials in `.env_template`.
 
-The CLI prints the incident ID before each request and its outcome afterward. Requests are processed
-sequentially, so a slow incident delays the next one.
+The CLI prints the incident ID before each request and its outcome afterward. It limits in-flight
+service requests to `--max-concurrency`; completed calls may be printed out of request order, while
+each incident's report results remain ordered by `call_number`.

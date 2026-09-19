@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Protocol, Sequence
 import json
@@ -78,6 +79,7 @@ class BenchmarkCaseReference:
         default_factory=list
     )
     reference_related_incidents: List[str] = field(default_factory=list)
+    reference_related_pages: List[str] = field(default_factory=list)
     notes: str = ""
 
 
@@ -89,6 +91,7 @@ class BenchmarkCaseOutput:
         default_factory=list
     )
     generated_related_incidents: List[str] = field(default_factory=list)
+    generated_related_pages: List[str] = field(default_factory=list)
     tokens_in: Optional[int] = None
     tokens_out: Optional[int] = None
     tokens_total: Optional[int] = None
@@ -96,6 +99,7 @@ class BenchmarkCaseOutput:
     latency_ms: Optional[float] = None
     status: str = "success"
     error_notes: str = ""
+    call_number: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -129,6 +133,7 @@ class BenchmarkCaseResult:
     summary_score: Optional[float]
     top_k_accuracy: Optional[float]
     related_incident_precision: Optional[float]
+    related_page_precision: Optional[float]
     tokens_in: Optional[int]
     tokens_out: Optional[int]
     tokens_total: Optional[int]
@@ -138,6 +143,7 @@ class BenchmarkCaseResult:
     suggestion_matches: List[BenchmarkSuggestionMatch] = field(default_factory=list)
     judge_usage: Optional[BenchmarkJudgeUsage] = None
     error_notes: str = ""
+    call_number: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -145,6 +151,7 @@ class BenchmarkCaseAverage:
     summary_score: Optional[float]
     top_k_accuracy: Optional[float]
     related_incident_precision: Optional[float]
+    related_page_precision: Optional[float]
     tokens_in: Optional[float]
     tokens_out: Optional[float]
     tokens_total: Optional[float]
@@ -175,6 +182,13 @@ class BenchmarkEvaluationResult:
     metrics: Dict[str, Any]
 
 
+@dataclass(frozen=True)
+class _BenchmarkRequest:
+    request_number: int
+    call_number: int
+    reference: BenchmarkCaseReference
+
+
 def load_golden_reference(path: Path | str) -> List[BenchmarkCaseReference]:
     payload = _load_json(path)
     incidents = payload.get("incidents", []) if isinstance(payload, Mapping) else payload
@@ -187,6 +201,9 @@ def load_golden_reference(path: Path | str) -> List[BenchmarkCaseReference]:
             ),
             reference_related_incidents=list(
                 incident.get("reference_related_incidents", [])
+            ),
+            reference_related_pages=_load_related_page_urls(
+                incident.get("reference_related_pages", [])
             ),
             notes=incident.get("notes", ""),
         )
@@ -204,6 +221,7 @@ def collect_benchmark_outputs(
     service_url: str = DEFAULT_LOCAL_SERVICE_URL,
     repetitions: int = 1,
     timeout_seconds: float = 300.0,
+    max_concurrency: int = 10,
     client: Optional[httpx.Client] = None,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> tuple[BenchmarkRunMetadata, List[BenchmarkCaseOutput]]:
@@ -211,44 +229,76 @@ def collect_benchmark_outputs(
         raise ValueError("repetitions must be at least 1")
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be greater than 0")
+    if max_concurrency < 1:
+        raise ValueError("max_concurrency must be at least 1")
 
     owns_client = client is None
     request_client = client or httpx.Client(timeout=timeout_seconds)
-    outputs: List[BenchmarkCaseOutput] = []
-    metadata_payload: Optional[Mapping[str, Any]] = None
-    request_number = 0
     total_requests = len(references) * repetitions
+    requests = [
+        _BenchmarkRequest(
+            request_number=request_number,
+            call_number=call_number,
+            reference=reference,
+        )
+        for request_number, (reference, call_number) in enumerate(
+            (
+                (reference, call_number)
+                for reference in references
+                for call_number in range(1, repetitions + 1)
+            ),
+            start=1,
+        )
+    ]
+    collected_outputs: List[
+        tuple[int, BenchmarkCaseOutput, Optional[Mapping[str, Any]]]
+    ] = []
 
     try:
-        for reference in references:
-            for _ in range(repetitions):
-                request_number += 1
+        with ThreadPoolExecutor(max_workers=max_concurrency) as executor:
+            futures = {}
+            for request in requests:
                 if progress_callback is not None:
                     progress_callback(
                         "requesting",
-                        request_number,
+                        request.request_number,
                         total_requests,
-                        reference.incident_id,
+                        request.reference.incident_id,
                     )
-                output, payload = _request_incident_output(
+                future = executor.submit(
+                    _request_incident_output,
                     request_client,
                     service_url,
-                    reference.incident_id,
+                    request.reference.incident_id,
                 )
-                outputs.append(output)
+                futures[future] = request
+
+            for future in as_completed(futures):
+                request = futures[future]
+                output, payload = future.result()
+                output = replace(output, call_number=request.call_number)
+                collected_outputs.append((request.request_number, output, payload))
                 if progress_callback is not None:
                     progress_callback(
                         output.status,
-                        request_number,
+                        request.request_number,
                         total_requests,
-                        reference.incident_id,
+                        request.reference.incident_id,
                     )
-                if output.status == "success" and metadata_payload is None and payload is not None:
-                    metadata_payload = payload
     finally:
         if owns_client:
             request_client.close()
 
+    collected_outputs.sort(key=lambda item: item[0])
+    outputs = [output for _, output, _ in collected_outputs]
+    metadata_payload = next(
+        (
+            payload
+            for _, output, payload in collected_outputs
+            if output.status == "success" and payload is not None
+        ),
+        None,
+    )
     return _build_metadata(metadata_payload), outputs
 
 
@@ -343,6 +393,9 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
                 item.get("generated_mitigation_suggestions", [])
             ),
             generated_related_incidents=list(item.get("generated_related_incidents", [])),
+            generated_related_pages=_load_related_page_urls(
+                item.get("generated_related_pages", [])
+            ),
             tokens_in=item.get("tokens_in"),
             tokens_out=item.get("tokens_out"),
             tokens_total=item.get("tokens_total"),
@@ -360,6 +413,9 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
                 item.get("generated_mitigation_suggestions", [])
             ),
             generated_related_incidents=list(item.get("generated_related_incidents", [])),
+            generated_related_pages=_load_related_page_urls(
+                item.get("generated_related_pages", [])
+            ),
             tokens_in=item.get("tokens_in"),
             tokens_out=item.get("tokens_out"),
             tokens_total=item.get("tokens_total"),
@@ -380,6 +436,12 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
             for related_incident in entry.get("relatedIncidents", [])
         }
     )
+    generated_related_pages = _load_related_page_urls(item.get("relatedPages", [])) or [
+        page_url
+        for entry in resolve_suggestions
+        if isinstance(entry, Mapping)
+        for page_url in _load_related_page_urls(entry.get("relatedPages", []))
+    ]
     usage_tokens_in = llm_usage.get("tokensIn", llm_usage.get("tokens_in"))
     usage_tokens_out = llm_usage.get("tokensOut", llm_usage.get("tokens_out"))
     usage_tokens_total = llm_usage.get("tokensTotal", llm_usage.get("tokens_total"))
@@ -389,6 +451,7 @@ def _build_case_output(item: Mapping[str, Any]) -> BenchmarkCaseOutput:
         generated_summary=item.get("summary", ""),
         generated_mitigation_suggestions=generated_mitigation_suggestions,
         generated_related_incidents=generated_related_incidents,
+        generated_related_pages=generated_related_pages,
         tokens_in=usage_tokens_in,
         tokens_out=usage_tokens_out,
         tokens_total=usage_tokens_total,
@@ -430,6 +493,23 @@ def _load_resolution_suggestions(
     return normalized_suggestions
 
 
+def _load_related_page_urls(pages: Any) -> List[str]:
+    if not isinstance(pages, Sequence) or isinstance(pages, (str, bytes)):
+        return []
+
+    urls = []
+    for page in pages:
+        if isinstance(page, str):
+            url = page
+        elif isinstance(page, Mapping):
+            url = page.get("url")
+        else:
+            continue
+        if isinstance(url, str) and url.strip():
+            urls.append(url.strip())
+    return urls
+
+
 def evaluate_benchmark_run(
     references: Sequence[BenchmarkCaseReference],
     outputs: Sequence[BenchmarkCaseOutput],
@@ -453,6 +533,7 @@ def evaluate_benchmark_run(
                     summary_score=None,
                     top_k_accuracy=None,
                     related_incident_precision=None,
+                    related_page_precision=None,
                     tokens_in=None,
                     tokens_out=None,
                     tokens_total=None,
@@ -472,12 +553,14 @@ def evaluate_benchmark_run(
                         summary_score=None,
                         top_k_accuracy=None,
                         related_incident_precision=None,
+                        related_page_precision=None,
                         tokens_in=output.tokens_in,
                         tokens_out=output.tokens_out,
                         tokens_total=output.tokens_total,
                         estimated_cost=output.estimated_cost,
                         latency_ms=output.latency_ms,
                         error_notes=output.error_notes,
+                        call_number=output.call_number,
                     )
                 )
                 continue
@@ -492,12 +575,14 @@ def evaluate_benchmark_run(
                         summary_score=None,
                         top_k_accuracy=None,
                         related_incident_precision=None,
+                        related_page_precision=None,
                         tokens_in=output.tokens_in,
                         tokens_out=output.tokens_out,
                         tokens_total=output.tokens_total,
                         estimated_cost=output.estimated_cost,
                         latency_ms=output.latency_ms,
                         error_notes=str(exc),
+                        call_number=output.call_number,
                     )
                 )
                 continue
@@ -507,6 +592,10 @@ def evaluate_benchmark_run(
                 reference.reference_related_incidents,
                 output.generated_related_incidents,
             )
+            related_page_precision = _compute_precision(
+                reference.reference_related_pages,
+                output.generated_related_pages,
+            )
             case_results.append(
                 BenchmarkCaseResult(
                     incident_id=incident_id,
@@ -514,6 +603,7 @@ def evaluate_benchmark_run(
                     summary_score=judgment.summary.score,
                     top_k_accuracy=top_k_accuracy,
                     related_incident_precision=related_precision,
+                    related_page_precision=related_page_precision,
                     tokens_in=output.tokens_in,
                     tokens_out=output.tokens_out,
                     tokens_total=output.tokens_total,
@@ -523,6 +613,7 @@ def evaluate_benchmark_run(
                     suggestion_matches=judgment.suggestion_matches,
                     judge_usage=judgment.usage,
                     error_notes=output.error_notes,
+                    call_number=output.call_number,
                 )
             )
 
@@ -535,12 +626,14 @@ def evaluate_benchmark_run(
                     summary_score=None,
                     top_k_accuracy=None,
                     related_incident_precision=None,
+                    related_page_precision=None,
                     tokens_in=output.tokens_in,
                     tokens_out=output.tokens_out,
                     tokens_total=output.tokens_total,
                     estimated_cost=output.estimated_cost,
                     latency_ms=output.latency_ms,
                     error_notes="Generated output has no matching benchmark reference.",
+                    call_number=output.call_number,
                 )
             )
 
@@ -567,6 +660,7 @@ def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, An
             "top_k_accuracy": result.metrics.get("top_k_accuracy"),
             "related_incident_precision": result.metrics.get("related_incident_precision"),
             "related_incident_correlation": result.metrics.get("related_incident_precision"),
+            "related_page_precision": result.metrics.get("related_page_precision"),
             "cost_USD": result.metrics.get("estimated_cost"),
             "latency_ms": result.metrics.get("latency_ms"),
             "judge_tokens_in": result.metrics.get("judge_tokens_in"),
@@ -626,13 +720,21 @@ def _render_aggregated_case(case: AggregatedBenchmarkCaseResult) -> Dict[str, An
         "status": case.status,
         "call_count": case.call_count,
         "successful_call_count": case.successful_call_count,
-        "results": [
-            _render_case_result(call_number, result)
-            for call_number, result in enumerate(case.results, start=1)
-        ],
+        "results": _render_case_results(case.results),
         "average": _render_case_average(case.average),
         "error_notes": case.error_notes,
     }
+
+
+def _render_case_results(case_results: Sequence[BenchmarkCaseResult]) -> List[Dict[str, Any]]:
+    indexed_results = list(enumerate(case_results, start=1))
+    return [
+        _render_case_result(result.call_number or fallback_call_number, result)
+        for fallback_call_number, result in sorted(
+            indexed_results,
+            key=lambda item: item[1].call_number or item[0],
+        )
+    ]
 
 
 def _render_case_result(call_number: int, result: BenchmarkCaseResult) -> Dict[str, Any]:
@@ -650,6 +752,7 @@ def _render_case_result(call_number: int, result: BenchmarkCaseResult) -> Dict[s
         "summary_score": result.summary_score,
         "top_k_accuracy": result.top_k_accuracy,
         "related_incident_precision": result.related_incident_precision,
+        "related_page_precision": result.related_page_precision,
         "tokens_in": result.tokens_in,
         "tokens_out": result.tokens_out,
         "tokens_total": result.tokens_total,
@@ -667,6 +770,7 @@ def _render_case_average(average: Optional[BenchmarkCaseAverage]) -> Optional[Di
         "summary_score": average.summary_score,
         "top_k_accuracy": average.top_k_accuracy,
         "related_incident_precision": average.related_incident_precision,
+        "related_page_precision": average.related_page_precision,
         "tokens_in": average.tokens_in,
         "tokens_out": average.tokens_out,
         "tokens_total": average.tokens_total,
@@ -702,6 +806,9 @@ def _build_case_average(
         top_k_accuracy=_mean(case.top_k_accuracy for case in evaluated_cases),
         related_incident_precision=_mean(
             case.related_incident_precision for case in evaluated_cases
+        ),
+        related_page_precision=_mean(
+            case.related_page_precision for case in evaluated_cases
         ),
         tokens_in=_mean(case.tokens_in for case in successful_cases),
         tokens_out=_mean(case.tokens_out for case in successful_cases),
@@ -772,6 +879,9 @@ def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str,
     precision_values = [
         case.related_incident_precision for case in case_results if case.related_incident_precision is not None
     ]
+    page_precision_values = [
+        case.related_page_precision for case in case_results if case.related_page_precision is not None
+    ]
     cost_values = [case.estimated_cost for case in case_results if case.estimated_cost is not None]
     latency_values = [case.latency_ms for case in case_results if case.latency_ms is not None]
     judge_tokens_in = [
@@ -804,6 +914,7 @@ def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str,
         "summary_score": _mean(summary_scores),
         "top_k_accuracy": _mean(top_k_values),
         "related_incident_precision": _mean(precision_values),
+        "related_page_precision": _mean(page_precision_values),
         "estimated_cost": _mean(cost_values),
         "latency_ms": _mean(latency_values),
         "judge_tokens_in": _mean(judge_tokens_in),

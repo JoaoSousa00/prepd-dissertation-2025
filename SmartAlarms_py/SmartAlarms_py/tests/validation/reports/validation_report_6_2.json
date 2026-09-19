@@ -1,0 +1,401 @@
+{
+  "run_id": "20260919T133519Z",
+  "release_label": "local",
+  "dataset_version": "phase1-validation-v3",
+  "model_name": "openai/gpt-5.6-terra",
+  "judge_model_name": "openai/gpt-5.6-terra",
+  "configuration_notes": "",
+  "metrics": {
+    "summary_score": 4.25,
+    "top_k_accuracy": 0.5,
+    "related_incident_precision": 0.3,
+    "related_incident_correlation": 0.3,
+    "cost_USD": 0.0293802875,
+    "latency_ms": 15710.081052000078,
+    "judge_tokens_in": 858.0,
+    "judge_tokens_out": 202.5,
+    "judge_tokens_total": 1060.5,
+    "judge_cost_USD": 0.0045606,
+    "judge_latency_ms": 3247.626786374667
+  },
+  "manual_notes": "",
+  "status": "complete",
+  "cases": [
+    {
+      "incident_id": "INC000110969970",
+      "status": "success",
+      "call_count": 2,
+      "successful_call_count": 2,
+      "results": [
+        {
+          "call_number": 1,
+          "status": "success",
+          "summary_score": 5,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 0.0,
+          "tokens_in": 12178,
+          "tokens_out": 1267,
+          "tokens_total": 13445,
+          "cost_USD": 0.0369741,
+          "latency_ms": 20137.490834000346,
+          "judge_decision": {
+            "summary": {
+              "score": 5,
+              "reason": "Fully matches the production route-planning failure, >100 km condition, battery risk, RSU timing, online status, and unsuccessful reset."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Includes reproduction evidence collection for the affected case, but omits impact-scope assessment and the reference escalation/rollback decision path."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 987,
+              "tokens_out": 307,
+              "tokens_total": 1294,
+              "cost_USD": 0.0062238,
+              "latency_ms": 4546.739707999222
+            }
+          },
+          "error_notes": ""
+        },
+        {
+          "call_number": 2,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 0.0,
+          "tokens_in": 12178,
+          "tokens_out": 1270,
+          "tokens_total": 13448,
+          "cost_USD": 0.0370137,
+          "latency_ms": 20275.114125000982,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Core long-distance charging-stop failure, connectivity, and station search behavior match; RSU timing and reset outcome are omitted."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Generated suggestion 2 supports reproduction and request investigation, but omits fleet-scope assessment and the required escalation/rollback mitigation path."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 978,
+              "tokens_out": 218,
+              "tokens_total": 1196,
+              "cost_USD": 0.0050292,
+              "latency_ms": 3325.86291699954
+            }
+          },
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": 4.5,
+        "top_k_accuracy": 0.0,
+        "related_incident_precision": 0.0,
+        "tokens_in": 12178.0,
+        "tokens_out": 1268.5,
+        "tokens_total": 13446.5,
+        "cost_USD": 0.036993899999999996,
+        "latency_ms": 20206.302479500664,
+        "judge_tokens_in": 982.5,
+        "judge_tokens_out": 262.5,
+        "judge_tokens_total": 1245.0,
+        "judge_cost_USD": 0.0056264999999999996,
+        "judge_latency_ms": 3936.3013124993813
+      },
+      "error_notes": ""
+    },
+    {
+      "incident_id": "INC000111017580",
+      "status": "success",
+      "call_count": 2,
+      "successful_call_count": 2,
+      "results": [
+        {
+          "call_number": 1,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 1.0,
+          "related_incident_precision": 0.2,
+          "tokens_in": 6534,
+          "tokens_out": 1227,
+          "tokens_total": 7761,
+          "cost_USD": 0.0305712,
+          "latency_ms": 15577.88362500105,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Correctly identifies public translations 4XX errors involving los-MobileApp-ChargingTariffsCompositeService, with extra client and operational detail."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": 2,
+                "score": 4,
+                "reason": "Explicitly investigates los-MobileApp-ChargingTariffsCompositeService 4XX requests and proposes remediation, though recovery confirmation is less direct."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 901,
+              "tokens_out": 274,
+              "tokens_total": 1175,
+              "cost_USD": 0.005599,
+              "latency_ms": 4052.0164169993222
+            }
+          },
+          "error_notes": ""
+        },
+        {
+          "call_number": 2,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 0.2,
+          "tokens_in": 6534,
+          "tokens_out": 1329,
+          "tokens_total": 7863,
+          "cost_USD": 0.021407799999999998,
+          "latency_ms": 17264.693749999424,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Correctly identifies elevated public translations 4XXs linked primarily to los-MobileApp-ChargingTariffsCompositeService, with extra contextual detail."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Investigation covers the correct client and translations failures, but mitigation focuses on request fixes and retries rather than confirming 4XX recovery."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 893,
+              "tokens_out": 226,
+              "tokens_total": 1119,
+              "cost_USD": 0.0049478,
+              "latency_ms": 3730.3250830009347
+            }
+          },
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": 4.0,
+        "top_k_accuracy": 0.5,
+        "related_incident_precision": 0.2,
+        "tokens_in": 6534.0,
+        "tokens_out": 1278.0,
+        "tokens_total": 7812.0,
+        "cost_USD": 0.0259895,
+        "latency_ms": 16421.288687500237,
+        "judge_tokens_in": 897.0,
+        "judge_tokens_out": 250.0,
+        "judge_tokens_total": 1147.0,
+        "judge_cost_USD": 0.005273399999999999,
+        "judge_latency_ms": 3891.1707500001285
+      },
+      "error_notes": ""
+    },
+    {
+      "incident_id": "INC000111250397",
+      "status": "success",
+      "call_count": 2,
+      "successful_call_count": 2,
+      "results": [
+        {
+          "call_number": 1,
+          "status": "success",
+          "summary_score": 5,
+          "top_k_accuracy": 1.0,
+          "related_incident_precision": 0.0,
+          "tokens_in": 11739,
+          "tokens_out": 1252,
+          "tokens_total": 12991,
+          "cost_USD": 0.042352200000000007,
+          "latency_ms": 15871.263749999343,
+          "judge_decision": {
+            "summary": {
+              "score": 5,
+              "reason": "Correctly identifies the failed Step Functions job."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": 2,
+                "score": 4,
+                "reason": "Includes checking execution/task logs and rerunning affected processing after investigation, with additional validation details."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 829,
+              "tokens_out": 63,
+              "tokens_total": 892,
+              "cost_USD": 0.0026554,
+              "latency_ms": 1529.9839999988762
+            }
+          },
+          "error_notes": ""
+        },
+        {
+          "call_number": 2,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 0.0,
+          "related_incident_precision": 0.0,
+          "tokens_in": 11739,
+          "tokens_out": 864,
+          "tokens_total": 12603,
+          "cost_USD": 0.0343992,
+          "latency_ms": 11973.573957999179,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Correctly identifies the failed workflow task, with additional speculative context."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": null,
+                "score": 3,
+                "reason": "Includes log review and rerun concepts, but adds capacity-specific conditions and does not clearly prescribe retry after log investigation."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 751,
+              "tokens_out": 200,
+              "tokens_total": 951,
+              "cost_USD": 0.0042922,
+              "latency_ms": 3211.047040998892
+            }
+          },
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": 4.5,
+        "top_k_accuracy": 0.5,
+        "related_incident_precision": 0.0,
+        "tokens_in": 11739.0,
+        "tokens_out": 1058.0,
+        "tokens_total": 12797.0,
+        "cost_USD": 0.0383757,
+        "latency_ms": 13922.418853999261,
+        "judge_tokens_in": 790.0,
+        "judge_tokens_out": 131.5,
+        "judge_tokens_total": 921.5,
+        "judge_cost_USD": 0.0034738,
+        "judge_latency_ms": 2370.515520498884
+      },
+      "error_notes": ""
+    },
+    {
+      "incident_id": "INC000111254019",
+      "status": "success",
+      "call_count": 2,
+      "successful_call_count": 2,
+      "results": [
+        {
+          "call_number": 1,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 1.0,
+          "related_incident_precision": 1.0,
+          "tokens_in": 3654,
+          "tokens_out": 744,
+          "tokens_total": 4398,
+          "cost_USD": 0.0106365,
+          "latency_ms": 10960.180582998873,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Correctly identifies EES25 Availability API-key usage reaching 90% of the NetScaler touchpoint rate limit, with extra unsupported incident context."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": 1,
+                "score": 5,
+                "reason": "Covers checking API-key usage/quota and IFC threshold, then adjusting the IFC threshold subject to approved capacity."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 742,
+              "tokens_out": 166,
+              "tokens_total": 908,
+              "cost_USD": 0.0038236,
+              "latency_ms": 2732.888542001092
+            }
+          },
+          "error_notes": ""
+        },
+        {
+          "call_number": 2,
+          "status": "success",
+          "summary_score": 4,
+          "top_k_accuracy": 1.0,
+          "related_incident_precision": 1.0,
+          "tokens_in": 3654,
+          "tokens_out": 1034,
+          "tokens_total": 4688,
+          "cost_USD": 0.021687599999999998,
+          "latency_ms": 13620.447791001425,
+          "judge_decision": {
+            "summary": {
+              "score": 4,
+              "reason": "Correctly describes API-key usage reaching 90% of the Netscaler touchpoint rate limit, with extra unsupported context."
+            },
+            "suggestion_matches": [
+              {
+                "reference_index": 1,
+                "generated_rank": 1,
+                "score": 4,
+                "reason": "Covers IFC threshold and API-key utilization validation, then adjusts the warning threshold based on available capacity; quota verification is less explicit."
+              }
+            ],
+            "usage": {
+              "model_name": "openai/gpt-5.6-terra",
+              "tokens_in": 783,
+              "tokens_out": 166,
+              "tokens_total": 949,
+              "cost_USD": 0.0039138,
+              "latency_ms": 2852.1505829994567
+            }
+          },
+          "error_notes": ""
+        }
+      ],
+      "average": {
+        "summary_score": 4.0,
+        "top_k_accuracy": 1.0,
+        "related_incident_precision": 1.0,
+        "tokens_in": 3654.0,
+        "tokens_out": 889.0,
+        "tokens_total": 4543.0,
+        "cost_USD": 0.016162049999999997,
+        "latency_ms": 12290.31418700015,
+        "judge_tokens_in": 762.5,
+        "judge_tokens_out": 166.0,
+        "judge_tokens_total": 928.5,
+        "judge_cost_USD": 0.0038687,
+        "judge_latency_ms": 2792.5195625002743
+      },
+      "error_notes": ""
+    }
+  ]
+}

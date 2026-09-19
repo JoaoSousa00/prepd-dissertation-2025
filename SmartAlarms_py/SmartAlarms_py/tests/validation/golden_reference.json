@@ -10,34 +10,92 @@
           "mitigation": "If the issue is not reproducible ask for more information from the customer. If is reproducible and it affects few cars, present the issue to the business owner so they can decide the next steps. If is reproducible and it affects a lot of cars, rollback the service to a previous stable version."
         }
       ],
-      "reference_related_incidents": [],
-      "notes": "Manual charging stations on the route"
+      "reference_related_incidents": [
+        "INC000111049826",
+        "INC000110874888"
+      ],
+      "reference_related_pages": [],
+      "notes": "Manual: Charging stations not found on route"
     },
     {
-      "incident_id": "INC000111017580",
-      "reference_summary": "Translations/public 4XX errors from los-MobileApp-ChargingTariffsCompositeService",
+      "incident_id": "INC000110574851",
+      "reference_summary": "In EMEA PROD, a customer refers that his car shows the correct location on the car display, but the address on the APP is incorrect.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Check requests from los-MobileApp-ChargingTariffsCompositeService to translations/public.",
-          "mitigation": "Confirm translations/public 4XX errors are recovered."
+          "investigation": "Validate the referred coordinates to check what address is being returned by the service.",
+          "mitigation": "If the issue is provider related, contact the provider to fix the issue."
         }
       ],
       "reference_related_incidents": [
-        "INC000111017340"
+        "INC000110572991",
+        "INC000111123080",
+        "INC000110804751",
+        "INC000110781443"
       ],
-      "notes": "Resolved through the parent incident."
+      "reference_related_pages": [],
+      "notes": "Manual: Car location is correct but is address on the APP is incorrect."
+    },
+    {
+      "incident_id": "INC000111017580",
+      "reference_summary": "In EMEA PROD, we are getting 4XX Errors on Place-Search service in translations public endpoint.",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Check request logs on the service or the api gateway and indentify the specific status and the client.",
+          "mitigation": "Confirm translations public endpoint 4XX errors are recovered. Communicate with the client to confirm the issue is resolved."
+        }
+      ],
+      "reference_related_incidents": [
+        "INC000111017340",
+        "INC000111245228",
+        "INC000111230726",
+        "INC000111194980",
+        "INC000110880719"
+      ],
+      "reference_related_pages": [],
+      "notes": "Automatic: Errors 4XX on translations, resolved through the parent incident."
+    },
+    {
+      "incident_id": "INC000108364726",
+      "reference_summary": "In EMEA PROD, customer can search for fuel stations and obtain routing/distance information, but fuel prices are not displayed.",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Search for requests made by that vehicle and try to reproduce the issue.",
+          "mitigation": "If no issue is found on the service, contact the client which are responsible for showing the prices."
+        }
+      ],
+      "reference_related_incidents": [
+        "INC000108310659",
+        "INC000110839192"
+      ],
+      "reference_related_pages": [],
+      "notes": "Manual: Fuel prices not returned, with related incident."
     },
     {
       "incident_id": "INC000111250397",
-      "reference_summary": "ua_cdc_te_navisrch_to_session_store_job failed with States.TaskFailed.",
+      "reference_summary": "In US INT, the usage analytics session-store semantic job failed with States.TaskFailed.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Check CDEC Ops and Session Store state machine logs.",
+          "investigation": "Check Session Store state machine logs and outputs for errors or memory crashes.",
           "mitigation": "Retry ua_cdc_te_navisrch_to_session_store_job after investigation."
         }
       ],
-      "reference_related_incidents": [],
-      "notes": "Active incident; no resolution available."
+      "reference_related_incidents": ["INC000111222687"],
+      "reference_related_pages": [],
+      "notes": "Automatic: UA job failed, with related page"
+    },
+    {
+      "incident_id": "INC000106628604",
+      "reference_summary": "",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "",
+          "mitigation": ""
+        }
+      ],
+      "reference_related_incidents": [
+      ],
+      "reference_related_pages": [],
+      "notes": "Automatic: "
     },
     {
       "incident_id": "INC000111254019",
@@ -51,6 +109,7 @@
       "reference_related_incidents": [
         "INC000111175746"
       ],
+      "reference_related_pages": [],
       "notes": "Previous incident was resolved by adjusting the IFC threshold."
     }
   ]

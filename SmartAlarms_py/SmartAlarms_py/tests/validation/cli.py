@@ -37,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of requests to make for every referenced incident (default: 10).",
     )
     parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=10,
+        help="Maximum simultaneous local-service requests (default: 10).",
+    )
+    parser.add_argument(
         "--timeout-seconds",
         type=float,
         default=300.0,
@@ -64,6 +70,8 @@ def main(
     args = parser.parse_args(argv)
     if args.repetitions < 1:
         parser.error("--repetitions must be at least 1")
+    if args.max_concurrency < 1:
+        parser.error("--max-concurrency must be at least 1")
     if args.timeout_seconds <= 0:
         parser.error("--timeout-seconds must be greater than 0")
     if args.top_k < 1:
@@ -78,6 +86,7 @@ def main(
         service_url=args.service_url,
         repetitions=args.repetitions,
         timeout_seconds=args.timeout_seconds,
+        max_concurrency=args.max_concurrency,
         client=client,
         progress_callback=_print_progress,
     )
