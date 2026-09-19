@@ -431,6 +431,7 @@ def test_fetch_incident_details_uses_same_title_fetch_limit_and_recent_resolved_
 
     assert source.same_title_limits == [100]
     assert payload["itsm_summary"]["total_incidents_title"] == 3
+    assert payload["itsm_summary"]["fetched_incidents_by_title"] == ["INC1002", "INC1001"]
     assert payload["itsm_summary"]["total_incidents_fallback"] == 0
     same_title_context = gateway.kwargs["same_title_incident_context"]
     assert "Incident INC0001" not in same_title_context

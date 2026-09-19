@@ -329,18 +329,16 @@ class IncidentDetailsService:
             main_incident_ids,
             excluded_incident_ids=related_ids,
         )
-        if context is not None and not context.fallback_triggered:
-            context.fetched_incidents_by_title = [
-                (candidate.number or candidate.id).upper()
-                for candidate in title_candidates
-                if (candidate.number or candidate.id).upper() not in main_incident_ids
-            ]
-
         deduped_same_title = sorted(
             title_candidates,
             key=self._incident_resolved_at_sort_key,
             reverse=True,
         )[:same_title_recent_limit]
+        if context is not None and not context.fallback_triggered:
+            context.fetched_incidents_by_title = [
+                (candidate.number or candidate.id).upper()
+                for candidate in deduped_same_title
+            ]
 
         if not deduped_same_title and incident.raw is not None:
             assignment_group = self._extract_assignment_group(incident)
