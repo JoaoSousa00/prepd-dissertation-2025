@@ -51,7 +51,7 @@ evaluation should be run through a dedicated offline script or CLI.
 | CA-2 | A positive repetition count is supplied or the default is used | A researcher runs the validation CLI | Every benchmark incident is requested that many times, with a default of ten calls per incident |
 | CA-3 | Repeated responses exist for a benchmark incident | The report is written | The incident record preserves each call result in execution order and finishes with averages for summary score, mitigation MRR, related-incident precision, token usage, cost, latency, and judge telemetry |
 | CA-4 | A local-service request fails or omits the requested incident | The remaining calls continue | The failed call is explicit in the incident's individual results and successful calls continue to contribute to its averages |
-| CA-5 | A benchmark case has no related incidents or pages in either the reference or output | The evaluator computes related-item precision | The related-incident and related-page scores are each recorded as `1.0` when both sides are empty |
+| CA-5 | A benchmark case has related incidents or pages in its golden reference | The evaluator computes related-item precision | The related-incident and related-page scores are `1.0` when every golden identifier appears in the response; additional returned identifiers do not reduce the score |
 | CA-6 | Two or more benchmark runs exist for different releases or configurations | The researcher compares the reports | The results can be compared release by release using aggregated quality, cost, and latency values over the same dataset |
 | CA-7 | A validation run has many repeated requests | The researcher runs the CLI | Local-service requests execute concurrently with at most ten in flight by default, or the configured positive concurrency limit |
 
@@ -84,8 +84,9 @@ evaluation should be run through a dedicated offline script or CLI.
       default; each incident's report results remain ordered by call number.
     - Model metadata is read from `llmUsage.model` in the first successful service response when available.
     - If `run_id` is not supplied, a UTC timestamp in the form `YYYYMMDDTHHMMSSZ` is generated automatically.
-    - The related-incident precision metric treats an empty reference set and an empty generated set as a perfect
-      match (`1.0`) so valid no-correlation cases are not penalized.
+    - Related-incident and related-page precision measure golden-reference coverage: the score is the fraction of
+      golden identifiers returned by the service. Additional service identifiers do not reduce the score, and an
+      empty golden reference scores `1.0`.
     - The report records the judge model, decision, reason, usage, cost, and latency separately from the evaluated
       service telemetry.
 - Error path:
@@ -165,7 +166,8 @@ evaluation should be run through a dedicated offline script or CLI.
 - Handling of partial failures and missing references.
 - LLM-judged 1-5 semantic summary scoring, including the full scoring rubric.
 - LLM-judged MRR and generated rank computation for mitigation suggestions, including partial matches.
-- Precision computation for related-incident references, including the empty/empty edge case.
+- Golden-reference coverage computation for related incidents and pages, including extra service identifiers and
+  empty golden-reference cases.
 - Loading of golden references from a validation fixture file.
 - Writing of per-iteration result templates for validation runs.
 - Validation README describing how to execute the benchmark/validation suite.

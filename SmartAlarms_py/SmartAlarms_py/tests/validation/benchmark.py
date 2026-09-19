@@ -587,11 +587,11 @@ def evaluate_benchmark_run(
                 continue
 
             mrr = _compute_mrr(judgment.suggestion_matches)
-            related_precision = _compute_precision(
+            related_precision = _compute_reference_coverage(
                 reference.reference_related_incidents,
                 output.generated_related_incidents,
             )
-            related_page_precision = _compute_precision(
+            related_page_precision = _compute_reference_coverage(
                 reference.reference_related_pages,
                 output.generated_related_pages,
             )
@@ -658,7 +658,6 @@ def render_iteration_template(result: BenchmarkEvaluationResult) -> Dict[str, An
             "summary_score": result.metrics.get("summary_score"),
             "mrr": result.metrics.get("mrr"),
             "related_incident_precision": result.metrics.get("related_incident_precision"),
-            "related_incident_correlation": result.metrics.get("related_incident_precision"),
             "related_page_precision": result.metrics.get("related_page_precision"),
             "cost_USD": result.metrics.get("estimated_cost"),
             "latency_ms": result.metrics.get("latency_ms"),
@@ -853,17 +852,18 @@ def _compute_mrr(suggestion_matches: Sequence[BenchmarkSuggestionMatch]) -> floa
     return 1.0 / min(matching_ranks)
 
 
-def _compute_precision(reference_items: Sequence[str], generated_items: Sequence[str]) -> float:
+def _compute_reference_coverage(
+    reference_items: Sequence[str],
+    generated_items: Sequence[str],
+) -> float:
     reference_set = set(reference_items)
     generated_set = set(generated_items)
 
-    if not reference_set and not generated_set:
+    if not reference_set:
         return 1.0
-    if not generated_set:
-        return 0.0
 
-    true_positives = sum(1 for item in generated_set if item in reference_set)
-    return true_positives / len(generated_set)
+    matched_references = sum(1 for item in reference_set if item in generated_set)
+    return matched_references / len(reference_set)
 
 
 def _aggregate_metrics(case_results: Sequence[BenchmarkCaseResult]) -> Dict[str, Optional[float]]:

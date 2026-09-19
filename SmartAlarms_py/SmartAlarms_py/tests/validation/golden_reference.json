@@ -2,120 +2,128 @@
   "dataset_version": "phase1-validation-v3",
   "incidents": [
     {
-      "incident_id": "INC000110969970",
-      "reference_summary": "Route-planning issue in PROD after the 06 Jul 2026 RSU update. The vehicle is online and can find individual charging stations, but for destinations over 100 km it generates no charging stops, risking an infeasible route and battery depletion. ACK and HU reset did not resolve the issue.",
+      "incident_id": "INC000109239880",
+      "reference_summary": "In EMEA E2E, Place Search service tasks are with high memory usage.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Check EMEA PROD requests for routes over 100 km for that VIN and try to reproduce the issue. Check if the issue is isolated or affects more vehicles.",
-          "mitigation": "If the issue is not reproducible ask for more information from the customer. If is reproducible and it affects few cars, present the issue to the business owner so they can decide the next steps. If is reproducible and it affects a lot of cars, rollback the service to a previous stable version."
+          "investigation": "Check the memory usage of the Place Search service tasks and validate is not a normal auto-scaling situation.",
+          "mitigation": "Adapt metrics thresholds or evaluation window to avoid false positives."
         }
       ],
       "reference_related_incidents": [
-        "INC000111049826",
-        "INC000110874888"
+        "INC000109342242",
+        "INC000109262470",
+        "INC000109245740",
+        "INC000109192382",
+        "INC000109188456"
       ],
-      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=2239070952"],
-      "notes": "Manual: Charging stations not found on route"
+      "reference_related_pages": [
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=6173017257",
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8530682146"
+      ],
+      "notes": "Automatic: Random incident"
     },
     {
-      "incident_id": "INC000110574851",
-      "reference_summary": "In EMEA PROD, a customer refers that his car shows the correct location on the car display, but the address on the APP is incorrect.",
+      "incident_id": "INC000108423440",
+      "reference_summary": "In US PROD, Place Search service registered a high number of 5XX errors to history endpoint.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Validate the referred coordinates to check what address is being returned by the service.",
-          "mitigation": "If the issue is provider related, contact the provider to fix the issue."
+          "investigation": "Analyze the errors window in the service logs and verify possible provider connection issues.",
+          "mitigation": "Contact the provider to check if there are any known issues or outages."
         }
       ],
       "reference_related_incidents": [
-        "INC000110572991",
-        "INC000111123080",
-        "INC000110804751",
-        "INC000110781443"
+        "INC000107364949"
+      ],
+      "reference_related_pages": [
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8530682146",
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8535188039"
+      ],
+      "notes": "Automatic: Random incident"
+    },
+    {
+      "incident_id": "INC000109402602",
+      "reference_summary": "In US E2E, Place search service tasks stopped unexpectedly.",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Check if the service tasks are up and running and if there was any deploy or auto-scaling event.",
+          "mitigation": "Propose the team to decomission/update this false positive alarm."
+        }
+      ],
+      "reference_related_incidents": [
+        "INC000109535862",
+        "INC000108847529",
+        "INC000108783722",
+        "INC000108336968",
+        "INC000107350051",
+        "INC000106313743"
       ],
       "reference_related_pages": [],
-      "notes": "Manual: Car location is correct but is address on the APP is incorrect."
+      "notes": "Automatic: Random incident"
     },
     {
-      "incident_id": "INC000111017580",
-      "reference_summary": "In EMEA PROD, we are getting 4XX Errors on Place-Search service in translations public endpoint.",
+      "incident_id": "INC000109046344",
+      "reference_summary": "In US PROD, the NetScaler touchpoint detected too many 429 errors.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Check request logs on the service or the api gateway and indentify the specific status and the client.",
-          "mitigation": "Confirm translations public endpoint 4XX errors are recovered. Communicate with the client to confirm the issue is resolved."
+          "investigation": "Check the api gateway logs for the specific touchpoint, identify the client causing the 429 errors and check the IFC threshold.",
+          "mitigation": "Contact the client to reduce the number of requests or adjust the IFC threshold if the usage is within approved capacity."
         }
       ],
       "reference_related_incidents": [
-        "INC000111017340",
-        "INC000111245228",
-        "INC000111230726",
-        "INC000111194980",
-        "INC000110880719"
+        "INC000109045989",
+        "INC000109045761"
       ],
       "reference_related_pages": [],
-      "notes": "Automatic: Errors 4XX on translations, resolved through the parent incident."
+      "notes": "Automatic: Random incident"
     },
     {
-      "incident_id": "INC000108364726",
-      "reference_summary": "In EMEA PROD, customer can search for fuel stations and obtain routing/distance information, but fuel prices are not displayed.",
+      "incident_id": "INC000110464857",
+      "reference_summary": "In EMEA PROD, the Usage Analytics Streaming Spark lambda has detected an invocation error.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Search for requests made by that vehicle and try to reproduce the issue.",
-          "mitigation": "If no issue is found on the service, contact the client which are responsible for showing the prices."
+          "investigation": "Check the lambda logs for the specific invocation error and check if it is a known issue.",
+          "mitigation": "If related with Lambda memory, increase the memory allocation."
         }
       ],
       "reference_related_incidents": [
-        "INC000108310659",
-        "INC000110839192"
+        "INC000111201265",
+        "INC000110497771",
+        "INC000110734641"
       ],
+      "reference_related_pages": [
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=3962894715",
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=3988145780"
+      ],
+      "notes": "Automatic: Random incident"
+    },
+    {
+      "incident_id": "INC000109653980",
+      "reference_summary": "The US PROD monitoring tests have failed (https://atc-github.azure.cloud.bmw/LOS/los-regression-test/actions/runs/36795386).",
+      "reference_mitigation_suggestions": [
+        {
+          "investigation": "Check the workflow run logs and identify the specific test that failed.",
+          "mitigation": "Identify and contact the provider in failure to fix the issue."
+        }
+      ],
+      "reference_related_incidents": [],
       "reference_related_pages": [],
-      "notes": "Manual: Fuel prices not returned, with related incident."
+      "notes": "Automatic: Random incident"
     },
     {
-      "incident_id": "INC000111250397",
-      "reference_summary": "In US INT, the usage analytics session-store semantic job failed with States.TaskFailed.",
+      "incident_id": "INC000109503364",
+      "reference_summary": "In EMEA E2E, the Place Search service tasks reached their maximum quantity.",
       "reference_mitigation_suggestions": [
         {
-          "investigation": "Check Session Store state machine logs and outputs for errors or memory crashes.",
-          "mitigation": "Retry ua_cdc_te_navisrch_to_session_store_job after investigation."
+          "investigation": "Check the AWS console and indentify why the increase on the service tasks.",
+          "mitigation": "Increase the maximum quantity of tasks or restart them while the issue is not identified."
         }
       ],
-      "reference_related_incidents": ["INC000111222687"],
-      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8764277287"],
-      "notes": "Automatic: UA job failed, with related page"
-    },
-    {
-      "incident_id": "INC000106628604",
-      "reference_summary": "In KR PROD, Places history endpoint is returning 5XX errors.",
-      "reference_mitigation_suggestions": [
-        {
-          "investigation": "Confirm that errors are related with search history service.",
-          "mitigation": "Redirect to the corresponding team (HAWK)."
-        }
+      "reference_related_incidents": [],
+      "reference_related_pages": [
+        "https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=8530682146"
       ],
-      "reference_related_incidents": [
-        "INC000108007136",
-        "INC000107831199",
-        "INC000106903352",
-        "INC000106479179",
-        "INC000106733219"
-      ],
-      "reference_related_pages": ["https://atc.bmwgroup.net/confluence/pages/viewpage.action?pageId=6173017257"],
-      "notes": "Automatic: 5XX errors history, should be redirected"
-    },
-    {
-      "incident_id": "INC000111254019",
-      "reference_summary": "Cloudwatch detected that the EES25-Availability API-key usage exceeded 90% of the Netscaler rate limit for the defined touchpoint.",
-      "reference_mitigation_suggestions": [
-        {
-          "investigation": "Check EES25-Availability API-key usage, quota, and IFC threshold.",
-          "mitigation": "Adjust the IFC threshold if API-key usage is within approved capacity."
-        }
-      ],
-      "reference_related_incidents": [
-        "INC000111175746"
-      ],
-      "reference_related_pages": [],
-      "notes": "Automatic: Previous incident was resolved by adjusting the IFC threshold (without confluence project)"
+      "notes": "Automatic: Random incident"
     }
   ]
 }

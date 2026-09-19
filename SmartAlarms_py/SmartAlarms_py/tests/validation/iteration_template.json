@@ -9,7 +9,6 @@
     "summary_score": null,
     "mrr": null,
     "related_incident_precision": null,
-    "related_incident_correlation": null,
     "related_page_precision": null,
     "cost_USD": null,
     "latency_ms": null,

@@ -148,13 +148,16 @@ def test_load_golden_reference_reads_validation_dataset():
     )
 
 
-def test_related_incident_precision_is_one_when_both_sides_are_empty():
-    from tests.validation.benchmark import _compute_precision
+def test_related_item_precision_requires_all_golden_references_and_ignores_extras():
+    from tests.validation.benchmark import _compute_reference_coverage
 
-    assert _compute_precision([], []) == pytest.approx(1.0)
+    assert _compute_reference_coverage(["INC001", "INC002"], ["INC001", "INC002", "INC003"]) == pytest.approx(1.0)
+    assert _compute_reference_coverage(["INC001", "INC002"], ["INC001", "INC003"]) == pytest.approx(0.5)
+    assert _compute_reference_coverage([], []) == pytest.approx(1.0)
+    assert _compute_reference_coverage([], ["INC003"]) == pytest.approx(1.0)
 
 
-def test_related_page_precision_uses_urls_and_scores_empty_sets_as_perfect_match():
+def test_related_page_precision_uses_urls_and_ignores_extra_pages():
     reference = BenchmarkCaseReference(
         incident_id="INC000000000001",
         reference_summary="Service requests are failing.",
@@ -184,7 +187,7 @@ def test_related_page_precision_uses_urls_and_scores_empty_sets_as_perfect_match
     related_page_scores = {
         case.incident_id: case.related_page_precision for case in evaluation.cases
     }
-    assert related_page_scores[reference.incident_id] == pytest.approx(0.5)
+    assert related_page_scores[reference.incident_id] == pytest.approx(1.0)
     assert related_page_scores[empty_reference.incident_id] == pytest.approx(1.0)
 
 
@@ -560,6 +563,7 @@ def test_validation_cli_writes_aggregated_report_from_local_service(tmp_path, mo
     assert report["judge_model_name"] == "judge-model"
     assert report["metrics"]["mrr"] == pytest.approx(1.0)
     assert "top_k_accuracy" not in report["metrics"]
+    assert "related_incident_correlation" not in report["metrics"]
     assert all(
         result["mrr"] == pytest.approx(1.0)
         for case in report["cases"]

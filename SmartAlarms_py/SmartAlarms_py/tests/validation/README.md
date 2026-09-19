@@ -56,9 +56,9 @@ object contains the quality and telemetry means across successful calls; failed 
 `results` but do not contribute quality metrics. Service cost and latency remain separate from
 judge cost and latency.
 
-Related incident and related page precision compare returned identifiers against the golden
-reference. Pages use their URLs as identifiers. Both metrics score `1.0` when neither the
-reference nor the response contains related items.
+Related incident and related page precision measure golden-reference coverage: every golden
+identifier present in the response scores `1.0`, regardless of additional related items returned.
+Pages use their URLs as identifiers. An empty golden reference also scores `1.0`.
 
 Add expected page URLs to each golden reference incident with `reference_related_pages`. Either
 plain URL strings or objects containing a `url` field are accepted.
