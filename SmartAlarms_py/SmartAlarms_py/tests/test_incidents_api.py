@@ -1,7 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
 import httpx2 as httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from src.domain.incident import IncidentDetails
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.llm import (
@@ -125,6 +129,29 @@ class FailingLlmGateway:
         raise LlmGatewayUnavailableError("gateway unavailable")
 
 
+class ConcurrentIncidentDetailsService:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._active_requests = 0
+        self.concurrent_requests_observed = False
+        self._concurrent_request_started = threading.Event()
+
+    def fetch_incident_details(self, incident_ids):
+        with self._lock:
+            self._active_requests += 1
+            if self._active_requests >= 2:
+                self.concurrent_requests_observed = True
+                self._concurrent_request_started.set()
+
+        self._concurrent_request_started.wait(timeout=1)
+
+        with self._lock:
+            self._active_requests -= 1
+
+        incident_id = next(iter(incident_ids))
+        return [IncidentDetails(id=incident_id)]
+
+
 @pytest.fixture
 def enriched_client():
     app.state.incident_details_service = IncidentDetailsService(
@@ -204,6 +231,27 @@ class TestIncidentDetailsEndpoint:
             "code": "UNAUTHORIZED",
             "details": [],
         }
+
+    def test_endpoint_processes_concurrent_requests_without_blocking_event_loop(self):
+        service = ConcurrentIncidentDetailsService()
+        app.state.incident_details_service = service
+        try:
+            with TestClient(app) as test_client:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    responses = list(
+                        executor.map(
+                            lambda incident_id: test_client.get(
+                                "/incident/details",
+                                params={"incidentIds": incident_id},
+                            ),
+                            ["INC000000000001", "INC000000000002"],
+                        )
+                    )
+        finally:
+            del app.state.incident_details_service
+
+        assert [response.status_code for response in responses] == [200, 200]
+        assert service.concurrent_requests_observed is True
 
 
 class TestIncidentDetailsValidation:

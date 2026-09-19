@@ -52,6 +52,7 @@ the same response.
 | CA-6 | The LLM is unavailable or fails for a request                           | The endpoint processes the request    | The service still returns base incident data through the existing contract, with enrichment fields absent/empty per contract rules |
 | CA-7 | The incident context includes Hub and Environment values | The LLM generates the incident summary | The summary includes the affected Hub and Environment when available, without inventing unavailable values |
 | CA-8 | Relevant Confluence pages are provided to the LLM | The LLM generates mitigation suggestions | Each suggestion references only the supplied pages whose summarized content it used as evidence, preserving their exact title and URL; suggestions with no page evidence return an empty list |
+| CA-9 | Two or more valid incident-details requests arrive together | Each request performs blocking ITSM, Confluence, or LLM I/O | The API keeps the event loop available and processes the requests concurrently while preserving isolated request observability context |
 
 ## 6) Functional Design
 
@@ -70,6 +71,8 @@ the same response.
       exact supplied title and URL. The domain filters page attributions against the supplied pages before returning
       them in the API response.
     - Domain merges summary, mitigation suggestions, and related references into incident output.
+    - Presentation dispatches the synchronous domain request work through the framework thread pool so separate API
+      requests can make progress concurrently without blocking the event loop.
 - Error path: if LLM fails, preserve base incident data and return without blocking the endpoint response.
 
 ## 7) Data and Integration Design
@@ -142,6 +145,7 @@ list.
 
 - `GET /incident/details` returns base incident data plus LLM enrichment on successful LLM calls.
 - `GET /incident/details` still returns base incident data when the LLM call fails.
+- Concurrent `GET /incident/details` requests run blocking domain work concurrently and each return a valid response.
 
 ## 12) Implementation Notes
 

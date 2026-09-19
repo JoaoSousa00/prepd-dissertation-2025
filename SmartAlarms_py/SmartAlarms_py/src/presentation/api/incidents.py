@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from src.domain.incident_details import IncidentDetailsService
 from src.domain.incident_fetching import IncidentFetchingService
 from src.domain.incident import IncidentSourceUnauthorizedError
@@ -89,7 +90,10 @@ async def get_incident_details(
 
     incident_details_service = get_incident_details_service(request)
     try:
-        incident_details = incident_details_service.fetch_incident_details(incidentIds)
+        incident_details = await run_in_threadpool(
+            incident_details_service.fetch_incident_details,
+            incidentIds,
+        )
     except IncidentSourceUnauthorizedError as exc:
         if context is not None:
             context.record_itsm_error(str(exc), 401)
