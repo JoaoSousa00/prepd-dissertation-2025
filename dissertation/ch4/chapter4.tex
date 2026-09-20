@@ -1,24 +1,11 @@
 % Chapter 4
 
-\chapter{Análise} % Main chapter title
+\chapter{Análise e Desenho} % Main chapter title
 \label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
 
 	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
 	
 	Assim, a solução, através da integração com um \gls{LLM}, deve ser capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução é baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Com o apoio de integrações externas, como \textit{Confluence}, pretende-se também aumentar o contexto do serviço afetado de forma a indicar uma mitigação mais viável. Com a correlação de incidentes funcional e documentação dos próprios produtos, procura-se encontrar sugestões de mitigação para o utilizador que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
-
-%----------------------------------------------------------------------------------------
-\section{Desenho da Solução}
-
-	Como referido anteriormente, o objetivo da solução passa por integrar com diversos serviços externos, tais como:
-	
-	\begin{itemize}
-		\item \textbf{Serviço de incidentes:} apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
-		\item \textbf{Serviço de documentação:} com informação retirada do incidente, fornece documentação do serviço afetado;
-		\item \textbf{Motor \gls{LLM}:} outro elemento que devemos considerar como base da solução, visto que é responsável por fazer a ligação entre o incidente principal, os incidentes relacionados e a documentação do serviço devolvendo um resumo em linguagem natural e as sugestões de mitigação priorizarizadas.
-	\end{itemize}
-	
-	Assim, a solução proposta combina a informação obtida do serviço de incidentes e documentação com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação.
 
 %----------------------------------------------------------------------------------------
 \section{Dataset}
@@ -241,6 +228,49 @@
 			\caption[Requisitos não Funcionais]{Requisitos não Funcionais}
 			\label{tab:requisitos_nao_funcionais}
 		\end{table}
+	
+\section{Desenho}
+	
+	Como referido anteriormente, o objetivo da solução passa por integrar com diversos serviços externos, tais como:
+	\begin{itemize}
+		\item \textbf{Serviço de incidentes:} apresenta-se como sendo a base da solução, é a partir deste serviço que retiramos a informação do incidente a ser analisado e do histórico de incidentes, para realizar a correlação;
+		\item \textbf{Serviço de documentação:} com informação retirada do incidente, fornece documentação do serviço afetado;
+		\item \textbf{Motor \gls{LLM}:} outro elemento que devemos considerar como base da solução, visto que é responsável por fazer a ligação entre o incidente principal, os incidentes relacionados e a documentação do serviço devolvendo um resumo em linguagem natural e as sugestões de mitigação priorizarizadas.
+	\end{itemize}
+	
+	Assim, a solução proposta combina a informação obtida do serviço de incidentes e documentação com as capacidades de análise do motor \gls{LLM}. Esta combinação permite analisar o incidente atual com base no histórico disponível, gerar uma descrição em linguagem natural e apresentar sugestões de mitigação.
+	
+%----------------------------------------------------------------------------------------
+	\subsection{Diagrama de Implantação}
+	
+	Para além dos serviços funcionais descritos, a solução proposta deve, futuramente, ser exposta através de uma interface de acesso controlada e escalável. Desta forma, propomos a utilização de um \textit{API Gateway} (Gateway de API) para agir como uma porta de entrada do serviço, controlando autorizações e acessos, e gerir o tráfego de pedidos feitos à \gls{API}. Em paralelo, apresentamos a necessidade de um \textit{Load Balancer} (balanceador de carga) que ajuda a distribuir tráfego entre múltiplas instâncias do serviço, assegurando maior disponibilidade e tolerância a falhas.
+	
+	Adicionalmente, é sugerido o desenvolvimento de uma aplicação \textit{Web} que permita a visualização da informação gerada por parte dos \gls{OCEs}, onde estes poderão consultar o resumo do incidente pretendido, \textit{tickets} relacionados e sugestões de mitigação.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=110mm,keepaspectratio]{img/diagramaDeployment_v3}
+		\caption[Diagrama de Implantação]{Diagrama de Implantação}
+		\label{fig:deployDiagram}
+	\end{figure}
+	
+	%----------------------------------------------------------------------------------------
+	\subsection{Diagrama de Sequência}
+	
+	O diagrama de sequência apresentado na Figura \ref{fig:sequenceDiagram}, representa um fluxo bem sucedido de recuperação e enriquecimento de contexto utilizado na análise de um incidente. O processo começa, com a obtenção dos dados do incidente, através do serviço de \textit{ITSM}. De seguida, é realizada uma primeira chamada ao \gls{LLM}, utilizando a informação do incidente e com o objetivo de identificar possíveis incidentes relacionados e o serviço afetado.
+	
+	Com base no serviço identificado, o sistema pesquisa as páginas disponíveis no espaço definido do \textit{Confluence} e obtém o conteúdo de cada uma. Para cada página encontrada, é realizada uma chamada ao \gls{LLM}, onde o modelo avalia se o conteúdo da página é relevante para o incidente em análise. Este processo é repetido até que todas as páginas obtidas sejam verificadas. Desta forma, cada página é analisada individualmente com base no contexto do incidente, de forma, a que o modelo não crie alucinações.
+	
+	De seguida, o sistema pesquisa no \textit{ITSM} outros incidentes com o mesmo título do incidente em análise, mantendo apenas os dados considerados relevantes. Os incidentes relacionados identificados na primeira etapa são também obtidos e combinados com a restante informação recolhida.
+	
+	Por fim, o incidente original, os incidentes relacionados, os incidentes com o mesmo título e as páginas consideradas relevantes são enviados numa chamada final ao \gls{LLM}. Esta chamada utiliza todo o contexto recolhido para produzir o resumo do incidente e as respetivas sugestões de mitigação.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/diagramaSequencia_v3}
+		\caption[Diagrama de Sequência]{Diagrama de Sequência}
+		\label{fig:sequenceDiagram}
+	\end{figure}
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
