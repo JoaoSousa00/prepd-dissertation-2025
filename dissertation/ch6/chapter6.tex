@@ -321,6 +321,66 @@
 			Estas configurações permitem ajustar o nível de informação utilizado pelo sistema de acordo com as necessidades do projeto e com os recursos disponíveis. Em conjunto com o acompanhamento do custo e do tempo de execução, permitem avaliar o impacto das alterações realizadas e encontrar um equilíbrio entre a quantidade de contexto fornecida ao \gls{LLM} e o custo de cada análise.
 			
 			Com esta abordagem é possível cumprir o \textit{RNF-03}, que define que o sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis.
+			
+\section{Caso de Uso}
+	
+	% O trabalho permitido permite realizar pedidos através de uma API, como se vê na figura X (imagem do postman). O unico campo a passar é o ID do incidente, porém é necessário estar na rede interna da Empresa.
+	
+	% Apresentar a resposta:
+		% Contem ID, titulo e descrição do incidente
+		% Contem resumo gerado
+		% Contem lista de sugestões ordenada pela prioridade
+			% Cada sugestão tem investigação, mitigação, incidentes relacionados e paginas relacionadas
+		% Contem o custo, tokens e modelo usados pelo LLM
+	
+	A solução desenvolvida pode ser utilizada através de uma \textit{API} que permite iniciar a análise de um incidente. Para realizar um pedido, é necessário fornecer apenas o identificador do incidente, porém, por se tratar de um serviço interno, o pedido tem de ser realizado a partir da rede interna da empresa.
+	
+	A figura \ref{fig:postmanRequest} apresenta um exemplo de um pedido realizado através do \textit{Postman}. Neste caso, o identificador do incidente é enviado no pedido e o serviço é responsável por obter a restante informação necessária através dos sistemas integrados.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=100mm,keepaspectratio]{img/postmanRequest}
+		\caption[Exemplo de um Pedido ao Serviço]{Exemplo de um Pedido ao Serviço}
+		\label{fig:postmanRequest}
+	\end{figure}
+	
+	Após a execução da análise, o serviço devolve uma resposta, visivel na figura \ref{fig:postmanResponse1}, \ref{fig:postmanResponse2} e \ref{fig:postmanResponse3}, contendo a informação principal do incidente, incluindo o seu identificador, título e descrição. A resposta inclui também o resumo gerado pelo \gls{LLM} e uma lista de sugestões de mitigação ordenadas pela prioridade atribuída pelo modelo.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=100mm,keepaspectratio]{img/postmanResponse1}
+		\caption[Detalhes do Incidente na Resposta do Serviço]{Detalhes do Incidente na Resposta do Serviço}
+		\label{fig:postmanResponse1}
+	\end{figure}
+	
+		O exemplo aqui apresentado é uma amostra perfeita de um incidente manual com demasiada informação irrelevante. A descrição deste incidente conta com 2952 letras e 628 palavras, dificultando e atrasando a análise do incidente com informação repetida e irrelevante à investigação e resolução. Já o resumo gerado pelo serviço, descreve o mesmo problema em apenas 399 letras e 71 palavras, indicando uma redução de 88\% de palavras.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=100mm,keepaspectratio]{img/postmanResponse2}
+		\caption[Resumo Gerado pelo Serviço]{Resumo Gerado pelo Serviço}
+		\label{fig:postmanResponse2}
+	\end{figure}
+	
+	Ainda que o serviço não tenha identificado incidentes relacionados para o contexto do problema, conseguiu, pela própria analise do incidente e com base em documentação relevante, fornecer um resumo e sugestão de investigação correta e passível de ser utilizado pela equipa de suporte.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=100mm,keepaspectratio]{img/postmanResponse3}
+		\caption[Sugestões Geradas pelo Serviço]{Sugestões Geradas pelo Serviço}
+		\label{fig:postmanResponse3}
+	\end{figure}
+	
+	Assim sendo, podemos afirmar que cada sugestão contém a informação necessária para compreender e validar a possível solução, incluindo os passos de investigação, a ação de mitigação proposta, os incidentes relacionados e as páginas do \textit{Confluence} consideradas relevantes. Desta forma, a resposta não apresenta apenas uma possível ação para resolver o problema, mas também o contexto utilizado para chegar a essa sugestão.
+	
+	Por fim, são disponibilizadas informações relativas à execução do \gls{LLM} (figura \ref{fig:postmanResponse5}), nomeadamente o modelo utilizado, o número de \textit{tokens} processados e o custo associado à análise. Estas informações permitem acompanhar o consumo de cada execução.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=100mm,keepaspectratio]{img/postmanResponse5}
+		\caption[Informações Adicionais fornecidas pelo Serviço]{Informações Adicionais fornecidas pelo Serviço}
+		\label{fig:postmanResponse5}
+	\end{figure}
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}

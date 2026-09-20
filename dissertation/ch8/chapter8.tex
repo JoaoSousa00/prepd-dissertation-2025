@@ -2,16 +2,21 @@
 
 \chapter{Conclusão} % Main chapter title
 \label{chap:Chapter8} % For referencing the chapter elsewhere, use \ref{chap:Chapter8} 
-\todo{TODO}
+
+	Neste capítulo são apresentadas as conclusões finais deste projeto. São também mencionados os próximos passos para que o projeto possa ser adotado, tirando partido da solução desenvolvida.
 
 %----------------------------------------------------------------------------------------
 \section{Trabalho Realizado}
-	% Alcançamos os objetivos funcionais e nao funcionais
-
-%----------------------------------------------------------------------------------------
-\section{Limitações}
-	% Qualidade das notas de resolução que por norma sao imcompletos
-
+	% Alcançamos os objetivos , e os requisitos funcionais e nao funcionais importantes (dizer como e especifica-los na sua generalidade)
+	
+	O trabalho realizado foi de encontro ao inicialmente antecipado, cumprindo não só os objetivos definidos como também todos os requisitos funcionais e não funcionais propostos no planeamento do projeto. Assim, foi possível finalizar um protótipo capaz de resumir incidentes com vasta informação e sugerir potenciais formas de investigação e mitigação, através de integrações externas que, normalmente, seriam processos morosos para os habituais membros das equipas de suporte.
+	
+	Como referido anteriormente, a solução desenvolvida não se limitou ao cumprimento dos objetivos definidos, tendo também sido implementada de acordo com os requisitos funcionais e não funcionais estabelecidos. Procurou-se, desta forma, desenvolver um serviço que seguisse boas práticas de engenharia de software, utilizando tecnologias, ferramentas e técnicas atuais ao longo do seu desenvolvimento.
+	
+	A solução permite integrar diferentes fontes de informação, nomeadamente o serviço de \textit{ITSM} e o \textit{Confluence}, utilizando essa informação para enriquecer a análise dos incidentes e gerar resumos e sugestões de mitigação. Ao mesmo tempo, foram consideradas questões como a proteção de informação sensível, o controlo da quantidade de informação enviada para o \gls{LLM} e a possibilidade de configurar parâmetros como o modelo utilizado, o número máximo de incidentes e de páginas analisadas.
+	
+	Desta forma, foi possível obter um serviço que combina a integração com os sistemas existentes com a utilização de \gls{LLM} e \textit{RAG}, mantendo uma estrutura preparada para futuras alterações e melhorias.
+	
 
 %----------------------------------------------------------------------------------------
 \section{Trabalho Futuro}
@@ -21,6 +26,30 @@
 	% Modelo de LLM configurável por chamada
 		% Porque cada chamada tem um intuito diferente e pode ser melhor dependendo do modelo
 	% Criar cache com "keywords" para a documentação para não ter de ir ao LLM para cada page de documentação (porque no total tem custado 10cents)
+	
+	Após a avaliação dos resultados dos testes efetuados sobre a aplicação desenvolvida, do feedback recolhido junto da equipa de operações e tendo em conta algumas funcionalidades previstas no planeamento inicial, foram identificados alguns pontos que poderão ser explorados como melhorias futuras.
+	
+	Uma das possíveis melhorias seria a integração dos anexos dos incidentes no contexto utilizado pelo \gls{LLM}. Estes ficheiros podem conter informação relevante para a análise, mas a sua integração apresenta alguma complexidade, uma vez que podem conter diferentes tipos de informação, como texto ou imagens, e ter quantidades de informação elevada.
+	
+	Outra possibilidade seria a integração com o serviço de \textit{logs} utilizado pela equipa. Esta informação é frequentemente essencial durante a análise de incidentes e poderia fornecer contexto adicional ao \gls{LLM}, permitindo complementar a informação existente nos incidentes e na documentação.
+	
+	Também poderia ser considerada a inclusão do código dos serviços no contexto da análise. Esta informação poderia ser particularmente útil em incidentes relacionados com anomalias ou alterações recentes nos serviços, permitindo relacionar o problema identificado com o código responsável pelo seu funcionamento.
+	
+	Ao nível da utilização dos modelos, uma possível melhoria seria permitir que o modelo de \gls{LLM} fosse configurado individualmente para cada chamada. Atualmente, diferentes etapas da análise utilizam o modelo de forma semelhante, apesar de terem objetivos diferentes. A utilização de modelos diferentes em cada etapa poderia permitir ajustar o equilíbrio entre qualidade, custo e latência de acordo com a tarefa realizada.
+	
+	Outra melhoria seria o desenvolvimento de uma interface gráfica para a solução. Atualmente, a análise é realizada através da \textit{API}, o que é suficiente para utilizar e testar o serviço, mas uma interface dedicada poderia proporcionar uma experiência mais simples aos elementos da equipa de operações. Esta interface poderia apresentar de forma mais clara o resumo do incidente, as sugestões de mitigação e o respetivo contexto, facilitando a consulta dos resultados durante a análise de um incidente.
+	
+	Por fim, a pesquisa de documentação poderia ser otimizada através da criação de uma \textit{cache} ou de um mecanismo de pré-filtragem baseado em palavras chave. Desta forma, nem todas as páginas teriam de ser enviadas para o \gls{LLM} para determinar a sua relevância. Esta alteração poderia reduzir significativamente o número de chamadas realizadas durante cada análise e, consequentemente, o custo e a latência associados a esta etapa.
 
 %----------------------------------------------------------------------------------------
 \section{Apreciação Final}
+	% Responder à questão de PREPD
+	
+	Podemos então responder à questão “Como é que as ferramentas de \textit{Large Language Models} podem melhorar a interpretação e análise de registos de incidentes de TI?”, afirmando que 
+	
+	
+	
+	
+	
+	
+	
