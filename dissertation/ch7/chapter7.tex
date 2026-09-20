@@ -7,37 +7,455 @@
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia}
-	% falar dos testes de validação que temos
-		% Como defininos a golden reference
-		% Que casos de teste escolhemos para fazer os testes
-	% comparar com e sem work_notes
-	% Devemos conseguir concluir que há coisas a melhorar (trabalho futuro)
+
+	% Inicialmente, e por causa dos artigos lidos no estado da arte, ia fazer a avaliação usando ROUGE, precision@k  mas:
+	% O rouge tinha uma problema analisava palavra literal a palavra literal
+	% O precision@k faria sentido se na golden reference tivessemos varias golden suggestions mas não é o caso definimos só a sugestão ideal
+	
+	% Então optou-se por alterar para LLM-as-a-judge, algo que o próprio langfuse permite e aconselha (no nosso caso não usamos o do langfuse porque o host não permitia a conexão ao LLM) e trocar o precision@k por MRR para avaliar se a sugestão preferida estaria nos primeiros lugares
+	
+	% Para incidentes relacionados e paginas relacionadas decidimos usar apenas precisão porque queriamos perceber se os incidentes estavam apenas  presentes na resposta ou não
+	
+	% Para custos e latência, avaliamos a média de todos os pedidos efetuados
+	
+	% Foi então definido um conjuntos de incidentes para os testes. Foram escolhidos 15 incidentes, onde 7 foram escolhidos a dedo (edge cases conhecidos) e os restantes 8 foram escolhidos aleatoriamente do dataset:
+	%1 Incidente Manual com fallback: INC000110969970 —> Manual charging stations na rota
+	% 		 1 incidente Manual sem fallback: INC000110574851
+	% 		 1 Incidente Automático: INC000111017580 
+	% 		 1 Incidente com referência a outro: INC000108364726 (relacionado no parent)
+	% 		 1 incidente com uma página relacionada: INC000111250397 
+	% 		 1 incidente que deve ser redirecionado: INC000106628604
+	% 		 1 incidente sem projeto relacionado: INC000111254019
+	% 		 + 8 incidentes random
+	
+	% Para a analise dos resumos, das sugestões, das coisas relacionadas e dos custos e latência foram corridos testes contra a golden reference e foi feita 15x a analise de cada incidente (o modelo usado foi o openai/gpt-5.6-terra)
+	
+	% Para a analise dos diferentes modelos, foram realizados testes mais soft por alguma razao (talvez porque vamos testar )... e então o mesmo golden reference so foi corrido 2x
+	%	 		openai/gpt-5.6-terra (referência de qualidade)
+	%	 		claude-sonnet-5 (forte em compreensão e síntese)
+	%	 		openai/gpt-5.6-luna (alternativa próxima do Terra)
+	%	 		gemini-3.8-flash (boa relação custo/latência)
+	%	 		openai/gpt-5.4-mini (baseline económico)
+	
+	A metodologia de avaliação, considerava, inicialmente, métricas como a \gls{ROUGE} e a \textit{Precision@k}, utilizadas em trabalhos semelhantes encontrados durante o estado da arte. No entanto, no decorrer da preparação da avaliação foram identificadas algumas limitações na utilização destas métricas para o contexto deste projeto.
+	
+	No caso da métrica \gls{ROUGE}, a comparação é baseada na sobreposição de palavras entre a resposta gerada e a \textit{golden reference}. Esta analogia, pode não representar corretamente a qualidade de uma resposta gerada por um \gls{LLM}, uma vez que duas respostas podem transmitir a mesma informação utilizando palavras ou estruturas diferentes. Dessa forma, optou-se por utilizar uma abordagem de \textit{LLM-as-a-judge}, onde um segundo modelo de \gls{LLM}, avalia a resposta gerada tendo em conta a \textit{golden reference} definida.
+	
+	Na implementação da abordagem \textit{LLM-as-a-judge}, foi desenvolvido um prompt para guiar e ajudar o juiz (\gls{LLM}), na avaliação dos resumos e sugestões. No texto enviado ao modelo, foi definida a rúbrica de avaliação, presente na tabela \ref{tab:rubrica_avaliacao}, que nos permitiu ter valores para avaliar e comparar no final.
+	
+	\begin{table}[H]
+		\centering
+		\begin{tabular}{|p{2cm}|p{11cm}|}
+			\hline
+			\textbf{Avaliação} & \textbf{Descrição} \\
+			\hline
+			1 & Completamente irrelevante \\
+			\hline
+			2 & Pouco relevante e maioritariamente incorreto \\
+			\hline
+			3 & Parcialmente relevante e correto mas falta elementos chave \\
+			\hline
+			4 & Maioritariamente correto, com pequenas diferenças e informação extra irrelevante \\
+			\hline
+			5 & Completamente correto e significado exatamente igual \\
+			\hline
+		\end{tabular}
+		\caption[Campos Utilizados do Dataset]{Campos Utilizados do Dataset}
+		\label{tab:rubrica_avaliacao}
+	\end{table}
+	
+	A \textit{Precision@k} também não foi considerada adequada para a avaliação das sugestões de mitigação. Esta métrica, seria mais indicada caso existissem várias sugestões consideradas corretas na \textit{golden reference}. Neste contexto, foi definida apenas uma sugestão considerada ideal para cada incidente, pelo que se pretende principalmente avaliar se essa sugestão aparece nos primeiros lugares da resposta. Assim, optou-se pela utilização do \gls{MRR}, que permite avaliar a posição em que a sugestão esperada é apresentada.
+	
+	Para a avaliação dos incidentes relacionados e das páginas relacionadas, foi utilizada a cobertura (ou \textit{recall@k}), uma vez que o objetivo é verificar se os elementos considerados relevantes estão presentes nos resultados apresentados. Para além da qualidade dos resultados, foram também avaliados o custo e a latência da solução, considerando a média dos valores obtidos nos diferentes pedidos realizados.
+	
+	Para realizar os testes, foi elencado um conjunto de quinze incidentes que, juntos, formam a \textit{golden reference}, um exemplo pode ser visto na figura \ref{fig:golden_reference}. Os sete primeiros incidentes, foram selecionados manualmente de forma a representar diferentes situações relevantes para a avaliação, e, os restantes oito foram selecionados aleatoriamente a partir do \textit{dataset}. Desta forma, procurou-se combinar casos específicos, escolhidos para testar comportamentos conhecidos da solução, com casos selecionados de forma aleatória.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/golden_reference}
+		\caption[Exemplo de uma \textit{Golden Reference}]{Exemplo de uma \textit{Golden Reference}}
+		\label{fig:golden_reference}
+	\end{figure}
+	
+	Para definir cada \textit{golden reference}, foi estabelecido um resumo simples em conjunto com a equipa atribuida ao incidente. Foi também acompanhado o processo de resolução, de forma a ser possivel indicar a sugestão de investigação e mitigação utilizado para resolver efetivamente o incidente em questão.
+	
+	Para a avaliação dos resumos, sugestões, elementos relacionados, custo e latência, cada um dos quinze incidentes foi analisado dez vezes utilizando o modelo \texttt{openai/gpt-5.6-terra}. Os resultados, obtidos comparando com as respetivas \textit{golden references} e a repetição das analises permitiram reduzir o impacto das diferenças entre respostas produzidas pelo modelo e obter uma avaliação mais consistente.
+	
+	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.6-luna}, o \textit{openai/gpt-5.4-mini}, o \textit{claude-sonnet-5} e o \textit{gemini-3.8-flash}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
+
+
+%----------------------------------------------------------------------------------------
+\section{Análise dos resultados}
+
+	As seguintes análises, foram um resultado de testes realizados contra o conjunto de incidentes definido na \textit{golden reference}. A escolha dos incidentes já foi referiada anteriormente, mas é apresentada com mais pormenor na tabela \ref{tab:Incidentes_golden}.
+	
+	\begin{table}[H]
+		\centering
+		\begin{tabular}{|p{2.5cm}|p{10cm}|}
+			\hline
+			\textbf{Identificador} & \textbf{Descrição} \\
+			\hline
+			\textit{INC001} & Incidente manual com recurso ao mecanismo de \textit{fallback} \\
+			\hline
+			\textit{INC002} & Incidente manual com incidentes com o mesmo título\\
+			\hline
+			\textit{INC003} & Incidente automático \\
+			\hline
+			\textit{INC004} & Incidente com referência a outro incidente nos seus campos \\
+			\hline
+			\textit{INC005} & Incidente com documentação relacionada \\
+			\hline
+			\textit{INC006} & Incidente que deve ser redirecionado \\
+			\hline
+			\textit{INC007} & Incidente genérico, sem documentação relacionada \\
+			\hline
+			\textit{INC008} a \textit{INC0015} & Incidentes aleatórios distintos \\
+			\hline
+		\end{tabular}
+		\caption[Incidentes na \textit{Golden Reference}]{Incidentes na \textit{Golden Reference}}
+		\label{tab:Incidentes_golden}
+	\end{table}
 
 %----------------------------------------------------------------------------------------
 	\subsection{Avaliação dos Resumos}
-	
+		
+		% Definir métricas esperadas
+			%Falar dos 150 resultados
+		% Apresentar métricas obtidas
+		% Análise
+		% Possiveis melhorias
+		
+		Tendo por base, a rubrica de avaliação da tabela \ref{tab:rubrica_avaliacao}, definimos como objetivo, que os resumos gerados tivessem na sua maioria corretos e com todos os elementos chave. Estes, são os objetivos que permitem aos membros da equipa de suporte compreender o incidente, independentemente do nível de senioridade, do contexto do produto ou da hora em que o problema ocorre. Assim, a tabela \ref{tab:classificacao-resumos} apresenta os critérios para a avaliação dos resumos gerados.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Classificação média pretendida &  $\geq4.0$ \\
+				\hline
+				Percentagem de resumos com classificação $\geq4.0$ & 90\% \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Avaliação dos Resumos]{Critérios de Avaliação dos Resumos}
+			\label{tab:classificacao-resumos}
+		\end{table}
+		
+		Para a definição da classificação atribuída a cada resumo gerado, o \textit{LLM-as-a-Judge}, utilizou a escala apresentada na tabela \ref{tab:rubrica_avaliacao}. Em cada iteração dos testes, o \gls{LLM} comparava o resultado obtido na análise do serviço com a \textit{golden reference} e atribuía um dos valores da escala.
+		
+		A bateria de testes executada, contou com 150 análises, tendo em conta, que foram analisados quinze incidentes e cada um foi iterado dez vezes para evitar incoerências dos modelos de \gls{LLM}. Dessa forma, foram obtido os resultados presentes na tabela \ref{tab:avaliacao-resumos}, que demonstram que os critérios previamente definidos foram alcançados. Isto significa que, o serviço foi capaz de gerar, na sua maioria (98.6\%), resumos maioritariamente corretos, com pequenas diferenças (nível 4).
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Classificação 3 & 2 (1,3\%) \\
+				\hline
+				Classificação 4 & 119 (79,3\%) \\
+				\hline
+				Classificação 5 & 29 (19,3\%) \\
+				\hline
+				Percentagem de resumos com classificação $\geq4.0$ & 98.6\% \\
+				\hline
+				Classificação média & 4,18 \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação dos Resumos Gerados]{Avaliação dos Resumos Gerados}
+			\label{tab:avaliacao-resumos}
+		\end{table}
+		
+		\todo{Se me lembrar mais analise ou conclusões}
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Avaliação das Sugestões de Mitigação}
 	
+		% Definir métricas esperadas
+		% Apresentar métricas obtidas
+		% Análise
+		% Possiveis melhorias
+		
+		Tal como na avaliação dos resumos, foram definidos os objetivos para classificar o sucesso, ou não, do serviço na criação de sugestões de mitigação. Assim, a tabela \ref{tab:classificacao-sugestoes} apresenta os o \gls{MRR} pretendido, evidenciando, o objetivo de ter a sugestão da \textit{golden reference} nas posições mais elevadas, surgindo no topo da lista. Apresenta ainda, o objetivo de ter a sugestão real no top-1, em 75\% ou mais, dos casos.
+				
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				\gls{MRR} médio pretendido & $\geq0.80$ \\
+				\hline
+				Top-1 pretendido & $\geq75\%$ \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Avaliação das Sugestões]{Critérios de Avaliação das Sugestões}
+			\label{tab:classificacao-sugestoes}
+		\end{table}
+		
+		Observou-se, no entanto, que estes objetivos não foram totalmente cumpridos, tal como demonstra a tabela \ref{tab:avaliacao-sugestoes}. O \gls{MRR} médio obtido foi de 0,472, sendo que,  em 40,7\% dos casos a sugestão correspondente à \textit{golden reference} encontra-se na primeira posição, aumentando para 55,3\% quando são consideradas as três primeiras posições. Em 44,0\% dos casos não foi encontrada qualquer correspondência entre a \textit{golden reference} e as sugestões geradas.
+	
+		Estes resultados devem-se, na sua maioria, ao facto de muitas das sugestões presentes nas \textit{golden references} não terem correspondência direta com as sugestões fornecidas pelo serviço. Isto acontece porque as sugestões de referência correspondem a soluções reais para os problemas analisados. Mesmo existindo histórico de incidentes, uma única sugestão de investigação pode não ser suficiente para realizar uma análise completa dos incidentes de referência.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				\gls{MRR} médio & 0,472 \\
+				\hline
+				Top-1 (até posição 1) & 61 (40,7\%) \\
+				\hline
+				Top-2 (até posição 2) & 74 (49,3\%) \\
+				\hline
+				Top-3 (até posição 3) & 83 (55,3\%) \\
+				\hline
+				Top-4 (até posição 4) & 84 (56,0\%) \\
+				\hline
+				Sem correspondência & 66 (44,0\%) \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação das Sugestões Geradas]{Avaliação das Sugestões Geradas}
+			\label{tab:avaliacao-sugestoes}
+		\end{table}
+		
+		Se realizarmos a mesma analise, retirando os casos em que as sugestões não têm correspondência, verificamos que os resultados são mais positivos, visível na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Cumpre-se assim o objetivo relacionado com o \gls{MRR}, que evidencia que as sugestões com correspondência estão, na sua maioria, no topo das sugestões.
+		
+		Para perceber o desempenho do serviço nos casos em que existe uma correspondência, foi realizada uma segunda análise, excluindo os casos em que não foi encontrada qualquer sugestão correspondente. Os resultados são apresentados na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Nesta análise, o \gls{MRR} médio aumenta para 0,842, cumprindo o objetivo apresentado na tabela \ref{tab:classificacao-sugestoes}. Para além disso, 72,6\% das sugestões correspondentes encontram-se na primeira posição, também aproximando-se do valor alvo.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				\gls{MRR} médio & 0,842 \\
+				\hline
+				Top-1 & 61 (72,6\%) \\
+				\hline
+				Top-2 & 74 (88,1\%) \\
+				\hline
+				Top-3 & 83 (98,8\%) \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação das Sugestões Geradas (Exclui não Correspondências)]{Avaliação das Sugestões Geradas (Exclui não Correspondências)}
+			\label{tab:avaliacao-sugestoes_sem_correspondencia}
+		\end{table}
+		
+		Estes resultados permitem verificar que, quando o serviço gera uma sugestão correspondente à \textit{golden reference}, esta tende a ser apresentada nas primeiras posições da resposta.
 	
 %----------------------------------------------------------------------------------------
-	\subsection{Avaliação das Incidentes de Relacionados}
+	\subsection{Avaliação dos Incidentes e Páginas Relacionadas}
+		
+		% Definir métricas esperadas
+		% Apresentar métricas obtidas
+		% Análise
+		% Possiveis melhorias
+		
+		Os incidentes e páginas relacionadas são apresentados sobretudo como mecanismo de rastreabilidade, ou seja, para comprovar a origem da informação usada pelo serviço nas afirmações que produz. Por esse motivo, os objetivos definidos para esta avaliação são menos exigentes, evidenciado na tabela \ref{tab:classificacao-relacionados}.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Cobertura média de incidentes relacionados pretendida & $\geq0.60$ \\
+				\hline
+				Cobertura completa de incidentes relacionados pretendida & $\geq50\%$ \\
+				\hline
+				Cobertura média de páginas relacionadas pretendida & $\geq0.60$ \\
+				\hline
+				Cobertura completa de páginas relacionadas pretendida & $\geq50\%$ \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Avaliação dos Relacionados]{Critérios de Avaliação dos Relacionados}
+			\label{tab:classificacao-relacionados}
+		\end{table}
 	
+		Para esta análise, foi usada uma métrica de cobertura, isto significa que, em cada execução, mede-se a percentagem de itens da referência que foram encontrados na resposta. Foram assim, analisadas 150 execuções (quinze incidentes, dez iterações por incidente).
+		
+		Nos incidentes relacionados, os resultados da tabela \ref{tab:avaliacao-incidentes-relacionados} mostram uma cobertura média de 0,917, isto é, o serviço encontra 91.7\% dos incidentes relacionados que devia encontrar. Já a cobertura completa encontra-se nos 72,7\% dos casos.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Cobertura média & 0,917 \\
+				\hline
+				Cobertura completa & 109 (72,7\%) \\
+				\hline
+				Cobertura parcial & 38 (25,3\%) \\
+				\hline
+				Sem correspondência (0,0) & 3 (2,0\%) \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação dos Incidentes Relacionados]{Avaliação dos Incidentes Relacionados}
+			\label{tab:avaliacao-incidentes-relacionados}
+		\end{table}
+		
+		
+		Para as páginas relacionadas, os resultados da tabela \ref{tab:avaliacao-paginas-relacionadas} também são positivos, com uma cobertura média de 0,897 e cobertura completa em 85,3\% dos casos.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Cobertura média & 0,897 \\
+				\hline
+				Cobertura completa & 128 (85,3\%) \\
+				\hline
+				Cobertura parcial & 13 (8,7\%) \\
+				\hline
+				Sem correspondência (0,0) & 9 (6,0\%) \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação das Páginas Relacionadas]{Avaliação das Páginas Relacionadas}
+			\label{tab:avaliacao-paginas-relacionadas}
+		\end{table}
+		
+		Em resumo, os resultados mostram que o serviço consegue recuperar, na maioria das execuções, os itens relacionados esperados.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Avaliação da Qualidade do serviço}
-	% Custos e latência
-		% Custos do ITSM
-		% Custos do Confluence (mais chamada ao LLM)
-			% INC000111254019 tem uma analise mais rapida e mais barata porque nao tem docs
+	
+		% Definir métricas esperadas
+			% Latencia <=30s
+			% Custos <= 0.05 (Justificar com quantidade de incidentes por mes(~1000) x este valor)
 		
-	\subsection{Avaliação do Feedback da Equipa}
-		% Criar o form e marcar
+		% Apresentar métricas obtidas
+		
+		% Análise
+			% Para além do apresentado a cima -> Custos do ITSM
+			% Custos do Confluence -> (mais chamada ao LLM)
+				% INC000111254019 tem uma analise mais rapida e mais barata porque nao tem docs
+					% Posso mostrar langfuse
+					
+		% Possiveis melhorias
+		
+		Nesta secção avaliamos o desempenho operacional do serviço em termos de tempo de resposta e custo por execução. 
+		Foram definidos os critérios da tabela \ref{tab:classificacao-servico}, tendo em conta um cenário de cerca de 1000 incidentes por mês, média estipulada através da figura \ref{fig:itsm_manual_1}.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Objetivo} \\
+				\hline
+				Latência média pretendida & $\leq30$ s \\
+				\hline
+				Custo médio por execução pretendido & $\leq0.05$ USD \\
+				\hline
+				Custo mensal estimado (1000 incidentes) & $\leq50$ USD \\
+				\hline
+			\end{tabular}
+			\caption[Critérios de Avaliação de Latência e Custos]{Critérios de Avaliação de Latência e Custos}
+			\label{tab:classificacao-servico}
+		\end{table}
+		
+		Os testes realizados para esta secção, basearam-se na mesma bateria de testes das secções anteriores tendo, portanto, utilizado os quinze incidentes de referência e iterando-os dez vezes.
+		
+		Os resultados, demonstrados na tabela \ref{tab:avaliacao-servico-latencia}, mostram que os objetivos definidos para esta métrica não foram atingidos. A latência média observada foi de 68,53 segundos, quando o objetivo era 30 segundos, ou seja, cerca de 128\% acima do valor alvo. Além disso, apenas 18,0\% das execuções ficaram abaixo de 30 segundos. A mediana (78,53 segundos) e o P95 (91,69 segundos) confirmam que, na maioria dos casos, o tempo de resposta real está mais próximo de 1 minuto e meio do que de 30 segundos.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lc}
+				\hline
+				\textbf{Métrica} & \textbf{Resultado} \\
+				\hline
+				Latência média & 68,53 s \\
+				\hline
+				Latência mediana & 78,53 s \\
+				\hline
+				Latência P95 & 91,69 s \\
+				\hline
+				Execuções com latência $\leq30$ s & 27 (18,0\%) \\
+				\hline
+			\end{tabular}
+			\caption[Avaliação de Latência]{Avaliação de Latência}
+			\label{tab:avaliacao-servico-latencia}
+		\end{table}
+		
+		No custo, o comportamento foi semelhante tal como é comprovado na tabela \ref{tab:avaliacao-servico-custos}. O custo médio por execução foi de 0,102 USD, acima da meta de 0,05 USD (cerca de 104\% acima). Projetando para 1000 incidentes/mês, o custo estimado fica em 102,11 USD/mês, também acima da meta de 50 USD/mês. Isto indica que, no estado atual, o serviço ainda não cumpre os limites operacionais definidos para produção com esse volume.
+		
+		\begin{table}[H]
+		\centering
+		\small
+		\begin{tabular}{lc}
+			\hline
+			Custo médio por execução & 0,102 USD \\
+			\hline
+			Custo mediano por execução & 0,117 USD \\
+			\hline
+			Custo P95 por execução & 0,136 USD \\
+			\hline
+			Custo total da bateria de testes & 15,32 USD \\
+			\hline
+			Custo mensal estimado (1000 incidentes & 102,11 USD \\
+			\hline
+		\end{tabular}
+		\caption[Avaliação de Custos]{Avaliação de Custos}
+		\label{tab:avaliacao-servico-custos}
+		\end{table}
+		
+		Porém, através da análise apresentada no \textit{LangFuse}, evidenciada na figura \ref{fig:langfuse_confluence}, podemos afirmar que a maioria do valor da latência e dos custos provêm das numerosas chamadas ao \textit{Confluence}, para obter a documentação relevante ao incidente.
+		
+		\begin{figure}[H]
+			\centering
+			\includegraphics[width=130mm,keepaspectratio]{img/langfuse_confluence}
+			\caption[Duração para Selecionar Documentação Relevante]{Duração para Selecionar Documentação Relevante}
+			\label{fig:langfuse_confluence}
+		\end{figure}
+		
+		Na analise apresentada anteriormente, a duração do processo de verificação de páginas relacionadas relevantes foi de 68.5 segundos, sendo que, a duração total da análise foi de 93.3 segundos. Assim, podemos concluir que 73\% da duração das análises são alocadas para verificar que documentação pode ou não ser interessante para o contexto do incidente.
+		
+		Para confirmar estes valores, foi realizada uma nova bateria de testes, mantendo os mesmo quinze incidentes de referência, e os valores obtidos estão apresentados na tabela \ref{tab:comparacao-confluence}. Posto isto, conseguimos afirmar que este processo de verificação de páginas relacionadas relevantes é de facto o maior causador na falha dos objetivos definidos nesta secção.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lcc}
+				\hline
+				\textbf{Configuração}  & \textbf{Latência média (s)} & \textbf{Custo médio (USD)} \\
+				\hline
+				Com \textit{Confluence} & 68,53 & 0,102 \\
+				\hline
+				Sem \textit{Confluence} & 14,44 & 0,028 \\
+				\hline
+				Diferença percentual & -78.9\% & -72.3\% \\
+				\hline
+			\end{tabular}
+			\caption[Comparação de Latência e Custo sem \textit{Confluence}]{Comparação de Latência e Custo sem \textit{Confluence}}
+			\label{tab:comparacao-confluence}
+		\end{table}
+		
+		Para corrigir este problema, seria possível paralelizar estas chamadas, reduzindo assim a latência total deste processo. No entanto, esta abordagem não resolveria o problema do custo, que continuaria a ser elevado para uma equipa com cerca de 1000 incidentes por mês. Para reduzir este custo, seria possível juntar várias chamadas ao \gls{LLM} numa única chamada, ou reduzir o número total de chamadas. Atualmente, cada documento é analisado através de uma chamada independente, o que aumenta o custo total. Ao juntar vários documentos numa mesma chamada, o custo não aumentaria necessariamente de forma proporcional ao número de documentos, permitindo reduzir o custo total do processo.
 		
 	\subsection{Avaliação com diferentes modelos}
 		\todo[inline]{Rever nome e se fica como capitulo}
+		
+	\subsection{Avaliação do Feedback da Equipa}
 	
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
+
+
+% comparar com e sem work_notes ????
+% Devemos conseguir concluir que há coisas a melhorar (trabalho futuro)
