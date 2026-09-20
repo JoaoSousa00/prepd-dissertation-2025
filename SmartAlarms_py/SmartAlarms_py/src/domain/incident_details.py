@@ -82,8 +82,14 @@ class IncidentDetailsService:
                                 + ", ".join(discovery_result.related_incidents)
                             )
                         if self._confluence_source is not None and discovery_result.confluence_search_query:
+                            relevance_incident_context = self._build_documentation_relevance_context(
+                                incident=incident,
+                                search_query=discovery_result.confluence_search_query,
+                            )
                             collected_confluence_context = self._collect_confluence_context(
-                                discovery_result.confluence_search_query
+                                discovery_result.confluence_search_query,
+                                incident_id=incident.id,
+                                incident_context=relevance_incident_context,
                             )
                             confluence_context = collected_confluence_context["documentation_context"]
                             confluence_pages = [
@@ -169,7 +175,12 @@ class IncidentDetailsService:
             log_request_summary()
         return details
 
-    def _collect_confluence_context(self, search_query: str) -> dict[str, object]:
+    def _collect_confluence_context(
+        self,
+        search_query: str,
+        incident_id: str = "",
+        incident_context: str = "",
+    ) -> dict[str, object]:
         if self._confluence_source is None:
             return {
                 "documentation_context": "No Confluence documentation context was available.",
@@ -190,8 +201,8 @@ class IncidentDetailsService:
             if self._llm_gateway is not None and hasattr(self._llm_gateway, "check_documentation_relevance"):
                 for page in matched_pages:
                     result = self._llm_gateway.check_documentation_relevance(
-                        incident_id="",
-                        incident_description=search_query,
+                        incident_id=incident_id,
+                        incident_description=incident_context or search_query,
                         page_title=page.title,
                         page_body=page.body or "",
                     )
@@ -236,6 +247,28 @@ class IncidentDetailsService:
                 "documentation_context": "No Confluence documentation context was available because the lookup failed.",
                 "related_pages": [],
             }
+
+    @staticmethod
+    def _build_documentation_relevance_context(
+        incident: BaseIncident,
+        search_query: str,
+    ) -> str:
+        short_description = (incident.short_description or "").strip() or "N/A"
+        description = (incident.description or "").strip()
+        if not description:
+            description = "N/A"
+        elif len(description) > 1200:
+            description = f"{description[:1200].rstrip()}..."
+        assignment_group = IncidentDetailsService._extract_assignment_group(incident)
+        lines = [
+            f"Incident ID: {incident.id}",
+            f"Confluence search query: {search_query}",
+            f"Short description: {short_description}",
+            f"Description: {description}",
+        ]
+        if assignment_group:
+            lines.append(f"Assignment group: {assignment_group}")
+        return "\n".join(lines)
 
     @staticmethod
     def _extract_status_code_from_error(error_message: str) -> Optional[int]:

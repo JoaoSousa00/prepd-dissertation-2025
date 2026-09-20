@@ -10,9 +10,9 @@
 %----------------------------------------------------------------------------------------
 \section{Dataset}
 	
-	Um \textit{dataset} é uma coleção estruturada de dados organizados e armazenados juntos para realizar alguma análise ou processamento. Os dados presentes num dataset são normalmente relacionados entre si. Neste caso, o dataset trata-se de um conjunto volumoso de incidentes no foro de várias equipas num projeto comum.
+	Um \textit{dataset} é uma coleção estruturada de dados organizados e armazenados juntos para realizar alguma análise ou processamento. Os dados presentes num \textit{dataset} estão normalmente relacionados entre si tratando-se, neste caso, de um conjunto volumoso de incidentes no foro de várias equipas num projeto comum.
 	
-	A gestão do dataset é realizada por um serviço externo (\textit{ServiceNow}) ao qual o acesso é feito através de uma \gls{API}. De forma a manter o conjunto de dados o mais recente e mais atualizado possível, é utilizada a API em cada pedido realizado ao serviço em desenvolvimento.
+	A gestão do \textit{dataset} é realizada por um serviço externo (\textit{ServiceNow}) ao qual o acesso é feito através de uma \gls{API}. De forma a manter o conjunto de dados o mais recente e mais atualizado possível, é utilizada a API em cada pedido realizado ao serviço em desenvolvimento.
 
 %----------------------------------------------------------------------------------------
 	\subsection{Estrutura}
@@ -34,7 +34,7 @@
 				\hline
 				\textit{assignment group} & Permite identificar a equipa responsável pelo incidente. \\
 				\hline
-				\textit{resolved\_at} & Utilizado para ordenar incidentes por relevância temporal e maior proximidade no tempo. \\
+				\textit{resolved\_at} & Ordena incidentes por relevância temporal e maior proximidade no tempo. \\
 				\hline
 				\textit{closed\_notes} & Campo com as notas de resolução do incidente. \\
 				\hline
@@ -43,7 +43,7 @@
 				\textit{hold\_reason} & Campo utilizado quando um incidente aguarda resposta do autor. \\
 				\hline
 			\end{tabular}
-			\caption[Campos Utilizados do Dataset]{Campos Utilizados do Dataset}
+			\caption[Campos Utilizados do \textit{Dataset}]{Campos Utilizados do \textit{Dataset}}
 			\label{tab:campos-utilizados}
 		\end{table}
 		
@@ -62,7 +62,7 @@
 				\textit{attachments} & A sua utilização no inicio do projeto não é relevante devido à natureza da maioria do conjunto de dados mas está considerado para trabalho futuro. \\
 				\hline
 			\end{tabular}
-			\caption[Campos Descartados do Dataset]{Campos Descartados do Dataset}
+			\caption[Campos Descartados do \textit{Dataset}]{Campos Descartados do \textit{Dataset}}
 			\label{tab:campos-descartados}
 		\end{table}
 	
@@ -75,7 +75,7 @@
 		
 		Por este motivo, perceber a origem do incidente é importante para a sua análise inicial, para identificar o problema, determinar a equipa responsável e perceber se é necessário obter informação adicional antes de avançar para a resolução.
 		
-		Na imagem \ref{fig:itsm_manual_1}, é possível ver que a maioria dos incidentes recebidos são de origem automática (Alert) e que existe uma quantidade limitada de incidentes manuais (Standard-UI, Portal e Email).
+		Na imagem \ref{fig:itsm_manual_1}, é possível ver que a maioria dos incidentes recebidos são de origem automática (\textit{Alert}) e que existe uma quantidade limitada de incidentes manuais (\textit{Standard-UI}, Portal e Email).
 		
 		\begin{figure}[H]
 			\centering
@@ -84,7 +84,7 @@
 			\label{fig:itsm_manual_1}
 		\end{figure}
 		
-		É ainda possível, confirmar na imagem \ref{fig:itsm_manual_2} a quantidade e a percentagem exata de incidentes automáticos, 8306 incidentes que corresponde a 98.41\% do dataset, e de incidentes manuais, 134 incidentes que corresponde a 1.59\% do conjunto de dados.
+		É ainda possível, confirmar na imagem \ref{fig:itsm_manual_2} a quantidade e a percentagem exata de incidentes automáticos (8306 incidentes que corresponde a 98.41\% do \textit{dataset}) e de incidentes manuais (134 incidentes que corresponde a 1.59\% do conjunto de dados).
 				
 		\begin{figure}[H]
 			\centering
@@ -93,16 +93,16 @@
 			\label{fig:itsm_manual_2}
 		\end{figure}
 		
-		Podemos assim concluir, que a maioria de dados presentes no \textit{dataset} correspondem a incidentes automáticos que por sua vez têm menos complexidade lexical, uma vez que, para um mesmo problema são gerados com um titulo exatamente similar.
+		Assim, conclui-se que a maioria de dados presentes no \textit{dataset} correspondem a incidentes automáticos que por sua vez têm menos complexidade lexical, uma vez que, para um mesmo problema são gerados com um titulo exatamente similar.
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Destino dos Incidentes}
 
 		Após um incidente ser criado, pode continuar com a equipa que iniciou a análise ou ser encaminhado para outra equipa, dependendo do tipo de problema ou do serviço afetado. Em ambientes com várias equipas, é comum que a equipa que recebe inicialmente o incidente não tenha o conhecimento necessário para o resolver, sendo necessário direciona-lo para a equipa mais adequada. A atribuição inicial é muitas vezes feita com base no serviço ou na área de negócio afetada, o que nem sempre corresponde à origem técnica do problema.
 		
-		A encaminhamento de incidentes pode ter impacto direto no tempo necessário para a sua resolução. Quando um incidente é encaminhado para a equipa errada, pode haver perda de tempo, repetição de trabalho e atrasos na investigação, podendo levar a um maior impacto em incidentes críticos. Além disso, decidir para que equipa deve ser encaminhado pode exigir uma análise mais detalhada do incidente e a consulta de casos anteriores. Por isso, mecanismos que ajudem a classificar os incidentes, encontrar casos semelhantes e identificar a equipa mais adequada podem facilitar este processo e reduzir o tempo de resolução.
+		O encaminhamento de incidentes pode ter impacto direto no tempo necessário para a sua resolução. Quando um incidente é encaminhado para a equipa errada, pode haver perda de tempo, repetição de trabalho e atrasos na investigação, podendo levar a um maior impacto em incidentes críticos. Além disso, decidir para que equipa deve ser encaminhado pode exigir uma análise mais detalhada do incidente e a consulta de casos anteriores. Por isso, mecanismos que ajudem a classificar os incidentes, encontrar casos semelhantes e identificar a equipa mais adequada podem facilitar este processo e reduzir o tempo de resolução.
 		
-		A análise do ano corrente, presente na imagem \ref{fig:itsm_redirect_1}, demonstra que a maioria dos incidentes não são redirecionados, e que existe uma quantidade diminuta de incidentes reencaminhados uma ou mais vezes.
+		A análise do ano corrente, presente na imagem \ref{fig:itsm_redirect_1}, demonstra que a maioria dos incidentes não são redirecionados, e que existe uma quantidade reduzida de incidentes reencaminhados uma ou mais vezes.
 		
 		\begin{figure}[H]
 			\centering
@@ -111,7 +111,7 @@
 			\label{fig:itsm_redirect_1}
 		\end{figure}
 		
-		É ainda possível, confirmar na imagem \ref{fig:itsm_redirect_2} a quantidade e a percentagem exata de incidentes não encaminhados, 7949 incidentes que corresponde a 94.08\% do dataset, de incidentes redirecionados apenas uma vez, 480 incidentes que corresponde a 5.68\% do conjunto de dados e os que são reencaminhados mais do que uma vez, 20 incidentes correspondentes à quantia restante.
+		É ainda possível, confirmar na imagem \ref{fig:itsm_redirect_2} a quantidade e a percentagem exata de incidentes não encaminhados (7949 incidentes que corresponde a 94.08\% do dataset), de incidentes redirecionados apenas uma vez (480 incidentes que corresponde a 5.68\% do conjunto de dados) e os que são reencaminhados mais do que uma vez (20 incidentes correspondentes à quantia restante).
 		
 		\begin{figure}[H]
 			\centering
@@ -120,9 +120,9 @@
 			\label{fig:itsm_redirect_2}
 		\end{figure}
 		
-		Incidentes reencaminhados duas ou mais vezes, podem indicar maus processos de analise e reencaminhamento, o que pode, novamente, atrasar na resolução de problemas no serviço.
+		Incidentes reencaminhados duas ou mais vezes, podem indicar maus processos de análise e reencaminhamento, o que pode, novamente, atrasar na resolução de problemas no serviço.
 		
-		No contexto do produto a ser analisado, a maioria de incidentes são redirecionados 0 vezes, o que indica que foram atribuidos corretamente, porém este numero pode ser enganador, visto que, normalmente, incidentes automáticos são corretamente encaminhados. Isto significa assim, que apesar do valor de incidentes reencaminhado parecer escasso, analisando apenas o conjunto de registos manuais, estes valores são completamente diferentes, como mostra a imagem \ref{fig:itsm_redirect_manual_1}. 
+		No contexto do produto a ser analisado, a maioria de incidentes não são redirecionados, o que indica que foram atribuidos corretamente, porém este numero pode ser enganador, visto que, normalmente, incidentes automáticos são corretamente encaminhados. Isto significa assim, que apesar do valor de incidentes reencaminhado parecer escasso, analisando apenas o conjunto de registos manuais, estes valores são completamente diferentes, como mostra a imagem \ref{fig:itsm_redirect_manual_1}. 
 		
 		\begin{figure}[H]
 			\centering
@@ -140,7 +140,7 @@
 			\label{fig:itsm_redirect_manual_2}
 		\end{figure}
 		
-		Deduz-se portanto, que é importante realizar uma boa analise do incidente, com recurso a histórico e incidentes relacionados, com o objetivo de indicar ao utilizador se o mesmo deve mitigar o problema ou encaminha-lo para a equipa mais competente.
+		Deduz-se portanto, que é importante realizar uma boa análise do incidente, com recurso a histórico e incidentes relacionados, com o objetivo de indicar ao utilizador se o mesmo deve mitigar o problema ou encaminha-lo para a equipa mais competente.
 		
 %----------------------------------------------------------------------------------------
 	\subsection{Conclusão}
@@ -176,31 +176,31 @@
 				\hline
 				\textbf{Identificador} & \textbf{Descrição} & \textbf{Prioridade} \\
 				\hline
-				\textit{RF-01} & O sistema deve permitir receber um incidente para análise através do serviço de incidentes & Must have \\
+				\textit{RF-01} & O sistema deve permitir receber um incidente para análise através do serviço de incidentes. & Must have \\
 				\hline
-				\textit{RF-02} & O sistema deve obter os dados relevantes do incidente, incluindo a descrição, serviço afetado, severidade e outros campos disponíveis & Must have \\
+				\textit{RF-02} & O sistema deve obter os dados relevantes do incidente, incluindo a descrição, serviço afetado, severidade e outros campos disponíveis. & Must have \\
 				\hline
-				\textit{RF-03} & O sistema deve procurar no histórico por incidentes relacionados com o incidente recebido & Must have \\
+				\textit{RF-03} & O sistema deve procurar no histórico por incidentes relacionados com o incidente recebido. & Must have \\
 				\hline
-				\textit{RF-04} & O sistema deve utilizar os incidentes relacionados como contexto para a análise realizada pelo \gls{LLM} & Must have \\
+				\textit{RF-04} & O sistema deve utilizar os incidentes relacionados como contexto para a análise realizada pelo \gls{LLM}. & Must have \\
 				\hline
-				\textit{RF-05} & O sistema deve gerar um resumo do incidente em linguagem natural & Must have \\
+				\textit{RF-05} & O sistema deve gerar um resumo do incidente em linguagem natural. & Must have \\
 				\hline
-				\textit{RF-06} & O sistema deve gerar sugestões de mitigação com base na informação disponível e nos incidentes relacionados & Must have \\
+				\textit{RF-06} & O sistema deve gerar sugestões de mitigação com base na informação disponível e nos incidentes relacionados. & Must have \\
 				\hline
-				\textit{RF-07} & O sistema deve ordenar as sugestões de mitigação de acordo com a sua relevância & Must have \\
+				\textit{RF-07} & O sistema deve ordenar as sugestões de mitigação de acordo com a sua relevância. & Must have \\
 				\hline
-				\textit{RF-08} & O sistema deve apresentar a informação utilizada para suportar as sugestões geradas, permitindo consultar os incidentes relacionados & Must have \\
+				\textit{RF-08} & O sistema deve apresentar a informação utilizada para suportar as sugestões geradas, permitindo consultar os incidentes relacionados. & Must have \\
 				\hline
-				\textit{RF-09} & O sistema deve permitir identificar a equipa mais adequada para tratar o incidente, quando essa informação fizer parte do objetivo da solução & Should have \\
+				\textit{RF-09} & O sistema deve permitir identificar a equipa mais adequada para tratar o incidente, quando essa informação fizer parte do objetivo da solução. & Should have \\
 				\hline
-				\textit{RF-10} & O sistema deve permitir configurar a utilização, ou não, de comentários e notas de analise dos incidentes & Should have \\
+				\textit{RF-10} & O sistema deve permitir configurar a utilização, ou não, de comentários e notas de análise dos incidentes. & Should have \\
 				\hline
-				\textit{RF-11} & O sistema deve permitir configurar o modelo utilizado pela \gls{LLM} & Could have \\
+				\textit{RF-11} & O sistema deve permitir configurar o modelo utilizado pela \gls{LLM}. & Could have \\
 				\hline
-				\textit{RF-12} & O sistema deve procurar informação relevante na documentação do serviço afetado, resumir o conteúdo encontrado e utiliza-lo na análise do incidente & Could have \\
+				\textit{RF-12} & O sistema deve procurar informação relevante na documentação do serviço afetado, resumir o conteúdo encontrado e utiliza-lo na análise do incidente. & Could have \\
 				\hline
-				\textit{RF-13} & O sistema deve consultar os logs do serviço afetado para encontrar informação relacionada com o incidente e utilizá-la na análise & Won't have \\
+				\textit{RF-13} & O sistema deve consultar os logs do serviço afetado para encontrar informação relacionada com o incidente e utilizá-la na análise. & Won't have \\
 				\hline
 			\end{tabular}
 			\caption[Requisitos Funcionais]{Requisitos Funcionais}
@@ -218,11 +218,11 @@
 				\hline
 				\textbf{Identificador} & \textbf{Descrição} \\
 				\hline
-				\textit{RNF-01} & O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar \\
+				\textit{RNF-01} & O sistema não deve expor informação confidencial dos incidentes a utilizadores ou serviços que não tenham autorização para a consultar. \\
 				\hline
-				\textit{RNF-02} & O sistema deve estar organizado de forma a permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço \\
+				\textit{RNF-02} & O sistema deve estar organizado de forma a permitir adicionar, substituir ou remover serviços externos sem impacto no restante serviço. \\
 				\hline
-				\textit{RNF-03} & O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis \\
+				\textit{RNF-03} & O sistema deve limitar a quantidade de informação enviada para o \gls{LLM}, de forma a manter o custo de cada análise dentro de valores aceitáveis. \\
 				\hline
 			\end{tabular}
 			\caption[Requisitos não Funcionais]{Requisitos não Funcionais}
@@ -275,4 +275,4 @@
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-	Neste capitulo pudemos observar o planeamento da solução desenvolvida, sendo apresentadas as funcionalidades principais e as integrações externas. Foram ainda abordadas, estatísticas sobre o conjunto de dados que permitem perceber qual a maior área de impacto do serviço. Por fim, foram apresentados requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido e os diagramas que permitem ter uma visão do fluxo de cada análise de incidente.
+	Neste capitulo observamos o planeamento da solução desenvolvida, sendo apresentadas as funcionalidades principais e as integrações externas. Foram ainda abordadas, estatísticas sobre o conjunto de dados que permitem perceber qual a maior área de impacto do serviço. Por fim, apresentam-se requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido e os diagramas que permitem ter uma visão do fluxo de cada análise de incidente.

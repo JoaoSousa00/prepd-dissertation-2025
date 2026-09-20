@@ -364,6 +364,63 @@ def test_fetch_incident_details_passes_page_urls_for_suggestion_attribution():
     )
 
 
+def test_fetch_incident_details_passes_incident_context_to_documentation_relevance_check():
+    class DocumentationAwareGateway(CapturingLlmGateway):
+        def __init__(self):
+            super().__init__()
+            self.relevance_calls = []
+
+        def discover_related_context(self, **kwargs):
+            return DiscoveryResult(confluence_search_query="place search")
+
+        def check_documentation_relevance(self, **kwargs):
+            self.relevance_calls.append(kwargs)
+            return {
+                "is_relevant": True,
+                "extracted_content": "Use this runbook to validate service latency.",
+            }
+
+    class DocumentationSource:
+        def search_pages(self, search_query, limit=None):
+            assert search_query == "place search"
+            assert limit == 25
+            return [
+                DocumentationPage(
+                    id="123",
+                    title="Place Search Runbook",
+                    url="https://confluence.example/pages/123",
+                    body="Runbook content",
+                )
+            ]
+
+    gateway = DocumentationAwareGateway()
+    service = IncidentDetailsService(
+        incident_fetching_service=IncidentFetchingService(
+            FakeIncidentSource(
+                incidents={
+                    "INC0001": BaseIncident(
+                        id="INC0001",
+                        short_description="API latency spike",
+                        description="Requests slowed down during load peak.",
+                    )
+                }
+            )
+        ),
+        llm_gateway=gateway,
+        confluence_source=DocumentationSource(),
+    )
+
+    service.fetch_incident_details(["INC0001"])
+
+    assert len(gateway.relevance_calls) == 1
+    relevance_call = gateway.relevance_calls[0]
+    assert relevance_call["incident_id"] == "INC0001"
+    assert "Confluence search query: place search" in relevance_call["incident_description"]
+    assert "Short description: API latency spike" in relevance_call["incident_description"]
+    assert "Description: Requests slowed down during load peak." in relevance_call["incident_description"]
+    assert relevance_call["incident_description"].strip() != "place search"
+
+
 def test_confluence_page_allowlist_matches_the_pages_sent_to_the_llm():
     class RelevantDocumentationGateway:
         def check_documentation_relevance(self, **kwargs):

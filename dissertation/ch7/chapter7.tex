@@ -5,7 +5,7 @@
 
 	Este capítulo apresenta a avaliação da solução desenvolvida, tendo como objetivo perceber se os resultados obtidos estão de acordo com os objetivos definidos ao longo do projeto. A avaliação foi dividida em diferentes áreas, de forma a analisar tanto a qualidade dos resultados como o desempenho da solução.
 	
-	Inicialmente, é apresentada a metodologia utilizada, de seguida são avaliados os resumos gerados pelo serviço, seguindo-se a avaliação das sugestões de mitigação e dos incidentes e páginas relacionadas utilizados como contexto. É também analisado o desempenho da solução em termos de custo e latência, bem como o impacto da utilização de diferentes modelos de \gls{LLM}. Por fim, é apresentado o feedback recolhido junto da equipa, permitindo complementar os resultados quantitativos com a perceção de possíveis utilizadores da solução.
+	Inicialmente, é apresentada a metodologia utilizada e posteriormente são avaliados os resumos gerados pelo serviço, seguindo-se a avaliação das sugestões de mitigação e dos incidentes e páginas relacionadas utilizados como contexto. É também analisado o desempenho da solução em termos de custo e latência, bem como o impacto da utilização de diferentes modelos de \gls{LLM}. Por fim, é apresentado o \textit{feedback} recolhido junto da equipa, permitindo complementar os resultados quantitativos com a perceção de possíveis utilizadores da solução.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia}
@@ -37,11 +37,11 @@
 	%	 		openai/gpt-5.4
 	%	 		openai/gpt-5.4-mini (baseline económico)
 	
-	A metodologia de avaliação, considerava, inicialmente, métricas como a \gls{ROUGE} e a \textit{Precision@k}, utilizadas em trabalhos semelhantes encontrados durante o estado da arte. No entanto, no decorrer da preparação da avaliação foram identificadas algumas limitações na utilização destas métricas para o contexto deste projeto.
+	A metodologia de avaliação considerava, inicialmente, métricas como a \gls{ROUGE} e a \textit{Precision@k}, utilizadas em trabalhos semelhantes encontrados durante o estado da arte. No entanto, no decorrer da preparação da avaliação foram identificadas algumas limitações na utilização destas métricas para o contexto deste projeto.
 	
 	No caso da métrica \gls{ROUGE}, a comparação é baseada na sobreposição de palavras entre a resposta gerada e a \textit{golden reference}. Esta analogia, pode não representar corretamente a qualidade de uma resposta gerada por um \gls{LLM}, uma vez que duas respostas podem transmitir a mesma informação utilizando palavras ou estruturas diferentes. Dessa forma, optou-se por utilizar uma abordagem de \textit{LLM-as-a-judge}, onde um segundo modelo de \gls{LLM}, avalia a resposta gerada tendo em conta a \textit{golden reference} definida.
 	
-	Na implementação da abordagem \textit{LLM-as-a-judge}, foi desenvolvido um prompt para guiar e ajudar o juiz (\gls{LLM}), na avaliação dos resumos e sugestões. No texto enviado ao modelo, foi definida a rúbrica de avaliação, presente na tabela \ref{tab:rubrica_avaliacao}, que nos permitiu ter valores para avaliar e comparar no final.
+	Na implementação da abordagem \textit{LLM-as-a-judge}, foi desenvolvido um \textit{prompt} para guiar e ajudar o juiz (\gls{LLM}), na avaliação dos resumos e sugestões. No texto enviado ao modelo, foi definida a rubrica de avaliação, presente na tabela \ref{tab:rubrica_avaliacao}, que nos permitiu ter valores para avaliar e comparar no final.
 	
 	\begin{table}[H]
 		\centering
@@ -68,7 +68,7 @@
 	
 	Para a avaliação dos incidentes relacionados e das páginas relacionadas, foi utilizada a cobertura (ou \textit{recall@k}), uma vez que o objetivo é verificar se os elementos considerados relevantes estão presentes nos resultados apresentados. Para além da qualidade dos resultados, foram também avaliados o custo e a latência da solução, considerando a média dos valores obtidos nos diferentes pedidos realizados.
 	
-	Para realizar os testes, foi elencado um conjunto de quinze incidentes que, juntos, formam a \textit{golden reference}, um exemplo pode ser visto na figura \ref{fig:golden_reference}. Os sete primeiros incidentes, foram selecionados manualmente de forma a representar diferentes situações relevantes para a avaliação, e, os restantes oito foram selecionados aleatoriamente a partir do \textit{dataset}. Desta forma, procurou-se combinar casos específicos, escolhidos para testar comportamentos conhecidos da solução, com casos selecionados de forma aleatória.
+	Para realizar os testes, foi elencado um conjunto de quinze incidentes que, juntos, formam a \textit{golden reference}, um exemplo pode ser visto na figura \ref{fig:golden_reference}. Os sete primeiros incidentes foram selecionados manualmente de forma a representar diferentes situações relevantes para a avaliação, e, os restantes oito foram selecionados aleatoriamente a partir do \textit{dataset}. Desta forma, procurou-se combinar casos específicos, escolhidos para testar comportamentos conhecidos da solução, com casos selecionados de forma aleatória.
 	
 	\begin{figure}[H]
 		\centering
@@ -77,17 +77,17 @@
 		\label{fig:golden_reference}
 	\end{figure}
 	
-	Para definir cada \textit{golden reference}, foi estabelecido um resumo simples em conjunto com a equipa atribuida ao incidente. Foi também acompanhado o processo de resolução, de forma a ser possivel indicar a sugestão de investigação e mitigação utilizado para resolver efetivamente o incidente em questão.
+	Para definir cada \textit{golden reference}, foi estabelecido um resumo simples em conjunto com a equipa atribuída ao incidente. Foi também acompanhado o processo de resolução, de forma a ser possível indicar a sugestão de investigação e mitigação utilizada para resolver efetivamente o incidente em questão.
 	
-	Para a avaliação dos resumos, sugestões, elementos relacionados, custo e latência, cada um dos quinze incidentes foi analisado dez vezes utilizando o modelo \texttt{openai/gpt-5.6-terra}. Os resultados, obtidos comparando com as respetivas \textit{golden references} e a repetição das analises permitiram reduzir o impacto das diferenças entre respostas produzidas pelo modelo e obter uma avaliação mais consistente.
+	Para a avaliação dos resumos, sugestões, elementos relacionados, custo e latência, cada um dos quinze incidentes foi analisado dez vezes utilizando o modelo \texttt{openai/gpt-5.6-terra}. Os resultados obtidos, comparando com as respetivas \textit{golden references} e a repetição das análises, permitiram reduzir o impacto das diferenças entre respostas produzidas pelo modelo e obter uma avaliação mais consistente.
 	
-	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.4-mini} e o \textit{openai/gpt-5.4}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
+	Além disso, realizou-se uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.4-mini} e o \textit{openai/gpt-5.4}. Para esta comparação foram executados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
 
 
 %----------------------------------------------------------------------------------------
 \section{Análise dos resultados}
 
-	As seguintes análises, foram um resultado de testes realizados contra o conjunto de incidentes definido na \textit{golden reference}. A escolha dos incidentes já foi referiada anteriormente, mas é apresentada com mais pormenor na tabela \ref{tab:Incidentes_golden}.
+	As seguintes análises surgiram de testes realizados contra o conjunto de incidentes definido na \textit{golden reference}. A escolha dos incidentes já foi referida anteriormente, mas é apresentada com mais pormenor na tabela \ref{tab:Incidentes_golden}.
 	
 	\begin{table}[H]
 		\centering
@@ -125,7 +125,7 @@
 		% Análise
 		% Possiveis melhorias
 		
-		Tendo por base, a rubrica de avaliação da tabela \ref{tab:rubrica_avaliacao}, definimos como objetivo, que os resumos gerados tivessem na sua maioria corretos e com todos os elementos chave. Estes, são os objetivos que permitem aos membros da equipa de suporte compreender o incidente, independentemente do nível de senioridade, do contexto do produto ou da hora em que o problema ocorre. Assim, a tabela \ref{tab:classificacao-resumos} apresenta os critérios para a avaliação dos resumos gerados.
+		Tendo por base a rubrica de avaliação da tabela \ref{tab:rubrica_avaliacao}, definimos como objetivo que os resumos gerados tivessem na sua maioria corretos e com todos os elementos chave. Estes, são os objetivos que permitem aos membros da equipa de suporte compreender o incidente, independentemente do nível de senioridade, do contexto do produto ou da hora em que o problema ocorre. Assim, a tabela \ref{tab:classificacao-resumos} apresenta os critérios para a avaliação dos resumos gerados.
 		
 		\begin{table}[H]
 			\centering
@@ -143,9 +143,9 @@
 			\label{tab:classificacao-resumos}
 		\end{table}
 		
-		Para a definição da classificação atribuída a cada resumo gerado, o \textit{LLM-as-a-Judge}, utilizou a escala apresentada na tabela \ref{tab:rubrica_avaliacao}. Em cada iteração dos testes, o \gls{LLM} comparava o resultado obtido na análise do serviço com a \textit{golden reference} e atribuía um dos valores da escala.
+		Para a definição da classificação atribuída a cada resumo gerado, o \textit{LLM-as-a-Judge} utilizou a escala apresentada na tabela \ref{tab:rubrica_avaliacao}. Em cada iteração dos testes, o \gls{LLM} comparava o resultado obtido na análise do serviço com a \textit{golden reference} e atribuía um dos valores da escala.
 		
-		A bateria de testes executada, contou com 150 análises, tendo em conta, que foram analisados quinze incidentes e cada um foi iterado dez vezes para evitar incoerências dos modelos de \gls{LLM}. Dessa forma, foram obtido os resultados presentes na tabela \ref{tab:avaliacao-resumos}, que demonstram que os critérios previamente definidos foram alcançados. Isto significa que, o serviço foi capaz de gerar, na sua maioria (98.6\%), resumos maioritariamente corretos, com pequenas diferenças (nível 4).
+		A bateria de testes executada contou com 150 análises, tendo em conta que, foram analisados quinze incidentes e cada um foi iterado dez vezes para evitar incoerências dos modelos de \gls{LLM}. Dessa forma, obtiveram-se os resultados presentes na tabela \ref{tab:avaliacao-resumos}, que demonstram que os critérios previamente definidos foram alcançados. Isto significa que, o serviço conseguiu, na sua maioria (98.6\%), resumos maioritariamente corretos, com pequenas diferenças (nível 4).
 		
 		\begin{table}[H]
 			\centering
@@ -177,7 +177,7 @@
 		% Análise
 		% Possiveis melhorias
 		
-		Tal como na avaliação dos resumos, foram definidos os objetivos para classificar o sucesso, ou não, do serviço na criação de sugestões de mitigação. Assim, a tabela \ref{tab:classificacao-sugestoes} apresenta os o \gls{MRR} pretendido, evidenciando, o objetivo de ter a sugestão da \textit{golden reference} nas posições mais elevadas, surgindo no topo da lista. Apresenta ainda, o objetivo de ter a sugestão real no top-1, em 75\% ou mais, dos casos.
+		Tal como na avaliação dos resumos, definiram-se os objetivos para classificar o sucesso, ou não, do serviço na criação de sugestões de mitigação. Assim, a tabela \ref{tab:classificacao-sugestoes} apresenta o \gls{MRR} pretendido, evidenciando o objetivo de ter a sugestão da \textit{golden reference} nas posições mais elevadas, surgindo no topo da lista. Apresenta ainda, o objetivo de ter a sugestão real no top-1, em 75\% ou mais, dos casos.
 				
 		\begin{table}[H]
 			\centering
@@ -223,9 +223,9 @@
 			\label{tab:avaliacao-sugestoes}
 		\end{table}
 		
-		Se realizarmos a mesma analise, retirando os casos em que as sugestões não têm correspondência, verificamos que os resultados são mais positivos, visível na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Cumpre-se assim o objetivo relacionado com o \gls{MRR}, que evidencia que as sugestões com correspondência estão, na sua maioria, no topo das sugestões.
+		Se realizarmos a mesma análise, retirando os casos em que as sugestões não têm correspondência, verificamos que os resultados são mais positivos, visível na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Cumpre-se assim o objetivo relacionado com o \gls{MRR}, que evidencia que as sugestões com correspondência estão, na sua maioria, no topo das sugestões.
 		
-		Para perceber o desempenho do serviço nos casos em que existe uma correspondência, foi realizada uma segunda análise, excluindo os casos em que não foi encontrada qualquer sugestão correspondente. Os resultados são apresentados na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Nesta análise, o \gls{MRR} médio aumenta para 0,842, cumprindo o objetivo apresentado na tabela \ref{tab:classificacao-sugestoes}. Para além disso, 72,6\% das sugestões correspondentes encontram-se na primeira posição, também aproximando-se do valor alvo.
+		Para compreender o desempenho do serviço nos casos em que existe uma correspondência, realizou-se uma segunda análise, excluindo os casos em que não foi encontrada qualquer sugestão correspondente. Os resultados são apresentados na tabela \ref{tab:avaliacao-sugestoes_sem_correspondencia}. Nesta análise, o \gls{MRR} médio aumenta para 0,842, cumprindo o objetivo apresentado na tabela \ref{tab:classificacao-sugestoes}. Para além disso, 72,6\% das sugestões correspondentes encontram-se na primeira posição, também aproximando-se do valor alvo.
 		
 		\begin{table}[H]
 			\centering
@@ -279,7 +279,7 @@
 			\label{tab:classificacao-relacionados}
 		\end{table}
 	
-		Para esta análise, foi usada uma métrica de cobertura, isto significa que, em cada execução, mede-se a percentagem de itens da referência que foram encontrados na resposta. Foram assim, analisadas 150 execuções (quinze incidentes, dez iterações por incidente).
+		Para esta análise, utilizou-se uma métrica de cobertura, isto significa que, em cada execução, mede-se a percentagem de itens da referência que foram encontrados na resposta. Foram assim, analisadas 150 execuções (quinze incidentes, dez iterações por incidente).
 		
 		Nos incidentes relacionados, os resultados da tabela \ref{tab:avaliacao-incidentes-relacionados} mostram uma cobertura média de 0,917, isto é, o serviço encontra 91.7\% dos incidentes relacionados que devia encontrar. Já a cobertura completa encontra-se nos 72,7\% dos casos.
 		
@@ -339,7 +339,7 @@
 		
 		% Análise
 			% Para além do apresentado a cima -> Custos do ITSM
-			% Custos do Confluence -> (mais chamada ao LLM)
+ -> (mais chamada ao LLM)
 				% INC000111254019 tem uma analise mais rapida e mais barata porque nao tem docs
 					% Posso mostrar langfuse
 					
@@ -366,9 +366,9 @@
 			\label{tab:classificacao-servico}
 		\end{table}
 		
-		Os testes realizados para esta secção, basearam-se na mesma bateria de testes das secções anteriores tendo, portanto, utilizado os quinze incidentes de referência e iterando-os dez vezes.
+		Os testes realizados para esta secção basearam-se na mesma bateria de testes das secções anteriores tendo, portanto, utilizado os quinze incidentes de referência e iterando-os dez vezes.
 		
-		Os resultados, demonstrados na tabela \ref{tab:avaliacao-servico-latencia}, mostram que os objetivos definidos para esta métrica não foram atingidos. A latência média observada foi de 68,53 segundos, quando o objetivo era 30 segundos, ou seja, cerca de 128\% acima do valor alvo. Além disso, apenas 18,0\% das execuções ficaram abaixo de 30 segundos. A mediana (78,53 segundos) e o P95 (91,69 segundos) confirmam que, na maioria dos casos, o tempo de resposta real está mais próximo de 1 minuto e meio do que de 30 segundos.
+		Os resultados demonstrados na tabela \ref{tab:avaliacao-servico-latencia}, mostram que os objetivos definidos para esta métrica não foram atingidos. A latência média observada foi de 68,53 segundos, quando o objetivo era 30 segundos, ou seja, cerca de 128\% acima do valor alvo. Além disso, apenas 18,0\% das execuções ficaram abaixo de 30 segundos. A mediana (78,53 segundos) e o P95 (91,69 segundos) confirmam que, na maioria dos casos, o tempo de resposta real está mais próximo de 1 minuto e meio do que de 30 segundos.
 		
 		\begin{table}[H]
 			\centering
@@ -421,7 +421,7 @@
 			\label{fig:langfuse_confluence}
 		\end{figure}
 		
-		Na analise apresentada anteriormente, a duração do processo de verificação de páginas relacionadas relevantes foi de 68.5 segundos, sendo que, a duração total da análise foi de 93.3 segundos. Assim, podemos concluir que 73\% da duração das análises são alocadas para verificar que documentação pode ou não ser interessante para o contexto do incidente.
+		Na análise apresentada anteriormente, a duração do processo de verificação de páginas relacionadas relevantes foi de 68.5 segundos, sendo que, a duração total da análise foi de 93.3 segundos. Assim, podemos concluir que 73\% da duração das análises são alocadas para verificar que documentação pode ou não ser interessante para o contexto do incidente.
 		
 		Para confirmar estes valores, foi realizada uma nova bateria de testes, mantendo os mesmo quinze incidentes de referência, e os valores obtidos estão apresentados na tabela \ref{tab:comparacao-confluence}. Posto isto, conseguimos afirmar que este processo de verificação de páginas relacionadas relevantes é de facto o maior causador na falha dos objetivos definidos nesta secção.
 		
@@ -443,7 +443,7 @@
 			\label{tab:comparacao-confluence}
 		\end{table}
 		
-		Para corrigir este problema, seria possível paralelizar estas chamadas, reduzindo assim a latência total deste processo. No entanto, esta abordagem não resolveria o problema do custo, que continuaria a ser elevado para uma equipa com cerca de 1000 incidentes por mês. Para reduzir este custo, seria possível juntar várias chamadas ao \gls{LLM} numa única chamada, ou reduzir o número total de chamadas. Atualmente, cada documento é analisado através de uma chamada independente, o que aumenta o custo total. Ao juntar vários documentos numa mesma chamada, o custo não aumentaria necessariamente de forma proporcional ao número de documentos, permitindo reduzir o custo total do processo.
+		Para corrigir este problema, colocou-se a possibilidade de paralelizar estas chamadas, reduzindo assim a latência total deste processo. No entanto, esta abordagem não resolveria o problema do custo, que continuaria a ser elevado para uma equipa com cerca de 1000 incidentes por mês. Para reduzir este custo, seria possível juntar várias chamadas ao \gls{LLM} numa única chamada, ou reduzir o número total de chamadas. Atualmente, cada documento é analisado através de uma chamada independente, o que aumenta o custo total. Ao juntar vários documentos numa mesma chamada, o custo não aumentaria necessariamente de forma proporcional ao número de documentos, permitindo reduzir o custo total do processo.
 		
 	\subsection{Avaliação dos Modelos LLM}
 		
@@ -460,14 +460,14 @@
 		
 		Para avaliar o impacto da escolha do modelo nos resultados obtidos pela solução, foram realizados testes com diferentes modelos de \gls{LLM}. Nestes testes, mantiveram-se as condições de avaliação comparáveis, sendo utilizados os mesmos incidentes presentes no conjunto de \textit{golden references}, e onde cada incidente foi analisado duas vezes por cada modelo.
 		
-		Foram considerados três modelos com diferentes características:
+		Considerou-se três modelos com diferentes características:
 		\begin{itemize}
 			\item \textbf{\textit{openai/gpt-5.6-terra}}: utilizado como referência de qualidade;
 			\item \textbf{\textit{openai/gpt-5.4-mini}}: utilizado como referência de menor custo;
 			\item \textbf{\textit{openai/gpt-5.4}}: utilizado como referência de equilíbrio entre qualidade e custo;
 	 	\end{itemize}
 		
-		Para cada modelo, foram comparados os resultados médios obtidos na avaliação dos resumos, das sugestões de mitigação, dos incidentes e páginas relacionadas e o custo e a latência médios de cada execução. Desta forma, pretende-se observar não só as diferenças na qualidade dos resultados produzidos, mas também o impacto da escolha do modelo nos recursos necessários para executar a solução.
+		Para cada modelo, comparou-se os resultados médios obtidos na avaliação dos resumos, das sugestões de mitigação, dos incidentes e páginas relacionadas e o custo e a latência médios de cada execução. Desta forma, pretende-se observar não só as diferenças na qualidade dos resultados produzidos, mas também o impacto da escolha do modelo nos recursos necessários para executar a solução.
 		
 		\begin{table}[H]
 			\centering
@@ -489,9 +489,9 @@
 		
 		Os resultados mostram que os três modelos obtiveram classificações médias muito semelhantes nos resumos, próximas de 4,17 valores. O \textit{GPT-5.4} apresentou o melhor \textit{MRR} e a maior cobertura de incidentes e páginas relacionadas, mas também foi o modelo com maior custo médio por execução.
 		
-		O \textit{GPT-5.4 Mini} apresentou o menor custo e a menor latência média, sendo 38\% mais rápido e 61\% mais barato do que o \textit{GPT-5.6 Terra}. No entanto, este resultado deve ser interpretado com cuidado visto que, na maioria dos incidentes, o \textit{GPT-5.4 Mini} não identificou nenhum projeto associado e, por esse motivo, não foi executada a etapa de recolha de documentação no Confluence. Como o serviço analisou menos contexto e evitou chamadas adicionais, a resposta obtida foi mais célere e com menor custo.
+		O \textit{GPT-5.4 Mini} apresentou o menor custo e a menor latência média, sendo 38\% mais rápido e 61\% mais barato do que o \textit{GPT-5.6 Terra}. No entanto, este resultado deve ser interpretado com cuidado visto que, na maioria dos incidentes, o \textit{GPT-5.4 Mini} não identificou nenhum projeto associado e, por esse motivo, não foi executada a etapa de recolha de documentação no \textit{Confluence}. Como o serviço analisou menos contexto e evitou chamadas adicionais, a resposta obtida foi mais célere e com menor custo.
 		
-		Assim, o menor custo e latência do \textit{GPT-5.4 Mini} não significam necessariamente que o modelo seja mais eficiente em todos os cenários. Parte dessa diferença resulta de não ter usado documentação que poderia melhorar a fundamentação da análise. Adicionalmente, o modelo tem um custo por \textit{token} inferior aos restantes modelos, contribuindo também para a redução do custo final.
+		Assim, o menor custo e latência do \textit{GPT-5.4 Mini} não significa necessariamente que o modelo seja mais eficiente em todos os cenários. Parte dessa diferença resulta de não ter usado documentação que poderia melhorar a fundamentação da análise. Adicionalmente, o modelo tem um custo por \textit{token} inferior aos restantes modelos, contribuindo também para a redução do custo final.
 		
 	\subsection{Avaliação do Feedback da Equipa}
 	
@@ -510,20 +510,20 @@
 		
 		% Analisar resultados
 		
-		Para complementar as análises quantitativas e estatísticas apresentadas anteriormente, foi realizado um questionário de perceção junto de uma equipa que atua em operações de múltiplos serviços, após a apresentação do projeto e do protótipo desenvolvido. O objetivo desta avaliação foi recolher evidência qualitativa sobre o problema atual, a utilidade da solução proposta e a sua viabilidade de adoção no contexto real da equipa.
+		Para complementar as análises quantitativas e estatísticas apresentadas anteriormente, realizou-se um questionário de perceção junto de uma equipa que atua em operações de múltiplos serviços, após a apresentação do projeto e do protótipo desenvolvido. O objetivo desta avaliação foi recolher evidência qualitativa sobre o problema atual, a utilidade da solução proposta e a sua viabilidade de adoção no contexto real da equipa.
 		
 		A equipa considerada nesta avaliação é constituída por um \textit{Scrum Master}, um \textit{Product Owner} e sete \textit{Developers}. O \textit{Scrum Master}, apesar de não executar operações diretamente, apoia o trabalho operacional da equipa, o \textit{Product Owner} também pode analisar incidentes para acompanhar o estado dos serviços e os seis \textit{DevOps} participam nas operações. No total, foram obtidas 8 respostas válidas ao questionário.
 		
-		As questões apresentadas foram respondidas numa escala de \textit{Likert} de cinco pontos (1 a 5), onde 1 corresponde a menor concordância e 5 a maior concordância com as afirmações. A escolha de uma escala ímpar foi intencional, pois permite incluir um ponto intermédio (valor 3) para situações em que o participante não tem posição suficientemente forte para concordar ou discordar. Esta opção evita respostas forçadas, reduz ruído de medição e mantém um bom equilíbrio entre granularidade analítica e simplicidade de resposta. Em termos práticos, para questionários curtos com participantes operacionais, a escala de 5 pontos é uma solução robusta por facilitar o preenchimento e, ao mesmo tempo, preservar capacidade de discriminação entre níveis de perceção.
+		As questões apresentadas foram respondidas numa escala de \textit{Likert} de cinco pontos (1 a 5), onde 1 corresponde a menor concordância e 5 a maior concordância com as afirmações. A escolha de uma escala ímpar foi intencional, porque permite incluir um ponto intermédio (valor 3) para situações em que o participante não tem posição suficientemente forte para concordar ou discordar. Esta opção evita respostas forçadas, reduz ruído de medição e mantém um bom equilíbrio entre granularidade analítica e simplicidade de resposta. Em termos práticos, para questionários curtos com participantes operacionais, a escala de 5 pontos é uma solução robusta por facilitar o preenchimento e, ao mesmo tempo, preservar capacidade de discriminação entre níveis de perceção.
 		
 		As afirmações foram, ainda, organizadas em três capítulos: 
 		\begin{enumerate}
-			\item problema e impacto sentido no processo atual (Q1 - Q3);
-			\item utilidade da solução proposta (Q4 - Q6);
-			\item viabilidade de implementação e adoção pela equipa (Q7 - Q9).
+			\item Problema e impacto sentido no processo atual (Q1 - Q3);
+			\item Utilidade da solução proposta (Q4 - Q6);
+			\item Viabilidade de implementação e adoção pela equipa (Q7 - Q9).
 		\end{enumerate}
 		
-		A tabela \ref{tab:questoes-feedback-equipa} demonstra as questões apresentadas à equipa e atribui um identificador que nos permite analisar posteriormente os resultados.
+		A tabela \ref{tab:questoes-feedback-equipa} demonstra as questões colocadas à equipa e atribui um identificador que nos permite analisar posteriormente os resultados.
 		
 		\begin{table}[H]
 			\centering
@@ -550,7 +550,7 @@
 				Q9 & Considero que a solução, na sua forma atual, poderia ser utilizada como ferramenta de apoio pela equipa. \\
 				\hline
 			\end{tabular}
-			\caption[Questões do Feedback da Equipa]{Questões do Feedback da Equipa}
+			\caption[Questões do \textit{Feedback} da Equipa]{Questões do \textit{Feedback} da Equipa}
 			\label{tab:questoes-feedback-equipa}
 		\end{table}
 		
@@ -581,7 +581,7 @@
 				Q9 & 4,63 & 1 (12,5\%) & 1 (12,5\%) & 6 (75,0\%) \\
 				\hline
 			\end{tabular}
-			\caption[Resultados do Feedback da Equipa]{Resultados do Feedback da Equipa}
+			\caption[Resultados do \textit{Feedback} da Equipa]{Resultados do \textit{Feedback} da Equipa}
 			\label{tab:resultados-feedback-equipa}
 		\end{table}
 		
@@ -594,12 +594,12 @@
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-	Os resultados apresentados neste capítulo mostram que a solução desenvolvida conseguiu atingir vários dos objetivos definidos. A avaliação dos resumos apresentou uma classificação média de 4,18, com 98,7\% dos resultados a obterem uma classificação igual ou superior a 4. Também a recuperação de incidentes e páginas relacionadas apresentou resultados positivos, com coberturas médias de 0,917 e 0,897, respetivamente.
+	Os resultados apresentados neste capítulo mostram que a solução desenvolvida conseguiu atingir vários dos objetivos definidos. A avaliação dos resumos apresentou uma classificação média de 4,18, com 98,7\% dos resultados a obterem uma classificação igual ou superior a 4. Além disso, a recuperação de incidentes e páginas relacionadas apresentou resultados positivos, com coberturas médias de 0,917 e 0,897, respetivamente.
 	
 	Nas sugestões de mitigação, os resultados foram mais limitados. Apesar de, nos casos em que existe correspondência, a sugestão esperada tender a aparecer nas primeiras posições, ainda existe dificuldade em gerar sugestões diretamente equivalentes às soluções utilizadas nos incidentes de referência. Este é, por isso, um dos principais pontos a melhorar.
 	
-	A comparação entre modelos mostrou resultados semelhantes na qualidade dos resumos, mas algumas diferenças na recuperação de informação, custo e latência. O modelo \textit{GPT-5.4} apresentou uma maior cobertura dos incidentes e páginas relacionadas, enquanto o \textit{GPT-5.4 Mini} apresentou um custo e uma latência mais baixos. No entanto, estes resultados devem ser analisados tendo em conta que o modelo Mini nem sempre identificou um projeto associado, evitando em alguns casos a consulta ao Confluence.
+	A comparação entre modelos mostrou resultados semelhantes na qualidade dos resumos, mas algumas diferenças na recuperação de informação, custo e latência. O modelo \textit{GPT-5.4} apresentou uma maior cobertura dos incidentes e páginas relacionadas, enquanto o \textit{GPT-5.4 Mini} apresentou um custo e uma latência mais baixos. No entanto, estes resultados devem ser analisados tendo em conta que o modelo Mini nem sempre identificou um projeto associado, evitando em alguns casos a consulta ao \textit{Confluence}.
 	
-	O custo e a latência foram, de forma geral, superiores aos valores definidos inicialmente. A análise realizada permitiu identificar o acesso ao Confluence como um dos principais responsáveis por este aumento, pelo que a redução do número de chamadas ao LLM e a execução de algumas operações em paralelo poderão melhorar estes resultados.
+	O custo e a latência foram, de forma geral, superiores aos valores definidos inicialmente. A análise realizada permitiu identificar o acesso ao \textit{Confluence} como um dos principais responsáveis por este aumento, pelo que a redução do número de chamadas ao \gls{LLM} e a execução de algumas operações em paralelo poderão melhorar estes resultados.
 	
-	Por fim, o feedback da equipa apresentou uma avaliação positiva da solução e da sua utilidade no contexto de análise de incidentes. No conjunto, os resultados mostram que a abordagem é viável, embora ainda existam melhorias a realizar principalmente ao nível das sugestões de mitigação, do custo e da latência.
+	Por fim, o \textit{feedback} da equipa apresentou uma avaliação positiva da solução e da sua utilidade no contexto de análise de incidentes. No conjunto, os resultados mostram que a abordagem é viável, embora ainda existam melhorias a realizar principalmente a nível das sugestões de mitigação, do custo e da latência.
