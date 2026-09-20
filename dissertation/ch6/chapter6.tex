@@ -12,7 +12,7 @@
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Python}
-		A linguagem \textit{Python} foi escolhida para o desenvolvimento da solução principalmente pela sua forte utilização na área da Inteligência Artificial e pela variedade de bibliotecas disponíveis. Como o projeto envolve a utilização de \gls{LLM}s, processamento de texto e implementação de uma arquitetura \gls{RAG}, Python permite integrar estas diferentes componentes de forma relativamente simples.
+		A linguagem \textit{Python} foi escolhida para o desenvolvimento da solução principalmente pela sua forte utilização na área da Inteligência Artificial e pela variedade de bibliotecas disponíveis. Como o projeto envolve a utilização de \gls{LLM}s, processamento de texto e implementação de uma arquitetura \gls{RAG}, \textit{Python} permite integrar estas diferentes componentes de forma relativamente simples.
 		
 		Outro fator importante foi a facilidade de integração com serviços externos. A solução necessita de comunicar com o serviço de incidentes, com o motor \gls{LLM} e com os restantes componentes utilizados na recuperação de informação. \textit{Python} disponibiliza várias bibliotecas para comunicação através de \textit{APIs} e para trabalhar com diferentes formatos de dados, o que facilita esta integração.
 		
@@ -34,11 +34,11 @@
 	
 	%----------------------------------------------------------------------------------------
 	\subsection{Langfuse}
-		Para acompanhar a utilização dos \gls{LLM}s foi utilizado o Langfuse, permitindo obter uma maior visibilidade sobre as operações realizadas durante cada pedido. A ferramenta permite acompanhar as diferentes chamadas ao modelo e os respetivos custos, tornando possível perceber quanto é gasto em cada etapa do processo de análise de um incidente.
+		Para acompanhar a utilização dos \gls{LLM}s foi utilizado o \textit{Langfuse}, permitindo obter uma maior visibilidade sobre as operações realizadas durante cada pedido. A ferramenta permite acompanhar as diferentes chamadas ao modelo e os respetivos custos, tornando possível perceber quanto é gasto em cada etapa do processo de análise de um incidente.
 		
 		Esta informação é importante para a avaliação da solução, uma vez que permite calcular o custo associado a cada pedido e identificar quais as operações que têm maior impacto no consumo. Desta forma, é possível não só acompanhar os custos da solução, mas também identificar oportunidades de otimização.
 		
-		A utilização do Langfuse permite ainda que esta análise possa ser expandida no futuro. Para além do custo por pedido, poderão ser analisadas outras dimensões, como os custos associados a diferentes utilizadores, sessões ou tipos de operação. Isto permite obter uma visão mais detalhada sobre a utilização do sistema e apoiar futuras decisões de otimização.
+		A utilização do \textit{Langfuse} permite ainda que esta análise possa ser expandida no futuro. Para além do custo por pedido, poderão ser analisadas outras dimensões, como os custos associados a diferentes utilizadores, sessões ou tipos de operação. Isto permite obter uma visão mais detalhada sobre a utilização do sistema e apoiar futuras decisões de otimização.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia de Implementação}
@@ -54,7 +54,7 @@
 		
 		Esta abordagem foi escolhida principalmente devido à utilização de \gls{IA} como apoio ao desenvolvimento. Ao definir primeiro aquilo que o sistema deve fazer, é possível fornecer ao agente uma descrição mais clara do objetivo e das condições que a implementação deve cumprir. Desta forma, a utilização de \gls{IA} não fica limitada à geração direta de código a partir de um pedido, mas é incluída num processo mais estruturado.
 	
-		Apesar da existência de um kit oficial de ferramentas (spec-kit), optou-se por aplicar \gls{SDD} diretamente assim, a aplicação da metodologia, não ficou dependente da estrutura definida pela ferramenta. Por esse motivo, o projeto conta com uma série de ficheiros documentais que ajudam tanto no processo de criação de especificações, como também no processo de implementação.
+		Apesar da existência de um kit oficial de ferramentas (\textit{spec-kit}), optou-se por aplicar \gls{SDD} diretamente assim, a aplicação da metodologia, não ficou dependente da estrutura definida pela ferramenta. Por esse motivo, o projeto conta com uma série de ficheiros documentais que ajudam tanto no processo de criação de especificações, como também no processo de implementação.
 		
 		A utilização desta abordagem permitiu ainda dedicar mais tempo ao pensamento crítico e à compreensão do negócio, em vez de focar principalmente na implementação do código. Desta forma, foi possível dar maior atenção às decisões e ao problema que a solução pretendia resolver.
 	
