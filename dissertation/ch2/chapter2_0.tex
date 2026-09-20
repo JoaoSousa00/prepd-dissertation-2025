@@ -5,7 +5,7 @@
 
 	\todo[inline]{Remover este capitulo e passar info para estado da arte..}
 
-	Este capítulo apresenta os principais conceitos teóricos necessários para compreender o trabalho desenvolvido. Começa-se por uma breve introdução aos \textit{Large Language Models (LLMs)}, incluindo as suas principais limitações e as arquiteturas disponiveis para os adaptar, como o Prompt Engineering, o \gls{RAG} e o \textit{Fine-tuning}. Por fim, são apresentadas as métricas utilizadas para avaliar a qualidade, relevância, custo e tempo de resposta da solução.
+	Este capítulo apresenta os principais conceitos teóricos necessários para compreender o trabalho desenvolvido. Começa-se por uma breve introdução aos \textit{Large Language Models (LLMs)}, incluindo as suas principais limitações e as arquiteturas disponiveis para os adaptar, como o Prompt Engineering, o \gls{RAG} e o \textit{Fine-tuning}.
 
 %----------------------------------------------------------------------------------------
 \section{\gls{LLM}}
@@ -54,10 +54,3 @@
 	O \textit{fine-tuning} consiste em adaptar um modelo de linguagem pré-treinado a uma tarefa ou domínio específico através de um novo treino com dados direcionados. Este processo permite que o modelo aprenda padrões e termos próprios do domínio, tornando as suas respostas mais adequadas ao objetivo pretendido.
 	
 	Apesar das suas vantagens, o \textit{fine-tuning} requer dados de treino de qualidade e recursos computacionais. Além disso, quando a informação do domínio muda frequentemente, é necessário voltar a treinar o modelo para acompanhar essas alterações. Por isso, em contextos com informação dinâmica, como a gestão de incidentes, o \gls{RAG} pode ser uma abordagem mais adequada para fornecer informação atualizada, enquanto o \textit{fine-tuning} pode ser usado como complemento para melhorar a consistência das respostas \autocite{Reference7}.
-
-%----------------------------------------------------------------------------------------
-\section{Métricas de avaliação}
-
-	A avaliação de uma solução baseada em \gls{LLM}s pode ser feita através de diferentes métricas, uma vez que cada uma permite avaliar um aspeto diferente do sistema. A \gls{ROUGE} permite comparar a resposta gerada com uma resposta de referência, sendo útil para avaliar a similaridade do texto. Para avaliar a qualidade das sugestões de mitigação e dos incidentes recuperados, pode ser utilizada a Precisão no topo K (\textit{Precision@k}), que mede quantos dos primeiros $k$ resultados são realmente relevantes \autocite{Reference1,Reference2,Reference4,Reference7}.
-	
-	Para além da qualidade dos resultados, é também importante avaliar o custo e o tempo de resposta. O custo por pedido permite medir quanto é necessário gastar, para realizar cada análise através da API, enquanto a latência mede o tempo necessário para obter uma resposta. Desta forma, a avaliação considera não só a qualidade do conteúdo gerado, mas também o custo e o desempenho da solução.
