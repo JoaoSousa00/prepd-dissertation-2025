@@ -33,7 +33,6 @@
 	% Para a analise dos diferentes modelos, foram realizados testes mais soft por alguma razao (talvez porque vamos testar )... e então o mesmo golden reference so foi corrido 2x
 	%	 		openai/gpt-5.6-terra (referência de qualidade)
 	%	 		claude-sonnet-5 (forte em compreensão e síntese)
-	%	 		openai/gpt-5.6-luna (alternativa próxima do Terra)
 	%	 		gemini-3.8-flash (boa relação custo/latência)
 	%	 		openai/gpt-5.4-mini (baseline económico)
 	
@@ -81,7 +80,7 @@
 	
 	Para a avaliação dos resumos, sugestões, elementos relacionados, custo e latência, cada um dos quinze incidentes foi analisado dez vezes utilizando o modelo \texttt{openai/gpt-5.6-terra}. Os resultados, obtidos comparando com as respetivas \textit{golden references} e a repetição das analises permitiram reduzir o impacto das diferenças entre respostas produzidas pelo modelo e obter uma avaliação mais consistente.
 	
-	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.6-luna}, o \textit{openai/gpt-5.4-mini}, o \textit{claude-sonnet-5} e o \textit{gemini-3.8-flash}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
+	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.4-mini}, o \textit{claude-sonnet-5} e o \textit{gemini-3.8-flash}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
 
 
 %----------------------------------------------------------------------------------------
@@ -447,10 +446,50 @@
 		
 		Para corrigir este problema, seria possível paralelizar estas chamadas, reduzindo assim a latência total deste processo. No entanto, esta abordagem não resolveria o problema do custo, que continuaria a ser elevado para uma equipa com cerca de 1000 incidentes por mês. Para reduzir este custo, seria possível juntar várias chamadas ao \gls{LLM} numa única chamada, ou reduzir o número total de chamadas. Atualmente, cada documento é analisado através de uma chamada independente, o que aumenta o custo total. Ao juntar vários documentos numa mesma chamada, o custo não aumentaria necessariamente de forma proporcional ao número de documentos, permitindo reduzir o custo total do processo.
 		
-	\subsection{Avaliação com diferentes modelos}
-		\todo[inline]{Rever nome e se fica como capitulo}
+	\subsection{Avaliação dos Modelos LLM}
+		
+		% Para estes testes foram usados na mesma incidentes da goldee_reference mas só foram corridos 2x cada incidente. Foram corridos os testes para cada modelo e comparamos o score medio dos resumos, sugestões e relaccionados, assim como o custo e latência.
+		
+		%Modelos usados: 
+		%			openai/gpt-5.6-terra (referência de qualidade)
+		%	 		openai/gpt-5.4-mini (baseline económico)
+		%	 		claude-sonnet-5 (forte em compreensão e síntese)
+		%	 		gemini-3.8-flash (boa relação custo/latência)
+		
+		% tabela com dados
+		
+		%Algo mais que deva referir?
+		
+		Para avaliar o impacto da escolha do modelo nos resultados obtidos pela solução, foram realizados testes com diferentes modelos de \gls{LLM}. Nestes testes, mantiveram-se as condições de avaliação comparáveis, sendo utilizados os mesmos incidentes presentes no conjunto de \textit{golden references}, e onde cada incidente foi analisado duas vezes por cada modelo.
+		
+		Foram considerados cinco modelos com diferentes características:
+		\begin{itemize}
+			\item \textbf{\textit{openai/gpt-5.6-terra}}: utilizado como referência de qualidade;
+			\item \textbf{\textit{openai/gpt-5.4-mini}}: utilizado como referência de menor custo;
+			\item \textbf{\textit{claude-sonnet-5}}: utilizado devido às suas capacidades de compreensão e síntese;
+			\item \textbf{\textit{gemini-3.8-flash}}: utilizado devido à sua relação entre custo e latência.
+	 	\end{itemize}
+		
+		Para cada modelo, foram comparados os resultados médios obtidos na avaliação dos resumos, das sugestões de mitigação, dos incidentes e páginas relacionadas e o custo e a latência médios de cada execução. Desta forma, pretende-se observar não só as diferenças na qualidade dos resultados produzidos, mas também o impacto da escolha do modelo nos recursos necessários para executar a solução.
+		
+		%tabela
 		
 	\subsection{Avaliação do Feedback da Equipa}
+	
+		% Falar no proposito
+			% Para complementar as analises estatisticas/quantitativas chamamos uma equipa que faz operações de múltiplos serviços e apresentamos o projeto
+		% Falar na constituição da equipa
+			% 1 SM (suporta as pessoas em suporte apesar de não fazer operações)
+			% 1 PO (tambem pode analisar incidentes para perceber o estado do serviço)
+			% 7 Devs (todos fazem operações)
+		
+		% As questões foram divididas em 3 capitulos, abordando primeiro o problema e o impacto sentido por ele, depois a solução proposta e se faria sentido e a implementação para perceber se seria viável para a equipa.
+		
+		% Mostrar tabela com as questões (1 id por questão - > Q1, Q2,...)
+		
+		% Mostrar resultados
+		
+		% Analisar resultados
 	
 
 %----------------------------------------------------------------------------------------
