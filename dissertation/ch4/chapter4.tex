@@ -3,7 +3,7 @@
 \chapter{Análise e Desenho} % Main chapter title
 \label{chap:Chapter4} % For referencing the chapter elsewhere, use \ref{chap:Chapter4} 
 
-	Após a revisão da literatura, realizada no capitulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
+	Após a revisão da literatura, realizada no capítulo \ref{chap:Chapter2}, conseguimos chegar à conclusão que as ferramentas de \gls{LLM} quando utilizadas para correlação de incidentes, análise do histórico de \textit{tickets} e sugestões de mitigação, podem ajudar os membros das equipas de suporte a compreender melhor os incidentes e resolvê-los de uma forma mais eficaz e eficiente.
 	
 	Assim, a solução, através da integração com um \gls{LLM}, deve ser capaz de apoiar os \gls{OCEs} na interpretação, análise e mitigação dos incidentes. Esta solução é baseada, numa fase inicial, pela ligação entre o incidente a resolver e os registos anteriores, aumentando a informação do incidente atual numa linguagem percetível para qualquer membro da equipa de suporte, com mais ou menos experiência, e em qualquer contexto de trabalho e pressão. Com o apoio de integrações externas, como \textit{Confluence}, pretende-se também aumentar o contexto do serviço afetado de forma a indicar uma mitigação mais viável. Com a correlação de incidentes funcional e documentação dos próprios produtos, procura-se encontrar sugestões de mitigação para o utilizador que permitam uma rápida ação para resolver, temporariamente ou definitivamente, o problema, diminuindo o \gls{TMR}.
 
@@ -257,7 +257,7 @@
 	%----------------------------------------------------------------------------------------
 	\subsection{Diagrama de Sequência}
 	
-	O diagrama de sequência apresentado na Figura \ref{fig:sequenceDiagram}, representa um fluxo bem sucedido de recuperação e enriquecimento de contexto utilizado na análise de um incidente. O processo começa, com a obtenção dos dados do incidente, através do serviço de \textit{ITSM}. De seguida, é realizada uma primeira chamada ao \gls{LLM}, utilizando a informação do incidente e com o objetivo de identificar possíveis incidentes relacionados e o serviço afetado.
+	O diagrama de sequência apresentado na Figura \ref{fig:sequenceDiagram}, representa um fluxo bem sucedido de recuperação e enriquecimento de contexto utilizado na análise de um incidente. O processo começa com a obtenção dos dados do incidente, através do serviço de \textit{ITSM}. De seguida, é realizada uma primeira chamada ao \gls{LLM}, utilizando a informação do incidente e tem como objetivo identificar possíveis incidentes relacionados e o serviço afetado.
 	
 	Com base no serviço identificado, o sistema pesquisa as páginas disponíveis no espaço definido do \textit{Confluence} e obtém o conteúdo de cada uma. Para cada página encontrada, é realizada uma chamada ao \gls{LLM}, onde o modelo avalia se o conteúdo da página é relevante para o incidente em análise. Este processo é repetido até que todas as páginas obtidas sejam verificadas. Desta forma, cada página é analisada individualmente com base no contexto do incidente, de forma, a que o modelo não crie alucinações.
 	
@@ -275,4 +275,4 @@
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-	Neste capitulo observamos o planeamento da solução desenvolvida, sendo apresentadas as funcionalidades principais e as integrações externas. Foram ainda abordadas, estatísticas sobre o conjunto de dados que permitem perceber qual a maior área de impacto do serviço. Por fim, apresentam-se requisitos que descrevem as principais funcionalidades e características do sistema a ser desenvolvido e os diagramas que permitem ter uma visão do fluxo de cada análise de incidente.
+	Neste capítulo observamos o planeamento da solução desenvolvida, sendo apresentadas as funcionalidades principais e as integrações externas. Além disso, abordaram-se estatísticas sobre o conjunto de dados que permitem perceber qual a maior área de impacto do serviço. Por fim, apresentaram-se requisitos que descrevem as principais funcionalidades e características do sistema a serem desenvolvidas e os diagramas que permitem ter uma visão do fluxo de cada análise de incidente.
