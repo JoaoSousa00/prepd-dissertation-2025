@@ -32,8 +32,7 @@
 	
 	% Para a analise dos diferentes modelos, foram realizados testes mais soft por alguma razao (talvez porque vamos testar )... e então o mesmo golden reference so foi corrido 2x
 	%	 		openai/gpt-5.6-terra (referência de qualidade)
-	%	 		claude-sonnet-5 (forte em compreensão e síntese)
-	%	 		gemini-3.8-flash (boa relação custo/latência)
+	%	 		openai/gpt-5.4
 	%	 		openai/gpt-5.4-mini (baseline económico)
 	
 	A metodologia de avaliação, considerava, inicialmente, métricas como a \gls{ROUGE} e a \textit{Precision@k}, utilizadas em trabalhos semelhantes encontrados durante o estado da arte. No entanto, no decorrer da preparação da avaliação foram identificadas algumas limitações na utilização destas métricas para o contexto deste projeto.
@@ -80,7 +79,7 @@
 	
 	Para a avaliação dos resumos, sugestões, elementos relacionados, custo e latência, cada um dos quinze incidentes foi analisado dez vezes utilizando o modelo \texttt{openai/gpt-5.6-terra}. Os resultados, obtidos comparando com as respetivas \textit{golden references} e a repetição das analises permitiram reduzir o impacto das diferenças entre respostas produzidas pelo modelo e obter uma avaliação mais consistente.
 	
-	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.4-mini}, o \textit{claude-sonnet-5} e o \textit{gemini-3.8-flash}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
+	Foi também realizada uma comparação entre diferentes modelos de \gls{LLM}, onde foi utilizado o \textit{openai/gpt-5.6-terra}, o \textit{openai/gpt-5.4-mini} e o \textit{openai/gpt-5.4}. Para esta comparação foram realizados dois testes por incidente e por modelo, utilizando a mesma \textit{golden reference} de quinze incidentes e permitindo observar diferenças entre os diferentes modelos.
 
 
 %----------------------------------------------------------------------------------------
@@ -453,8 +452,7 @@
 		%Modelos usados: 
 		%			openai/gpt-5.6-terra (referência de qualidade)
 		%	 		openai/gpt-5.4-mini (baseline económico)
-		%	 		claude-sonnet-5 (forte em compreensão e síntese)
-		%	 		gemini-3.8-flash (boa relação custo/latência)
+		%  	openai/gpt-5.4
 		
 		% tabela com dados
 		
@@ -462,17 +460,16 @@
 		
 		Para avaliar o impacto da escolha do modelo nos resultados obtidos pela solução, foram realizados testes com diferentes modelos de \gls{LLM}. Nestes testes, mantiveram-se as condições de avaliação comparáveis, sendo utilizados os mesmos incidentes presentes no conjunto de \textit{golden references}, e onde cada incidente foi analisado duas vezes por cada modelo.
 		
-		Foram considerados cinco modelos com diferentes características:
+		Foram considerados três modelos com diferentes características:
 		\begin{itemize}
 			\item \textbf{\textit{openai/gpt-5.6-terra}}: utilizado como referência de qualidade;
 			\item \textbf{\textit{openai/gpt-5.4-mini}}: utilizado como referência de menor custo;
-			\item \textbf{\textit{claude-sonnet-5}}: utilizado devido às suas capacidades de compreensão e síntese;
-			\item \textbf{\textit{gemini-3.8-flash}}: utilizado devido à sua relação entre custo e latência.
+			\item \textbf{\textit{openai/gpt-5.4}}: utilizado como referência de equilíbrio entre qualidade e custo;
 	 	\end{itemize}
 		
 		Para cada modelo, foram comparados os resultados médios obtidos na avaliação dos resumos, das sugestões de mitigação, dos incidentes e páginas relacionadas e o custo e a latência médios de cada execução. Desta forma, pretende-se observar não só as diferenças na qualidade dos resultados produzidos, mas também o impacto da escolha do modelo nos recursos necessários para executar a solução.
 		
-		%tabela
+		
 		
 	\subsection{Avaliação do Feedback da Equipa}
 	
@@ -481,7 +478,7 @@
 		% Falar na constituição da equipa
 			% 1 SM (suporta as pessoas em suporte apesar de não fazer operações)
 			% 1 PO (tambem pode analisar incidentes para perceber o estado do serviço)
-			% 7 Devs (todos fazem operações)
+			% 6 Devs (todos fazem operações)
 		
 		% As questões foram divididas em 3 capitulos, abordando primeiro o problema e o impacto sentido por ele, depois a solução proposta e se faria sentido e a implementação para perceber se seria viável para a equipa.
 		
@@ -490,11 +487,89 @@
 		% Mostrar resultados
 		
 		% Analisar resultados
-	
+		
+		Para complementar as análises quantitativas e estatísticas apresentadas anteriormente, foi realizado um questionário de perceção junto de uma equipa que atua em operações de múltiplos serviços, após a apresentação do projeto e do protótipo desenvolvido. O objetivo desta avaliação foi recolher evidência qualitativa sobre o problema atual, a utilidade da solução proposta e a sua viabilidade de adoção no contexto real da equipa.
+		
+		A equipa considerada nesta avaliação é constituída por um \textit{Scrum Master}, um \textit{Product Owner} e sete \textit{Developers}. O \textit{Scrum Master}, apesar de não executar operações diretamente, apoia o trabalho operacional da equipa, o \textit{Product Owner} também pode analisar incidentes para acompanhar o estado dos serviços e os seis \textit{DevOps} participam nas operações. No total, foram obtidas 8 respostas válidas ao questionário.
+		
+		As questões apresentadas foram respondidas numa escala de \textit{Likert} de cinco pontos (1 a 5), onde 1 corresponde a menor concordância e 5 a maior concordância com as afirmações. A escolha de uma escala ímpar foi intencional, pois permite incluir um ponto intermédio (valor 3) para situações em que o participante não tem posição suficientemente forte para concordar ou discordar. Esta opção evita respostas forçadas, reduz ruído de medição e mantém um bom equilíbrio entre granularidade analítica e simplicidade de resposta. Em termos práticos, para questionários curtos com participantes operacionais, a escala de 5 pontos é uma solução robusta por facilitar o preenchimento e, ao mesmo tempo, preservar capacidade de discriminação entre níveis de perceção.
+		
+		As afirmações foram, ainda, organizadas em três capítulos: 
+		\begin{enumerate}
+			\item problema e impacto sentido no processo atual (Q1 - Q3);
+			\item utilidade da solução proposta (Q4 - Q6);
+			\item viabilidade de implementação e adoção pela equipa (Q7 - Q9).
+		\end{enumerate}
+		
+		A tabela \ref{tab:questoes-feedback-equipa} demonstra as questões apresentadas à equipa e atribui um identificador que nos permite analisar posteriormente os resultados.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{cp{13cm}}
+				\textbf{ID} & \textbf{Questão} \\
+				\hline
+				Q1 & Os incidentes analisados contêm, por vezes, informação insuficiente para compreender rapidamente o problema. \\
+				\hline
+				Q2 & A consulta de incidentes anteriores, documentação e logs é importante para compreender e resolver um novo incidente. \\
+				\hline
+				Q3 & Encontrar e reunir informação relevante é um processo que pode ser demorado. \\
+				\hline
+				Q4 & A utilização de um \gls{LLM} para analisar a informação de um incidente e gerar um resumo pode ser útil para apoiar a equipa. \\
+				\hline
+				Q5 & A utilização de histórico de incidentes e documentação como contexto pode melhorar a análise de um novo incidente. \\
+				\hline
+				Q6 & A solução proposta pode reduzir o tempo necessário para reunir informação relevante sobre um incidente. \\
+				\hline
+				Q7 & As sugestões de mitigação apresentadas são relevantes e podem ajudar na resolução do incidente. \\
+				\hline
+				Q8 & Considero que a solução pode trazer valor para o processo atual de análise e resolução de incidentes. \\
+				\hline
+				Q9 & Considero que a solução, na sua forma atual, poderia ser utilizada como ferramenta de apoio pela equipa. \\
+				\hline
+			\end{tabular}
+			\caption[Questões do Feedback da Equipa]{Questões do Feedback da Equipa}
+			\label{tab:questoes-feedback-equipa}
+		\end{table}
+		
+		Os resultados obtidos estão evidenciados na tabela \ref{tab:resultados-feedback-equipa}.
+		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{ccccc}
+				\textbf{Questão} & \textbf{Média (1--5)} & \textbf{Valor 3} & \textbf{Valor 4} & \textbf{Valor 5} \\
+				\hline
+				Q1 & 4,38 & 1 (12,5\%) & 3 (37,5\%) & 4 (50,0\%) \\
+				\hline
+				Q2 & 4,50 & 0 (0,0\%) & 4 (50,0\%) & 4 (50,0\%) \\
+				\hline
+				Q3 & 4,75 & 0 (0,0\%) & 2 (25,0\%) & 6 (75,0\%) \\
+				\hline
+				Q4 & 4,63 & 0 (0,0\%) & 3 (37,5\%) & 5 (62,5\%) \\
+				\hline
+				Q5 & 4,75 & 0 (0,0\%) & 2 (25,0\%) & 6 (75,0\%) \\
+				\hline
+				Q6 & 4,63 & 0 (0,0\%) & 3 (37,5\%) & 5 (62,5\%) \\
+				\hline
+				Q7 & 4,50 & 0 (0,0\%) & 4 (50,0\%) & 4 (50,0\%) \\
+				\hline
+				Q8 & 4,75 & 0 (0,0\%) & 2 (25,0\%) & 6 (75,0\%) \\
+				\hline
+				Q9 & 4,63 & 1 (12,5\%) & 1 (12,5\%) & 6 (75,0\%) \\
+				\hline
+			\end{tabular}
+			\caption[Resultados do Feedback da Equipa]{Resultados do Feedback da Equipa}
+			\label{tab:resultados-feedback-equipa}
+		\end{table}
+		
+		Nas primeiras três afirmações, relacionadas com o problema identificado, os resultados mostram uma concordância elevada por parte da equipa. Na Q1, foi obtida uma média de 4,38, com 87,5\% das respostas entre 4 e 5. Apesar de ser a média mais baixa do questionário, este resultado mostra que a equipa reconhece que existem incidentes com informação insuficiente ou que podem ser difíceis de compreender numa primeira análise. Na Q2, a média foi de 4,50, com todas as respostas entre 4 e 5, mostrando que a consulta de incidentes anteriores, documentação e \textit{logs} é considerada importante para a análise de novos incidentes. A Q3 obteve uma média de 4,75, também com todas as respostas entre 4 e 5, confirmando que reunir a informação necessária pode ser um processo demorado.
+		
+		Nas afirmações relacionadas com a solução proposta, os resultados foram igualmente positivos. A Q4 obteve uma média de 4,63, com 100\% das respostas entre 4 e 5, indicando que a equipa considera útil a utilização de um \gls{LLM} para analisar a informação de um incidente e gerar um resumo. Na Q5, a média foi de 4,75, com todas as respostas entre 4 e 5, mostrando que a utilização do histórico de incidentes e da documentação como contexto é vista como uma forma de melhorar a análise. A Q6 obteve uma média de 4,63, também com 100\% das respostas entre 4 e 5, indicando que a equipa considera que a solução pode ajudar a reduzir o tempo necessário para reunir informação relevante.
+		
+		Por fim, as últimas três afirmações estão relacionadas com a utilidade da solução no trabalho da equipa. A Q7 obteve uma média de 4,50, com todas as respostas entre 4 e 5, mostrando uma avaliação positiva das sugestões de mitigação apresentadas pelo serviço. A Q8 obteve uma média de 4,75, também com todas as respostas entre 4 e 5, indicando que a equipa considera que a solução pode trazer valor para o processo atual de análise e resolução de incidentes. Na Q9, a média foi de 4,63, com 87,5\% das respostas entre 4 e 5. Embora o resultado continue a ser positivo, esta foi a segunda afirmação com menor percentagem de respostas entre 4 e 5, o que pode indicar alguma cautela relativamente à utilização da solução na sua forma atual e a necessidade de algumas melhorias antes da sua utilização pela equipa.
 
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-
-% comparar com e sem work_notes ????
 % Devemos conseguir concluir que há coisas a melhorar (trabalho futuro)
