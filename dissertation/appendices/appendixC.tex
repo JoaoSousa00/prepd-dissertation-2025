@@ -4,11 +4,34 @@
 
 \label{AppendixC} % For referencing this appendix elsewhere, use \ref{AppendixC}
 
-O registo de um incidente, é um conjunto de informações sobre um incidente em especifico. Nesse registo é possível visualizar os detalhes desse mesmo \textit{ticket}, como o identificador, o cliente, equipa ou alarme que originou o incidente, o serviço afetado, a sua prioridade e o estado atual (Figura \ref{fig:incidentDetails}).
+	No âmbito da implementação, utilizando a metodologia \gls{SDD}, foi necessário definir especificações, em conjunto com o arquiteto de especificações, que seriam implementadas pelo engenheiro de \textit{software}. Dessa forma, é apresentada a estrutura e as especificações desenvolvidas no âmbito do projeto na figura \ref{fig:estruturaSpecs}.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=80mm,keepaspectratio]{img/estruturaSpecs}
+		\caption[Estrutura das Especificações]{Estrutura das Especificações}
+		\label{fig:estruturaSpecs}
+	\end{figure}
 
-\begin{figure}[H]
+	As especificações foram construídas passando contexto sobre a funcionalidade pretendida ao arquiteto de software. Este tem a responsabilidade de construir uma especificação com base no \textit{template} definido e no contexto disponibilizado. Na figura \ref{fig:spec1}, \ref{fig:spec2} e \ref{fig:spec3}, podemos visualizar um exemplo prático de uma especificação utilizada na primeira fase de desenvolvimento para a obtenção das informações base do incidente principal.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/spec1}
+		\caption[Exemplo da Especificação 1.2 - Parte 1]{Exemplo da Especificação 1.2 - Parte 1}
+		\label{fig:spec1}
+	\end{figure}
+	
+	\begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth,keepaspectratio]{img/IncidentDetails}
-	\caption[Detalhes do Incidente 1]{Detalhes do Incidente 1}
-	\label{fig:incidentDetails}
-\end{figure}
+	\includegraphics[width=\textwidth,keepaspectratio]{img/spec2}
+	\caption[Exemplo da Especificação 1.2 - Parte 2]{Exemplo da Especificação 1.2 - Parte 2}
+	\label{fig:spec2}
+	\end{figure}
+	
+	\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth,keepaspectratio]{img/spec3}
+	\caption[Exemplo da Especificação 1.2 - Parte 3]{Exemplo da Especificação 1.2 - Parte 3}
+	\label{fig:spec3}
+	\end{figure}

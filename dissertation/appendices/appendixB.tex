@@ -4,11 +4,66 @@
 
 \label{AppendixB} % For referencing this appendix elsewhere, use \ref{AppendixB}
 
-O registo de um incidente, é um conjunto de informações sobre um incidente em especifico. Nesse registo é possível visualizar os detalhes desse mesmo \textit{ticket}, como o identificador, o cliente, equipa ou alarme que originou o incidente, o serviço afetado, a sua prioridade e o estado atual (Figura \ref{fig:incidentDetails}).
-
-\begin{figure}[H]
+	A integração de \gls{LLM} no serviço trouxe a possibilidade de realizar diversas tarefas como a procura de contexto relacionado, identificação de elementos relevantes e análise de um incidente com base num contexto especifico. Para que essas funcionalidades operassem de melhor forma possível, foi necessário a definição concreta de cada instrução que o modelo devia realizar.
+	
+	Para isso, utilizou-se um \textit{prompt} para cada tipo de chamada efetuada. Assim, no projeto, existem cinco instruções distintas, sendo elas:
+	
+	\begin{itemize}
+		\item \textbf{\textit{Prompt} de descoberta:} Instruções utilizadas para identificar elementos relacionados com o incidente;
+		\item \textbf{\textit{Prompt} de relevância:} Instruções utilizadas para identificar as páginas relevantes e as resumir;
+		\item \textbf{\textit{Prompt} de análise:} Instruções utilizadas para analisar o incidente em conjunto com todo o contexto agregado;
+		\item \textbf{\textit{Prompt} de análise com \textit{fallback}:} Instruções utilizadas para analisar o incidente no caso de não existirem incidentes com o mesmo título;
+		\item \textbf{\textit{Prompt} para \textit{LLM-as-a-judge}:} Instruções utilizadas para guiar o juiz nos testes de validação.
+	\end{itemize}
+	
+	O \textit{prompt} de descoberta, foi utilizado para guiar o modelo de \gls{LLM} na identificação dos incidentes relacionados e o projeto afetado no incidente em análise. No momento da chamada o serviço tem apenas a informação do incidente principal e esta é a base para a identificação, como mostra a figura \ref{fig:promptDiscovery}.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/promptDiscovery}
+		\caption[\textit{Prompt} de Descoberta]{\textit{Prompt} de Descoberta}
+		\label{fig:promptDiscovery}
+	\end{figure}
+	
+	O \textit{prompt} de relevância, foi utilizado para guiar o modelo de \gls{LLM} na identificação das páginas relacionadas que são relevantes para o incidente em análise e sumarizar, com a técnica \textit{caveman}, as páginas de interesse. As chamadas são feitas individualmente para cada página relacionada, sendo que, na chamada ao modelo, o serviço envia apenas a informação do incidente principal e o conteúdo da página a ser analisada, como mostra a figura \ref{fig:promptRelevance}.
+	
+	\begin{figure}[H]
 	\centering
-	\includegraphics[width=\textwidth,keepaspectratio]{img/IncidentDetails}
-	\caption[Detalhes do Incidente 1]{Detalhes do Incidente 1}
-	\label{fig:incidentDetails}
-\end{figure}
+	\includegraphics[width=\textwidth,keepaspectratio]{img/promptRelevance}
+	\caption[\textit{Prompt} de Relevância]{\textit{Prompt} de Relevância}
+	\label{fig:promptRelevance}
+	\end{figure}
+	
+	O \textit{prompt} de análise, foi utilizado para guiar o modelo de \gls{LLM} na análise do incidente principal, em conjunto com todo o contexto processado anteriormente, com a finalidade de gerar os resumos e as sugestões de mitigação, como mostra a figura \ref{fig:promptAnalysis} e \ref{fig:promptAnalysis2}.
+	
+	\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth,keepaspectratio]{img/promptAnalysis}
+	\caption[\textit{Prompt} de Análise]{\textit{Prompt} de Análise}
+	\label{fig:promptAnalysis}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth,keepaspectratio]{img/promptAnalysis2}
+		\caption[\textit{Prompt} de Análise (continuação)]{\textit{Prompt} de Análise (continuação)}
+		\label{fig:promptAnalysis2}
+	\end{figure}
+	
+	O \textit{prompt} de análise de \textit{fallback}, foi utilizado para guiar o modelo de \gls{LLM} na análise do incidente principal, quando a pesquisa por incidentes com o mesmo titulo falha, usando como contexto os incidentes abertos mais recentes, com a finalidade de gerar os resumos e as sugestões de mitigação, como mostra a figura \ref{fig:promptFallback}.
+	
+	\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth,keepaspectratio]{img/promptFallback}
+	\caption[\textit{Prompt} de Análise com \textit{Fallback}]{\textit{Prompt} de Análise com \textit{Fallback}}
+	\label{fig:promptFallback}
+	\end{figure}
+	
+	Por fim, utilizou-se um conjunto de instruções de forma a realizar os testes de validação que deram origem aos resultados disponíveis no capítulo \ref{chap:Chapter7}, como mostra a figura \ref{fig:promptJudge}.
+	
+	\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth,keepaspectratio]{img/promptJudge}
+	\caption[\textit{Prompt} de Validação]{\textit{Prompt} de Validação}
+	\label{fig:promptJudge}
+	\end{figure}
