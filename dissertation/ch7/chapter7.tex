@@ -3,7 +3,9 @@
 \chapter{Validação de Resultados} % Main chapter title
 \label{chap:Chapter7} % For referencing the chapter elsewhere, use \ref{chap:Chapter7} 
 
-	\todo{TODO}
+	Este capítulo apresenta a avaliação da solução desenvolvida, tendo como objetivo perceber se os resultados obtidos estão de acordo com os objetivos definidos ao longo do projeto. A avaliação foi dividida em diferentes áreas, de forma a analisar tanto a qualidade dos resultados como o desempenho da solução.
+	
+	Inicialmente, é apresentada a metodologia utilizada, de seguida são avaliados os resumos gerados pelo serviço, seguindo-se a avaliação das sugestões de mitigação e dos incidentes e páginas relacionadas utilizados como contexto. É também analisado o desempenho da solução em termos de custo e latência, bem como o impacto da utilização de diferentes modelos de \gls{LLM}. Por fim, é apresentado o feedback recolhido junto da equipa, permitindo complementar os resultados quantitativos com a perceção de possíveis utilizadores da solução.
 
 %----------------------------------------------------------------------------------------
 \section{Metodologia}
@@ -166,8 +168,6 @@
 			\caption[Avaliação dos Resumos Gerados]{Avaliação dos Resumos Gerados}
 			\label{tab:avaliacao-resumos}
 		\end{table}
-		
-		\todo{Se me lembrar mais analise ou conclusões}
 	
 %----------------------------------------------------------------------------------------
 	\subsection{Avaliação das Sugestões de Mitigação}
@@ -469,7 +469,29 @@
 		
 		Para cada modelo, foram comparados os resultados médios obtidos na avaliação dos resumos, das sugestões de mitigação, dos incidentes e páginas relacionadas e o custo e a latência médios de cada execução. Desta forma, pretende-se observar não só as diferenças na qualidade dos resultados produzidos, mas também o impacto da escolha do modelo nos recursos necessários para executar a solução.
 		
+		\begin{table}[H]
+			\centering
+			\small
+			\begin{tabular}{lcccccc}
+				\hline
+				\textbf{Modelo} & \textbf{Resumo} & \textbf{MRR} & \textbf{Incidentes rel.} & \textbf{Páginas rel.} & \textbf{Custo} & \textbf{Latência} \\
+				\hline
+				GPT-5.6 Terra & 4,17 & 0,444 & 0,886 & 0,800 & 0,1073 & 75,10 \\
+				\hline
+				GPT-5.4 Mini & 4,17 & 0,494 & 0,922 & 0,767 & 0,0420 & 46,68 \\
+				\hline
+				GPT-5.4 & 4,17 & 0,563 & 0,983 & 0,863 & 0,1574 & 73,60 \\
+				\hline
+			\end{tabular}
+			\caption[Comparação entre modelos]{Comparação entre modelos}
+			\label{tab:comparacao-modelos}
+		\end{table}
 		
+		Os resultados mostram que os três modelos obtiveram classificações médias muito semelhantes nos resumos, próximas de 4,17 valores. O \textit{GPT-5.4} apresentou o melhor \textit{MRR} e a maior cobertura de incidentes e páginas relacionadas, mas também foi o modelo com maior custo médio por execução.
+		
+		O \textit{GPT-5.4 Mini} apresentou o menor custo e a menor latência média, sendo 38\% mais rápido e 61\% mais barato do que o \textit{GPT-5.6 Terra}. No entanto, este resultado deve ser interpretado com cuidado visto que, na maioria dos incidentes, o \textit{GPT-5.4 Mini} não identificou nenhum projeto associado e, por esse motivo, não foi executada a etapa de recolha de documentação no Confluence. Como o serviço analisou menos contexto e evitou chamadas adicionais, a resposta obtida foi mais célere e com menor custo.
+		
+		Assim, o menor custo e latência do \textit{GPT-5.4 Mini} não significam necessariamente que o modelo seja mais eficiente em todos os cenários. Parte dessa diferença resulta de não ter usado documentação que poderia melhorar a fundamentação da análise. Adicionalmente, o modelo tem um custo por \textit{token} inferior aos restantes modelos, contribuindo também para a redução do custo final.
 		
 	\subsection{Avaliação do Feedback da Equipa}
 	
@@ -572,4 +594,12 @@
 %----------------------------------------------------------------------------------------
 \section{Conclusão}
 
-% Devemos conseguir concluir que há coisas a melhorar (trabalho futuro)
+	Os resultados apresentados neste capítulo mostram que a solução desenvolvida conseguiu atingir vários dos objetivos definidos. A avaliação dos resumos apresentou uma classificação média de 4,18, com 98,7\% dos resultados a obterem uma classificação igual ou superior a 4. Também a recuperação de incidentes e páginas relacionadas apresentou resultados positivos, com coberturas médias de 0,917 e 0,897, respetivamente.
+	
+	Nas sugestões de mitigação, os resultados foram mais limitados. Apesar de, nos casos em que existe correspondência, a sugestão esperada tender a aparecer nas primeiras posições, ainda existe dificuldade em gerar sugestões diretamente equivalentes às soluções utilizadas nos incidentes de referência. Este é, por isso, um dos principais pontos a melhorar.
+	
+	A comparação entre modelos mostrou resultados semelhantes na qualidade dos resumos, mas algumas diferenças na recuperação de informação, custo e latência. O modelo \textit{GPT-5.4} apresentou uma maior cobertura dos incidentes e páginas relacionadas, enquanto o \textit{GPT-5.4 Mini} apresentou um custo e uma latência mais baixos. No entanto, estes resultados devem ser analisados tendo em conta que o modelo Mini nem sempre identificou um projeto associado, evitando em alguns casos a consulta ao Confluence.
+	
+	O custo e a latência foram, de forma geral, superiores aos valores definidos inicialmente. A análise realizada permitiu identificar o acesso ao Confluence como um dos principais responsáveis por este aumento, pelo que a redução do número de chamadas ao LLM e a execução de algumas operações em paralelo poderão melhorar estes resultados.
+	
+	Por fim, o feedback da equipa apresentou uma avaliação positiva da solução e da sua utilidade no contexto de análise de incidentes. No conjunto, os resultados mostram que a abordagem é viável, embora ainda existam melhorias a realizar principalmente ao nível das sugestões de mitigação, do custo e da latência.
